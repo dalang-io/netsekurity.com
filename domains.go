@@ -121,10 +121,13 @@ func handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 // authoritative nameservers (bypassing recursive-cache propagation), so a
 // freshly-added verification record is seen immediately.
 func lookupTXTAuth(name string) []string {
-	host := strings.TrimSuffix(name, ".")
-	// Find the authoritative NS via a recursive NS lookup (NS records are
-	// cached/propagated well before the new TXT is added).
-	ns, err := net.LookupNS(host)
+	// The NS records belong to the base domain, not the full record name
+	// (e.g. _netsekurity.netsekurity.com -> netsekurity.com).
+	base := name
+	if i := strings.Index(base, "."); i >= 0 {
+		base = base[i+1:]
+	}
+	ns, err := net.LookupNS(base)
 	if err != nil || len(ns) == 0 {
 		return nil
 	}

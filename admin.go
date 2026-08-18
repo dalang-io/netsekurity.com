@@ -46,6 +46,8 @@ func reportsDir() string {
 
 // handleAdmin renders the super-admin dashboard.
 func handleAdmin(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store, private")
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 	// Mark overdue pending invoices as expired (Xendit invoice_duration = 1 day).
 	db.Exec(`UPDATE payments SET status='expired' WHERE status='pending' AND created_at < datetime('now','-1 day')`)
 
@@ -234,6 +236,11 @@ func handleAdminUploadReport(w http.ResponseWriter, r *http.Request) {
 
 // handleReport serves a pentest report PDF to the owning user or an admin.
 func handleReport(w http.ResponseWriter, r *http.Request) {
+	// Never let Cloudflare (or browsers) cache reports — otherwise a cached
+	// copy can be served publicly without hitting the origin auth check.
+	w.Header().Set("Cache-Control", "no-store, private")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 	name := strings.TrimPrefix(r.URL.Path, "/reports/")
 	if !strings.HasSuffix(strings.ToLower(name), ".pdf") {
 		http.NotFound(w, r)

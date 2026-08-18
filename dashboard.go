@@ -32,6 +32,8 @@ type dom struct {
 
 // handleDashboard renders the authenticated dashboard.
 func handleDashboard(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-store, private")
+	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 	claims, err := currentUser(r)
 	if err != nil {
 		http.Redirect(w, r, "/login", http.StatusFound)
