@@ -167,6 +167,35 @@ func handleAdminPentest(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, `<div class="rounded bg-emerald-500/15 px-3 py-2 text-xs text-emerald-300">Pentest scheduled (%s) — 1 credit used.</div>`, pid)
 }
 
+// handleAdminAddCredit adds credit to a user's balance (super admin).
+func handleAdminAddCredit(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	uid := r.FormValue("user_id")
+	amount := parseFloat(r.FormValue("amount"))
+	if uid == "" || amount <= 0 {
+		http.Error(w, "user_id and positive amount required", http.StatusBadRequest)
+		return
+	}
+	var exists string
+	if err := db.QueryRow(`SELECT id FROM users WHERE id=?`, uid).Scan(&exists); err != nil {
+		http.Error(w, "user not found", http.StatusNotFound)
+		return
+	}
+	// Atomically credit the balance (insert-or-create) + log a transaction.
+	if _, err := db.Exec(`INSERT INTO credit_balance (user_id, balance, updated_at) VALUES (?, ?, ?)
+		ON CONFLICT(user_id) DO UPDATE SET balance = balance + excluded.balance, updated_at = excluded.updated_at`,
+		uid, amount, now()); err != nil {
+		http.Error(w, "db error", http.StatusInternalServerError)
+		return
+	}
+	db.Exec(`INSERT INTO credit_transactions (user_id, type, amount, description, reference_id) VALUES (?, 'admin_credit', ?, 'Admin credit', ?)`,
+		uid, amount, "admin-"+now())
+	http.Redirect(w, r, "/su", http.StatusSeeOther)
+}
+
 // handleAdminUploadReport uploads a pentest result PDF.
 func handleAdminUploadReport(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -273,7 +302,7 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
     </div>
     <div class="overflow-x-auto p-3">
       <table class="w-full font-mono text-xs">
-        <thead><tr class="text-left text-gray-500"><th class="py-1">email</th><th>name</th><th>role</th><th>credits</th><th>set role</th></tr></thead>
+        <thead><tr class="text-left text-gray-500"><th class="py-1">email</th><th>name</th><th>role</th><th>credits</th><th>set role</th><th>add credit</th></tr></thead>
         <tbody>
         {{range .Users}}
         <tr class="border-t border-white/10">
@@ -289,6 +318,13 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
                 <option value="admin" {{if eq .Role "admin"}}selected{{end}}>admin</option>
               </select>
               <button class="rounded border border-emerald-400/60 px-2 py-0.5 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/15">set</button>
+            </form>
+          </td>
+          <td>
+            <form method="post" action="/su/users/credit" class="flex gap-1">
+              <input type="hidden" name="user_id" value="{{.ID}}"/>
+              <input name="amount" type="number" step="0.5" min="0.5" placeholder="amt" class="w-16 rounded border border-white/15 bg-ink px-1 py-0.5 font-mono text-[11px] text-white"/>
+              <button class="rounded border border-cyan-400/60 px-2 py-0.5 text-[10px] font-bold text-cyan-300 hover:bg-cyan-500/15">+credit</button>
             </form>
           </td>
         </tr>

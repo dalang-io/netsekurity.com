@@ -60,9 +60,14 @@ func handleVerifyDomain(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "domain not found", http.StatusNotFound)
 		return
 	}
-	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(r.Context(), 15*time.Second)
 	defer cancel()
+
+	// Check both recursive resolvers and the authoritative nameservers directly,
+	// so a freshly-added TXT record verifies immediately (no waiting for
+	// recursive-cache propagation).
 	txts, _ := (&net.Resolver{}).LookupTXT(ctx, "_netsekurity."+domain)
+	txts = append(txts, lookupTXTAuth("_netsekurity."+domain)...)
 	matched := false
 	for _, t := range txts {
 		if strings.Trim(t, `"`) == stored {
@@ -110,6 +115,99 @@ func handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	}
 	db.Exec(`DELETE FROM domains WHERE user_id=? AND domain=?`, claims.Sub, domain)
 	fmt.Fprintf(w, `<div class="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-gray-300">%s removed.</div>`, domain)
+}
+
+// lookupTXTAuth queries the TXT records for a name directly from the domain's
+// authoritative nameservers (bypassing recursive-cache propagation), so a
+// freshly-added verification record is seen immediately.
+func lookupTXTAuth(name string) []string {
+	host := strings.TrimSuffix(name, ".")
+	// Find the authoritative NS via a recursive NS lookup (NS records are
+	// cached/propagated well before the new TXT is added).
+	ns, err := net.LookupNS(host)
+	if err != nil || len(ns) == 0 {
+		return nil
+	}
+	var out []string
+	for _, s := range ns {
+		out = append(out, dnsQueryTXT(strings.TrimSuffix(s.Host, "."), name)...)
+	}
+	return out
+}
+
+// dnsQueryTXT sends a minimal UDP DNS TXT query to a specific nameserver and
+// returns the TXT record strings (stdlib-only, no external DNS library).
+func dnsQueryTXT(nameserver, name string) []string {
+	buf := []byte{0x12, 0x34, 0x01, 0x00, 0x00, 0x01, 0, 0, 0, 0, 0, 0}
+	for _, label := range strings.Split(name, ".") {
+		if len(label) == 0 {
+			continue
+		}
+		buf = append(buf, byte(len(label)))
+		buf = append(buf, []byte(label)...)
+	}
+	buf = append(buf, 0, 0, 16, 0, 1) // qname null + TXT + IN
+
+	conn, err := net.Dial("udp", net.JoinHostPort(nameserver, "53"))
+	if err != nil {
+		return nil
+	}
+	defer conn.Close()
+	conn.SetDeadline(time.Now().Add(5 * time.Second))
+	if _, err := conn.Write(buf); err != nil {
+		return nil
+	}
+	resp := make([]byte, 4096)
+	n, err := conn.Read(resp)
+	if err != nil || n < 12 {
+		return nil
+	}
+	resp = resp[:n]
+	ancount := int(resp[6])<<8 | int(resp[7])
+	off := 12
+	off = skipDNSName(resp, off) // question name
+	off += 4                      // qtype + qclass
+	var txts []string
+	for i := 0; i < ancount && off < len(resp); i++ {
+		off = skipDNSName(resp, off)
+		if off+10 > len(resp) {
+			break
+		}
+		rtype := int(resp[off])<<8 | int(resp[off+1])
+		rdlen := int(resp[off+8])<<8 | int(resp[off+9])
+		off += 10
+		if rtype == 16 { // TXT
+			end := off + rdlen
+			var s []byte
+			for off < end && off < len(resp) {
+				l := int(resp[off])
+				off++
+				if off+l <= len(resp) {
+					s = append(s, resp[off:off+l]...)
+				}
+				off += l
+			}
+			txts = append(txts, string(s))
+		} else {
+			off += rdlen
+		}
+	}
+	return txts
+}
+
+// skipDNSName advances past a (possibly compression-pointer) DNS name.
+func skipDNSName(msg []byte, off int) int {
+	for off < len(msg) {
+		l := msg[off]
+		if l == 0 {
+			return off + 1
+		}
+		if l&0xC0 == 0xC0 {
+			return off + 2
+		}
+		off += int(l) + 1
+	}
+	return off
 }
 
 func isValidDomain(domain string) bool {

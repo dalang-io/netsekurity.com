@@ -54,6 +54,7 @@ func main() {
 	mux.HandleFunc("/su", requireAdmin(handleAdmin))
 	mux.HandleFunc("/su/users/add", requireAdmin(handleAdminAddUser))
 	mux.HandleFunc("/su/users/role", requireAdmin(handleAdminSetRole))
+	mux.HandleFunc("/su/users/credit", requireAdmin(handleAdminAddCredit))
 	mux.HandleFunc("/su/domains/pentest", requireAdmin(handleAdminPentest))
 	mux.HandleFunc("/su/reports/upload", requireAdmin(handleAdminUploadReport))
 	mux.HandleFunc("/reports/", requireAuth(handleReport))
