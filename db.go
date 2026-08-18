@@ -67,6 +67,7 @@ func initDB() error {
 			user_id TEXT NOT NULL,
 			external_id TEXT UNIQUE NOT NULL,
 			xendit_invoice_id TEXT,
+			url TEXT,
 			package_id TEXT,
 			amount_usd REAL NOT NULL,
 			credits REAL NOT NULL,
@@ -115,6 +116,13 @@ func initDB() error {
 	for _, p := range packages {
 		db.Exec(`INSERT OR IGNORE INTO credit_packages (id, name, usd_price, credits, is_active) VALUES (?,?,?,?,1)`,
 			p.id, p.name, p.usd, p.credits)
+	}
+
+	// Add payments.url if the column is missing (existing installs).
+	if !columnExists("payments", "url") {
+		if _, err := db.Exec(`ALTER TABLE payments ADD COLUMN url TEXT`); err != nil {
+			return fmt.Errorf("add payments.url: %w", err)
+		}
 	}
 
 	// Add users.role (admin / user) if the column is missing.

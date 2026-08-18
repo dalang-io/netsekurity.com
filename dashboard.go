@@ -29,9 +29,9 @@ type txn struct {
 
 // pymt is an Xendit invoice shown in the transaction history (incl. pending/expired).
 type pymt struct {
-	ExternalID, Package, Status, CreatedAt string
-	AmountUSD                              float64
-	Credits                                float64
+	ExternalID, Package, Status, CreatedAt, URL string
+	AmountUSD                                   float64
+	Credits                                     float64
 }
 
 type dom struct {
@@ -73,12 +73,12 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	// Mark overdue pending invoices as expired, then load the user's payment history
 	// (instances/pending/paid/expired) so the dashboard reflects real invoice state.
 	db.Exec(`UPDATE payments SET status='expired' WHERE user_id=? AND status='pending' AND created_at < datetime('now','-1 day')`, claims.Sub)
-	ptrows, _ := db.Query(`SELECT external_id, COALESCE(package_id,''), status, COALESCE(paid_at,''), amount_usd, credits, created_at
+	ptrows, _ := db.Query(`SELECT external_id, COALESCE(package_id,''), status, COALESCE(paid_at,''), amount_usd, credits, created_at, COALESCE(url,'')
 		FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 20`, claims.Sub)
 	for ptrows.Next() {
 		var p pymt
 		var paidSrc string
-		_ = ptrows.Scan(&p.ExternalID, &p.Package, &p.Status, &paidSrc, &p.AmountUSD, &p.Credits, &p.CreatedAt)
+		_ = ptrows.Scan(&p.ExternalID, &p.Package, &p.Status, &paidSrc, &p.AmountUSD, &p.Credits, &p.CreatedAt, &p.URL)
 		if p.Status == "paid" && paidSrc != "" {
 			p.CreatedAt = paidSrc
 		}
@@ -195,7 +195,7 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
               {{range .Payments}}
               <tr class="border-t border-white/10">
                 <td class="py-1 truncate max-w-[9rem]" title="{{.ExternalID}}">{{.ExternalID}}</td>
-                <td class="py-1"><span class="rounded px-1.5 py-0.5 text-[10px] font-bold {{if eq .Status "paid"}}bg-emerald-500/20 text-emerald-300{{else if eq .Status "pending"}}bg-yellow-500/20 text-yellow-300{{else}}bg-red-500/20 text-red-300{{end}}">{{.Status}}</span></td>
+                <td class="py-1"><span class="rounded px-1.5 py-0.5 text-[10px] font-bold {{if eq .Status "paid"}}bg-emerald-500/20 text-emerald-300{{else if eq .Status "pending"}}bg-yellow-500/20 text-yellow-300{{else}}bg-red-500/20 text-red-300{{end}}">{{.Status}}</span>{{if eq .Status "pending"}}{{if .URL}}&nbsp;<a href="{{.URL}}" target="_blank" rel="noopener" class="rounded border border-emerald-400 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/20">pay →</a>{{end}}{{end}}</td>
                 <td class="text-right font-mono text-emerald-400">{{printf "%.0f" .Credits}}</td>
               </tr>
               {{end}}

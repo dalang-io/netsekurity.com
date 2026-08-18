@@ -80,8 +80,8 @@ func handleTopUp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to create invoice: "+xr.ErrorMsg, http.StatusBadGateway)
 		return
 	}
-	db.Exec(`INSERT INTO payments (user_id, external_id, xendit_invoice_id, package_id, amount_usd, credits, status, currency)
-		VALUES (?,?,?,?,?,?,'pending',?)`, claims.Sub, externalID, xr.ID, packageID, usd, credits, currency)
+	db.Exec(`INSERT INTO payments (user_id, external_id, xendit_invoice_id, url, package_id, amount_usd, credits, status, currency)
+		VALUES (?,?,?,?,?,?,?,'pending',?)`, claims.Sub, externalID, xr.ID, xr.InvoiceURL, packageID, usd, credits, currency)
 
 	// Redirect the browser straight to the Xendit payment link (HTMX sees
 	// HX-Redirect and navigates to it). No extra "pay now" step.
