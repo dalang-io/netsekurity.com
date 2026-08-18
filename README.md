@@ -24,8 +24,9 @@ auto-generated TXT record, and get a full, human-reviewed pentest report.
 
 ## Current Status
 
-- **Live (prod):** marketing landing page — `http://netsekurity.com` (via Pingora on `:80`, origin port `8094`, systemd `netsekurity.service`).
-- The landing is **marketing-only** today. The sections below describe the architecture for the productized backend (login, credits, TXT verification, payments), which will be built on the same Go + SQLite foundation.
+- **Live (prod):** marketing landing page + **authenticated dashboard** — `http://netsekurity.com` (via Pingora on `:80`, origin port `8094`, systemd `netsekurity.service`).
+- **Implemented:** Google OAuth login, SQLite persistence, Xendit credit top-up (idempotent webhook credit), domain add + TXT verification, credits/dashboard.
+- **Planned:** the actual pentest scanning engine, report delivery, and retest workflow.
 
 ---
 
