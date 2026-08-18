@@ -271,7 +271,7 @@ func handleReport(w http.ResponseWriter, r *http.Request) {
 }
 
 
-var suTpl = template.Must(template.New("su").Parse(suHTML))
+var suTpl = template.Must(template.New("su").Funcs(template.FuncMap{"cssHash": func() string { return cssHash }}).Parse(suHTML))
 
 const suHTML = `{{define "su"}}<!DOCTYPE html>
 <html lang="en">
@@ -280,11 +280,10 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>super admin — netsekurity</title>
 <meta name="robots" content="noindex, nofollow"/>
-<link rel="stylesheet" href="/css/styles.css"/>
+<link rel="stylesheet" href="/css/styles.css?v={{cssHash}}"/>
 <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
 </head>
 <body class="scanlines bg-ink text-gray-300 min-h-screen">
-<a href="#main" class="skip-link">Skip to content</a>
 <header class="border-b border-yellow-500/30 bg-ink/85">
   <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
     <a href="/" class="font-mono text-base font-bold text-white"><span class="text-emerald-400">net</span>sekurity<span class="text-emerald-500">.com</span> <span class="text-yellow-300">/su</span></a>

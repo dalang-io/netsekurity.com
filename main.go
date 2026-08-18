@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"io/fs"
 	"log"
 	"net/http"
@@ -13,6 +15,19 @@ import (
 var staticFS embed.FS
 
 var staticSub fs.FS
+
+// cssHash is a short sha256 of the built stylesheet, used to cache-bust the CSS
+// URL on every deploy (?v=<hash>) so Cloudflare/browsers never serve stale CSS.
+var cssHash = func() string {
+	b, err := staticFS.ReadFile("static/css/styles.css")
+	if err != nil {
+		return "0"
+	}
+	h := sha256.Sum256(b)
+	return hex.EncodeToString(h[:])[:12]
+}()
+
+func init() { _ = cssHash }
 
 func main() {
 	loadEnv(".env")
@@ -104,6 +119,8 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s := strings.ReplaceAll(string(b), "__GOOGLE_CLIENT_ID__", getenv("GOOGLE_CLIENT_ID", ""))
+	s = strings.ReplaceAll(s, "__CSS_HASH__", cssHash)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Write([]byte(s))
 }

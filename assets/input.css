@@ -22,23 +22,6 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 2px rgba(34, 211, 238, 0.6);
 }
 
-/* Accessible skip-to-content link */
-.skip-link {
-  position: fixed;
-  left: -9999px;
-  top: 8px;
-  z-index: 200;
-}
-.skip-link:focus {
-  left: 8px;
-  background: #04060c;
-  border: 2px solid #00ff9c;
-  color: #00ff9c;
-  padding: 8px 14px;
-  font-size: 13px;
-  font-family: ui-monospace, Menlo, Consolas, monospace;
-}
-
 /* Screen-reader-only helper */
 .sr-only {
   position: absolute;
