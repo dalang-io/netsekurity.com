@@ -12,6 +12,8 @@ import (
 //go:embed static
 var staticFS embed.FS
 
+var staticSub fs.FS
+
 func main() {
 	loadEnv(".env")
 
@@ -30,12 +32,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("embed fs: %v", err)
 	}
+	staticSub = sub
 
 	mux := http.NewServeMux()
-	// Landing page served through a handler so the Google client ID can be
-	// injected into the One Tap script (static assets stay on the FileServer).
+	// Landing page + static assets. "/" is served through a handler so the
+	// Google client ID can be injected; all other paths fall through to the
+	// embedded FileServer (css, og.png, favicon, ...).
 	mux.HandleFunc("/", handleIndex)
-	mux.Handle("/css/", http.FileServer(http.FS(sub)))
 
 	// Auth
 	mux.HandleFunc("/login", handleGoogleLogin)
@@ -77,11 +80,15 @@ func main() {
 	}
 }
 
-// handleIndex serves the embedded landing page, injecting the Google client ID
-// into the One Tap script placeholder.
+// handleIndex serves the embedded landing page (injecting the Google client ID
+// into the One Tap script), and falls through to the FileServer for other
+// static assets (css, og.png, favicon, ...).
 func handleIndex(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path != "/" {
-		http.NotFound(w, r)
+		if staticSub == nil {
+			staticSub, _ = fs.Sub(staticFS, "static")
+		}
+		http.FileServer(http.FS(staticSub)).ServeHTTP(w, r)
 		return
 	}
 	b, err := staticFS.ReadFile("static/index.html")

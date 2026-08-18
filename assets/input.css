@@ -7,10 +7,72 @@ html {
 }
 
 body {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   -webkit-font-smoothing: antialiased;
 }
 
 ::selection {
-  background: rgba(16, 185, 129, 0.35);
+  background: rgba(0, 255, 156, 0.3);
   color: #fff;
+}
+
+/* CRT scanline overlay */
+.scanlines::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0) 0px,
+    rgba(0, 0, 0, 0) 2px,
+    rgba(0, 255, 156, 0.035) 3px,
+    rgba(0, 0, 0, 0) 4px
+  );
+}
+
+/* blinking block cursor */
+@keyframes nsk-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.cursor {
+  display: inline-block;
+  width: 0.6em;
+  height: 1em;
+  background: #00ff9c;
+  vertical-align: text-bottom;
+  animation: nsk-blink 1s steps(1) infinite;
+}
+
+/* terminal prompt marker */
+.prompt::before {
+  content: "$ ";
+  color: #00ff9c;
+}
+
+/* phosphor glow */
+.glow {
+  text-shadow: 0 0 10px rgba(0, 255, 156, 0.55);
+}
+.glow-cyan {
+  text-shadow: 0 0 10px rgba(34, 211, 238, 0.55);
+}
+
+/* soft fade-in for terminal lines */
+@keyframes nsk-line {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: none; }
+}
+.term-line {
+  animation: nsk-line 0.35s ease both;
+}
+
+/* subtle grid backdrop */
+.grid-bg {
+  background-image:
+    linear-gradient(rgba(0, 255, 156, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 255, 156, 0.05) 1px, transparent 1px);
+  background-size: 34px 34px;
 }

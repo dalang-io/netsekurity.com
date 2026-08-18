@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -56,7 +57,7 @@ var faqAnswers = map[string]string{
 	"5": `What if we have many subdomains? Each domain (hostname) costs 1 credit. A wildcard or an API surface can be scoped — contact us for a custom plan.`,
 }
 
-// handleFAQ toggles FAQ answers (HTMX hx-get).
+// handleFAQ toggles FAQ answers (HTMX hx-get) into an element id "faq-a-<q>".
 func handleFAQ(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query().Get("q")
 	if r.URL.Query().Get("open") != "1" {
@@ -70,7 +71,10 @@ func handleFAQ(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(`<div class="mt-2 rounded-md border border-white/10 bg-white/5 px-4 py-3 text-sm leading-relaxed text-gray-300">` + ans + `</div>`))
+	fmt.Fprintf(w, `<div class="mt-2 rounded border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs leading-relaxed text-gray-300">%s
+  <button class="mt-1 text-[10px] text-cyan-400 hover:underline"
+    hx-get="/api/faq?q=%s&amp;open=0" hx-target="#faq-a-%s" hx-swap="innerHTML">[x] hide</button>
+</div>`, ans, q, q)
 }
 
 func mustRand(n int) []byte {

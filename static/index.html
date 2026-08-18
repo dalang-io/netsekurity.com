@@ -3,14 +3,92 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>netsekurity — Pentest as a Service (PTaaS)</title>
-  <meta name="description" content="On-demand pentesting, per domain, per credit. Verify your domain with an auto-generated TXT record and get a full pentest report. Starting at $50." />
+  <title>netsekurity.com — Pentest as a Service (PTaaS) | On-Demand Web Security</title>
+
+  <!-- Primary SEO -->
+  <meta name="description" content="On-demand pentest per domain, per credit. Verify your domain with an auto-generated TXT record and get a human-reviewed vulnerability report. Pricing: $50 = 1, $100 = 3, $500 = 20, $1000 = 50 credits. 1 credit = 1 pentest · 1 domain." />
+  <meta name="keywords" content="pentest as a service, PTaaS, penetration testing, web security, vulnerability scan, OWASP Top 10, domain verification, ethical hacking, security testing, netsekurity" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#05070f" />
+  <link rel="canonical" href="https://netsekurity.com/" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>" />
+
+  <!-- Open Graph / meta ads -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="netsekurity.com" />
+  <meta property="og:url" content="https://netsekurity.com/" />
+  <meta property="og:title" content="netsekurity.com — Pentest as a Service (PTaaS)" />
+  <meta property="og:description" content="1 credit = 1 pentest · 1 domain. Auto TXT domain verification. From $50. Human-reviewed vulnerability reports." />
+  <meta property="og:image" content="https://netsekurity.com/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:locale" content="en_US" />
+
+  <!-- Twitter card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="netsekurity.com — Pentest as a Service (PTaaS)" />
+  <meta name="twitter:description" content="1 credit = 1 pentest · 1 domain. Auto TXT verification. From $50. Human-reviewed reports." />
+  <meta name="twitter:image" content="https://netsekurity.com/og.png" />
+
+  <!-- Structured data (SEO + GEO / LLM discoverability) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": "https://netsekurity.com/#org",
+        "name": "Dalang Pte Ltd",
+        "url": "https://netsekurity.com/",
+        "logo": "https://netsekurity.com/og.png"
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://netsekurity.com/#site",
+        "url": "https://netsekurity.com/",
+        "name": "netsekurity.com",
+        "publisher": { "@id": "https://netsekurity.com/#org" }
+      },
+      {
+        "@type": "Service",
+        "@id": "https://netsekurity.com/#service",
+        "name": "Pentest as a Service (PTaaS)",
+        "serviceType": "Pentest as a Service",
+        "provider": { "@id": "https://netsekurity.com/#org" },
+        "description": "On-demand penetration testing per domain, per credit. Verify domain ownership with an auto-generated TXT record, then receive a human-reviewed vulnerability report.",
+        "areaServed": "Worldwide",
+        "offers": [
+          { "@type": "Offer", "name": "Starter", "price": "50", "priceCurrency": "USD", "description": "1 credit = 1 pentest · 1 domain" },
+          { "@type": "Offer", "name": "Standard", "price": "100", "priceCurrency": "USD", "description": "3 credits" },
+          { "@type": "Offer", "name": "Professional", "price": "500", "priceCurrency": "USD", "description": "20 credits" },
+          { "@type": "Offer", "name": "Enterprise", "price": "1000", "priceCurrency": "USD", "description": "50 credits" }
+        ]
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://netsekurity.com/#faq",
+        "mainEntity": [
+          { "@type": "Question", "name": "How does pricing work?",
+            "acceptedAnswer": { "@type": "Answer", "text": "1 credit = 1 pentest on 1 domain. Buy a package, add a domain, verify ownership with the auto-generated TXT record, and a pentest is scheduled." } },
+          { "@type": "Question", "name": "What is covered in one pentest?",
+            "acceptedAnswer": { "@type": "Answer", "text": "An automated vulnerability assessment mapped to OWASP Top 10: injection, auth flaws, misconfiguration, exposed secrets, and more, with a prioritized report." } },
+          { "@type": "Question", "name": "How do I verify my domain?",
+            "acceptedAnswer": { "@type": "Answer", "text": "We auto-generate a unique TXT record per domain. Add it in your DNS provider, hit verify, and ownership is confirmed in seconds. No manual approval." } },
+          { "@type": "Question", "name": "Is it really automated?",
+            "acceptedAnswer": { "@type": "Answer", "text": "The scan is fully automated end-to-end. A human security engineer reviews and curates the findings before the report is delivered." } },
+          { "@type": "Question", "name": "What if we have many subdomains?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Each domain costs 1 credit. A wildcard or an API surface can be scoped — contact sales@dalang.io for a custom plan." } }
+        ]
+      }
+    ]
+  }
+  </script>
+
   <link rel="stylesheet" href="/css/styles.css" />
   <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
-    // Google Identity Services (One Tap) — suggest the signed-in Google account
-    // as soon as a visitor lands on the page.
+    // Google Identity Services (One Tap) — suggest the signed-in Google account.
     var NSK_CLIENT_ID = "__GOOGLE_CLIENT_ID__";
     window.addEventListener("load", function () {
       if (!NSK_CLIENT_ID || NSK_CLIENT_ID.indexOf("__") === 0) return;
@@ -34,248 +112,216 @@
     });
   </script>
 </head>
-<body class="bg-ink text-gray-200 antialiased">
-  <!-- Nav -->
-  <header class="sticky top-0 z-50 border-b border-white/10 bg-ink/80 backdrop-blur">
-    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-      <a href="#top" class="font-mono text-lg font-bold tracking-tight text-white">
-        <span class="text-emerald-400">net</span>sekurity<span class="text-emerald-400">.com</span>
+
+<body class="scanlines bg-ink text-gray-300 antialiased">
+  <!-- Terminal nav bar -->
+  <header class="sticky top-0 z-50 border-b border-emerald-500/25 bg-ink/85 backdrop-blur">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
+      <a href="#top" class="font-mono text-base font-bold text-white">
+        <span class="glow text-emerald-400">net</span>sekurity<span class="text-emerald-500">.com</span>
+        <span class="ml-2 hidden text-[11px] text-gray-500 sm:inline"># ptaas</span>
       </a>
-      <nav class="hidden items-center gap-6 text-sm text-gray-400 md:flex">
-        <a href="#how" class="hover:text-white">How it works</a>
-        <a href="#features" class="hover:text-white">Features</a>
-        <a href="#pricing" class="hover:text-white">Pricing</a>
-        <a href="#verify" class="hover:text-white">TXT verify</a>
-        <a href="#faq" class="hover:text-white">FAQ</a>
+      <nav class="hidden items-center gap-5 text-[13px] text-gray-400 md:flex">
+        <a href="#how" class="prompt hover:text-emerald-300">ls how</a>
+        <a href="#features" class="prompt hover:text-emerald-300">cat features</a>
+        <a href="#pricing" class="prompt hover:text-emerald-300">cat pricing</a>
+        <a href="#verify" class="prompt hover:text-emerald-300">verify -d</a>
+        <a href="#faq" class="prompt hover:text-emerald-300">man faq</a>
       </nav>
       <div class="flex items-center gap-3">
-        <a href="/dashboard" class="hidden text-sm text-gray-400 hover:text-white sm:block">Login</a>
-        <a href="/dashboard" class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-bold text-black hover:bg-emerald-400 transition-colors">
-          Dashboard
+        <a href="/dashboard" class="prompt hidden text-[13px] text-gray-400 hover:text-emerald-300 sm:inline">login</a>
+        <a href="/dashboard" class="rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-300 hover:bg-emerald-500/20 glow">
+          ./dashboard<span class="cursor"></span>
         </a>
       </div>
     </div>
   </header>
 
   <main id="top">
-    <!-- Hero -->
-    <section class="relative overflow-hidden">
-      <div class="pointer-events-none absolute inset-0 opacity-40" aria-hidden="true"
-           style="background-image: radial-gradient(circle at 20% 20%, rgba(16,185,129,.15), transparent 40%), radial-gradient(circle at 80% 30%, rgba(34,211,238,.12), transparent 40%);">
-      </div>
-      <div class="relative mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28 text-center">
-        <span class="inline-block rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs font-semibold text-emerald-300">
-          Pentest as a Service · PTaaS
-        </span>
-        <h1 class="mx-auto mt-6 max-w-3xl text-4xl font-extrabold leading-tight text-white sm:text-6xl">
-          Find the holes.
-          <span class="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">Before attackers do.</span>
-        </h1>
-        <p class="mx-auto mt-6 max-w-2xl text-lg text-gray-400">
-          One pentest. One domain. One credit. Verify ownership with an auto-generated TXT record, and our engine hunts
-          for vulnerabilities across your web surface — then you get a prioritized, human-reviewed report.
-        </p>
-        <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
-          <a href="#pricing" class="rounded-md bg-emerald-500 px-6 py-3 font-bold text-black hover:bg-emerald-400 transition-colors">
-            Get started — from $50
-          </a>
-          <a href="#how" class="rounded-md border border-white/20 bg-white/5 px-6 py-3 font-semibold text-white hover:bg-white/10 transition-colors">
-            How it works
-          </a>
+    <!-- Hero terminal -->
+    <section class="relative overflow-hidden grid-bg">
+      <div class="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
+        <div class="grid items-center gap-10 lg:grid-cols-2">
+          <div class="space-y-5">
+            <span class="inline-block rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-xs text-emerald-300">
+              [ Pentest as a Service ]
+            </span>
+            <h1 class="font-mono text-3xl font-bold leading-tight text-white sm:text-5xl">
+              Find the holes<span class="text-emerald-400">.</span>
+              <span class="glow block text-emerald-400">Before attackers do.</span>
+            </h1>
+            <p class="font-mono text-sm leading-relaxed text-gray-400 sm:text-base">
+              One pentest. One domain. One credit. Verify ownership with an
+              auto-generated <span class="text-cyan-300">TXT</span> record, let our
+              engine hunt your surface, and get a <span class="text-emerald-300">human-reviewed</span> report.
+            </p>
+            <div class="flex flex-wrap gap-3 pt-2">
+              <a href="/dashboard" class="rounded border-2 border-emerald-400 bg-emerald-500/10 px-5 py-2.5 font-mono text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 glow">
+                ./run pentest
+              </a>
+              <a href="#how" class="rounded border border-white/20 px-5 py-2.5 font-mono text-sm text-white hover:bg-white/5">
+                man netsekurity
+              </a>
+            </div>
+            <p class="font-mono text-xs text-gray-500">
+              <span class="text-emerald-400">1 credit</span> = 1 pentest · 1 domain · from <span class="text-white">$50</span>
+            </p>
+          </div>
+
+          <!-- Terminal window -->
+          <div class="rounded border border-emerald-500/30 bg-[#04060c] shadow-[0_0_40px_rgba(0,255,156,0.12)]">
+            <div class="flex items-center gap-1.5 border-b border-emerald-500/20 px-3 py-2">
+              <span class="h-3 w-3 rounded-full bg-red-500/80"></span>
+              <span class="h-3 w-3 rounded-full bg-yellow-500/80"></span>
+              <span class="h-3 w-3 rounded-full bg-emerald-500/80"></span>
+              <span class="ml-2 font-mono text-[11px] text-gray-500">netsekurity@ptaas: ~</span>
+            </div>
+            <div class="space-y-1.5 px-4 py-4 font-mono text-[13px] leading-relaxed">
+              <p class="term-line"><span class="text-emerald-400">$</span> nsk pentest <span class="text-cyan-300">--target</span> example.com</p>
+              <p class="term-line text-gray-500">[+] loading engine ............ ok</p>
+              <p class="term-line text-gray-500">[+] verifying domain (TXT) .... ok</p>
+              <p class="term-line text-emerald-300">[✓] ownership verified</p>
+              <p class="term-line text-gray-500">[+] scanning OWASP Top 10 ...... running</p>
+              <p class="term-line text-gray-500">[+] header / config checks ..... ok</p>
+              <p class="term-line text-emerald-300">[✓] report &gt; ./reports/example.com.pdf</p>
+              <p class="term-line"><span class="text-emerald-400">$</span> <span class="cursor"></span></p>
+            </div>
+          </div>
         </div>
-        <p class="mt-6 text-sm text-gray-500">
-          <span class="text-emerald-400">1 credit</span> = 1 pentest · 1 domain · No monthly lock-in
-        </p>
       </div>
     </section>
 
-    <!-- Stats strip -->
-    <section class="border-y border-white/10 bg-panel">
-      <div class="mx-auto grid max-w-6xl grid-cols-2 gap-6 px-4 py-10 sm:px-6 md:grid-cols-4 text-center">
-        <div>
-          <div class="font-mono text-3xl font-bold text-white">60+</div>
-          <div class="mt-1 text-xs uppercase tracking-wide text-gray-500">Checks per scan</div>
+    <!-- Stats / metrics -->
+    <section class="border-y border-emerald-500/20 bg-[#04060c]">
+      <div class="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-4 py-8 sm:px-6 md:grid-cols-4">
+        <div class="text-center">
+          <div class="font-mono text-2xl font-bold text-emerald-300 glow">60+</div>
+          <div class="mt-1 font-mono text-[11px] uppercase tracking-wide text-gray-500">checks / scan</div>
         </div>
-        <div>
-          <div class="font-mono text-3xl font-bold text-white">&lt; 24h</div>
-          <div class="mt-1 text-xs uppercase tracking-wide text-gray-500">Report turnaround</div>
+        <div class="text-center">
+          <div class="font-mono text-2xl font-bold text-emerald-300 glow">&lt; 24h</div>
+          <div class="mt-1 font-mono text-[11px] uppercase tracking-wide text-gray-500">report turnaround</div>
         </div>
-        <div>
-          <div class="font-mono text-3xl font-bold text-white">TXT</div>
-          <div class="mt-1 text-xs uppercase tracking-wide text-gray-500">Auto domain verification</div>
+        <div class="text-center">
+          <div class="font-mono text-2xl font-bold text-cyan-300 glow-cyan">TXT</div>
+          <div class="mt-1 font-mono text-[11px] uppercase tracking-wide text-gray-500">auto domain verify</div>
         </div>
-        <div>
-          <div class="font-mono text-3xl font-bold text-white">OWASP</div>
-          <div class="mt-1 text-xs uppercase tracking-wide text-gray-500">Top 10 mapped findings</div>
+        <div class="text-center">
+          <div class="font-mono text-2xl font-bold text-cyan-300 glow-cyan">OWASP</div>
+          <div class="mt-1 font-mono text-[11px] uppercase tracking-wide text-gray-500">top 10 mapped</div>
         </div>
       </div>
     </section>
 
     <!-- How it works -->
-    <section id="how" class="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-      <h2 class="text-center text-3xl font-bold text-white sm:text-4xl">How it works</h2>
-      <p class="mx-auto mt-3 max-w-xl text-center text-gray-400">From domain to report in four steps — most of it automatic.</p>
-      <div class="mt-12 grid gap-6 md:grid-cols-4">
-        <div class="rounded-xl border border-white/10 bg-panel p-6">
-          <div class="font-mono text-4xl font-bold text-emerald-400">01</div>
-          <h3 class="mt-4 text-lg font-bold text-white">Add a domain</h3>
-          <p class="mt-2 text-sm text-gray-400">Enter the domain or subdomain you want tested. One domain costs one credit.</p>
+    <section id="how" class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <h2 class="font-mono text-2xl font-bold text-white"><span class="text-emerald-400">$</span> cat how_it_works</h2>
+      <p class="mt-2 font-mono text-sm text-gray-500"># domain → report in four commands</p>
+      <div class="mt-8 grid gap-4 md:grid-cols-4">
+        <div class="rounded border border-white/10 bg-[#04060c] p-5">
+          <div class="font-mono text-xs text-emerald-400">01 · add-domain</div>
+          <h3 class="mt-3 font-mono font-bold text-white">./domain add</h3>
+          <p class="mt-2 font-mono text-xs leading-relaxed text-gray-400">Enter the domain to test. One domain = one credit.</p>
         </div>
-        <div class="rounded-xl border border-white/10 bg-panel p-6">
-          <div class="font-mono text-4xl font-bold text-emerald-400">02</div>
-          <h3 class="mt-4 text-lg font-bold text-white">Verify by TXT</h3>
-          <p class="mt-2 text-sm text-gray-400">We auto-generate a unique TXT record. Copy it into your DNS provider and hit verify.</p>
+        <div class="rounded border border-white/10 bg-[#04060c] p-5">
+          <div class="font-mono text-xs text-cyan-400">02 · verify-txt</div>
+          <h3 class="mt-3 font-mono font-bold text-white">./verify --txt</h3>
+          <p class="mt-2 font-mono text-xs leading-relaxed text-gray-400">We auto-generate a unique TXT record. Add it to DNS, hit verify.</p>
         </div>
-        <div class="rounded-xl border border-white/10 bg-panel p-6">
-          <div class="font-mono text-4xl font-bold text-emerald-400">03</div>
-          <h3 class="mt-4 text-lg font-bold text-white">We pentest</h3>
-          <p class="mt-2 text-sm text-gray-400">The engine scans your surface — headers, injection, auth, misconfig, secrets, and more.</p>
+        <div class="rounded border border-white/10 bg-[#04060c] p-5">
+          <div class="font-mono text-xs text-emerald-400">03 · pentest</div>
+          <h3 class="mt-3 font-mono font-bold text-white">./run --scan</h3>
+          <p class="mt-2 font-mono text-xs leading-relaxed text-gray-400">Engine scans injection, auth, config, secrets &amp; more.</p>
         </div>
-        <div class="rounded-xl border border-white/10 bg-panel p-6">
-          <div class="font-mono text-4xl font-bold text-emerald-400">04</div>
-          <h3 class="mt-4 text-lg font-bold text-white">Get the report</h3>
-          <p class="mt-2 text-sm text-gray-400">A prioritized, human-reviewed report with severity, proof, and fix guidance — fast.</p>
+        <div class="rounded border border-white/10 bg-[#04060c] p-5">
+          <div class="font-mono text-xs text-cyan-400">04 · report</div>
+          <h3 class="mt-3 font-mono font-bold text-white">./report.pdf</h3>
+          <p class="mt-2 font-mono text-xs leading-relaxed text-gray-400">Prioritized, human-reviewed findings with proof &amp; fixes.</p>
         </div>
       </div>
     </section>
 
     <!-- Features -->
-    <section id="features" class="border-y border-white/10 bg-panel">
-      <div class="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-        <h2 class="text-center text-3xl font-bold text-white sm:text-4xl">What you get per pentest</h2>
-        <p class="mx-auto mt-3 max-w-xl text-center text-gray-400">Real findings, curated by humans, ready for your engineering team.</p>
-        <div class="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          <div class="rounded-xl border border-white/10 bg-ink p-6">
-            <div class="text-emerald-400 text-xl">&#x1F50E;</div>
-            <h3 class="mt-3 font-bold text-white">OWASP Top 10 coverage</h3>
-            <p class="mt-1 text-sm text-gray-400">Injection, XSS, broken auth, sensitive data exposure, and the rest — mapped and explained.</p>
+    <section id="features" class="border-y border-emerald-500/20 bg-[#04060c]">
+      <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+        <h2 class="font-mono text-2xl font-bold text-white"><span class="text-emerald-400">$</span> cat features.conf</h2>
+        <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div class="rounded border border-white/10 bg-ink p-5">
+            <div class="font-mono text-emerald-400">[+] OWASP Top 10</div>
+            <p class="mt-2 font-mono text-xs leading-relaxed text-gray-400">Injection, XSS, broken auth, exposure &amp; more — mapped &amp; explained.</p>
           </div>
-          <div class="rounded-xl border border-white/10 bg-ink p-6">
-            <div class="text-emerald-400 text-xl">&#x1F4C8;</div>
-            <h3 class="mt-3 font-bold text-white">Prioritized risk scoring</h3>
-            <p class="mt-1 text-sm text-gray-400">Every finding ranked by severity and business impact so you fix what matters first.</p>
+          <div class="rounded border border-white/10 bg-ink p-5">
+            <div class="font-mono text-emerald-400">[+] risk_score</div>
+            <p class="mt-2 font-mono text-xs leading-relaxed text-gray-400">Every finding ranked by severity &amp; business impact.</p>
           </div>
-          <div class="rounded-xl border border-white/10 bg-ink p-6">
-            <div class="text-emerald-400 text-xl">&#x1F4DD;</div>
-            <h3 class="mt-3 font-bold text-white">Proof &amp; reproduction</h3>
-            <p class="mt-1 text-sm text-gray-400">Screenshots, requests, and reproduction steps for every vulnerability.</p>
+          <div class="rounded border border-white/10 bg-ink p-5">
+            <div class="font-mono text-emerald-400">[+] proof.txt</div>
+            <p class="mt-2 font-mono text-xs leading-relaxed text-gray-400">Screenshots, requests &amp; reproduction steps per vuln.</p>
           </div>
-          <div class="rounded-xl border border-white/10 bg-ink p-6">
-            <div class="text-emerald-400 text-xl">&#x1F6E1;&#xFE0F;</div>
-            <h3 class="mt-3 font-bold text-white">Human review</h3>
-            <p class="mt-1 text-sm text-gray-400">Automation finds it, a security engineer validates it, then signs the report.</p>
+          <div class="rounded border border-white/10 bg-ink p-5">
+            <div class="font-mono text-emerald-400">[+] human_review</div>
+            <p class="mt-2 font-mono text-xs leading-relaxed text-gray-400">Automation finds it, a security engineer validates &amp; signs it.</p>
           </div>
-          <div class="rounded-xl border border-white/10 bg-ink p-6">
-            <div class="text-emerald-400 text-xl">&#x1F504;</div>
-            <h3 class="mt-3 font-bold text-white">Retest ready</h3>
-            <p class="mt-1 text-sm text-gray-400">Fix, use another credit, and we re-run to confirm the patch holds.</p>
+          <div class="rounded border border-white/10 bg-ink p-5">
+            <div class="font-mono text-emerald-400">[+] retest</div>
+            <p class="mt-2 font-mono text-xs leading-relaxed text-gray-400">Fix, spend a credit, re-run to confirm the patch holds.</p>
           </div>
-          <div class="rounded-xl border border-white/10 bg-ink p-6">
-            <div class="text-emerald-400 text-xl">&#x1F512;</div>
-            <h3 class="mt-3 font-bold text-white">Safe, authorized scanning</h3>
-            <p class="mt-1 text-sm text-gray-400">We only test domains you prove you own — verification is mandatory, scans are non-destructive.</p>
+          <div class="rounded border border-white/10 bg-ink p-5">
+            <div class="font-mono text-emerald-400">[+] authorized</div>
+            <p class="mt-2 font-mono text-xs leading-relaxed text-gray-400">Only test domains you own — verification is mandatory.</p>
           </div>
         </div>
       </div>
     </section>
 
     <!-- Pricing -->
-    <section id="pricing" class="mx-auto max-w-6xl px-4 py-20 sm:px-6">
-      <h2 class="text-center text-3xl font-bold text-white sm:text-4xl">Simple credit pricing</h2>
-      <p class="mx-auto mt-3 max-w-xl text-center text-gray-400">Buy credits, spend them on pentests. <span class="text-emerald-400">1 credit = 1 pentest · 1 domain.</span></p>
-      <div class="mt-12 grid gap-6 md:grid-cols-4">
-        <!-- $50 -->
-        <div class="flex flex-col rounded-xl border border-white/10 bg-panel p-6">
-          <h3 class="font-bold text-white">Starter</h3>
-          <div class="mt-3 flex items-baseline gap-1">
-            <span class="font-mono text-3xl font-bold text-white">$50</span>
-            <span class="text-sm text-gray-500">/ once</span>
-          </div>
-          <div class="mt-1 text-sm text-gray-400">1 credit</div>
-          <ul class="mt-5 space-y-2 text-sm text-gray-300">
-            <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> 1 pentest · 1 domain</li>
-            <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Full scan + report</li>
-            <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> TXT domain verification</li>
-          </ul>
-          <a href="#verify" class="mt-auto pt-6">
-            <span class="block rounded-md border border-white/20 bg-white/5 px-4 py-2.5 text-center font-semibold text-white hover:bg-white/10 transition-colors">Buy $50</span>
-          </a>
-        </div>
-        <!-- $100 -->
-        <div class="flex flex-col rounded-xl border border-white/10 bg-panel p-6">
-          <h3 class="font-bold text-white">Standard</h3>
-          <div class="mt-3 flex items-baseline gap-1">
-            <span class="font-mono text-3xl font-bold text-white">$100</span>
-            <span class="text-sm text-gray-500">/ once</span>
-          </div>
-          <div class="mt-1 text-sm text-gray-400">3 credits</div>
-          <ul class="mt-5 space-y-2 text-sm text-gray-300">
-            <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> 3 pentests · 3 domains</li>
-            <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Same report quality</li>
-            <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Bulk discount</li>
-          </ul>
-          <a href="#verify" class="mt-auto pt-6">
-            <span class="block rounded-md border border-white/20 bg-white/5 px-4 py-2.5 text-center font-semibold text-white hover:bg-white/10 transition-colors">Buy $100</span>
-          </a>
-        </div>
-        <!-- $500 popular -->
-        <div class="relative flex flex-col rounded-xl border-2 border-emerald-400 bg-panel p-6">
-          <span class="absolute -top-3 left-4 rounded-full bg-emerald-500 px-3 py-0.5 text-xs font-bold text-black">Most popular</span>
-          <h3 class="font-bold text-white">Professional</h3>
-          <div class="mt-3 flex items-baseline gap-1">
-            <span class="font-mono text-3xl font-bold text-white">$500</span>
-            <span class="text-sm text-gray-500">/ once</span>
-          </div>
-          <div class="mt-1 text-sm text-gray-400">20 credits</div>
-          <ul class="mt-5 space-y-2 text-sm text-gray-300">
-            <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> 20 pentests · 20 domains</li>
-            <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Great for product teams</li>
-            <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Priority queue</li>
-          </ul>
-          <a href="#verify" class="mt-auto pt-6">
-            <span class="block rounded-md bg-emerald-500 px-4 py-2.5 text-center font-bold text-black hover:bg-emerald-400 transition-colors">Buy $500</span>
-          </a>
-        </div>
-        <!-- $1000 -->
-        <div class="flex flex-col rounded-xl border border-white/10 bg-panel p-6">
-          <h3 class="font-bold text-white">Enterprise</h3>
-          <div class="mt-3 flex items-baseline gap-1">
-            <span class="font-mono text-3xl font-bold text-white">$1000</span>
-            <span class="text-sm text-gray-500">/ once</span>
-          </div>
-          <div class="mt-1 text-sm text-gray-400">50 credits</div>
-          <ul class="mt-5 space-y-2 text-sm text-gray-300">
-            <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> 50 pentests · 50 domains</li>
-            <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Dedicated support</li>
-            <li class="flex gap-2"><span class="text-emerald-400">&#10003;</span> Custom scope options</li>
-          </ul>
-          <a href="#verify" class="mt-auto pt-6">
-            <span class="block rounded-md border border-white/20 bg-white/5 px-4 py-2.5 text-center font-semibold text-white hover:bg-white/10 transition-colors">Buy $1000</span>
-          </a>
-        </div>
+    <section id="pricing" class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <h2 class="font-mono text-2xl font-bold text-white"><span class="text-emerald-400">$</span> cat pricing.txt</h2>
+      <p class="mt-2 font-mono text-sm text-gray-500"># 1 credit = 1 pentest · 1 domain</p>
+      <div class="mt-8 overflow-x-auto rounded border border-emerald-500/25">
+        <table class="w-full font-mono text-sm">
+          <thead>
+            <tr class="border-b border-emerald-500/25 text-left text-emerald-300">
+              <th class="px-5 py-3">PLAN</th><th class="px-5 py-3">PRICE</th><th class="px-5 py-3">CREDITS</th><th class="px-5 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="text-gray-300">
+            <tr class="border-b border-white/10 hover:bg-emerald-500/5">
+              <td class="px-5 py-3 text-white">starter</td><td class="px-5 py-3">$50</td><td class="px-5 py-3">1</td>
+              <td class="px-5 py-3"><a href="/dashboard" class="text-emerald-300 hover:underline">buy →</a></td>
+            </tr>
+            <tr class="border-b border-white/10 hover:bg-emerald-500/5">
+              <td class="px-5 py-3 text-white">standard</td><td class="px-5 py-3">$100</td><td class="px-5 py-3">3</td>
+              <td class="px-5 py-3"><a href="/dashboard" class="text-emerald-300 hover:underline">buy →</a></td>
+            </tr>
+            <tr class="border-b border-emerald-500/40 bg-emerald-500/10">
+              <td class="px-5 py-3 text-white">professional <span class="text-[10px] text-emerald-400">[popular]</span></td><td class="px-5 py-3">$500</td><td class="px-5 py-3">20</td>
+              <td class="px-5 py-3"><a href="/dashboard" class="text-emerald-300 glow hover:underline">buy →</a></td>
+            </tr>
+            <tr class="hover:bg-emerald-500/5">
+              <td class="px-5 py-3 text-white">enterprise</td><td class="px-5 py-3">$1000</td><td class="px-5 py-3">50</td>
+              <td class="px-5 py-3"><a href="/dashboard" class="text-emerald-300 hover:underline">buy →</a></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <p class="mt-8 text-center text-sm text-gray-500">
-        Need a custom scope, API testing, or a full audit? <a href="#contact" class="text-emerald-400 underline">Talk to us</a>.
+      <p class="mt-6 font-mono text-xs text-gray-500">
+        custom scope / API / wildcard? <a href="mailto:sales@dalang.io" class="text-emerald-300 underline">$ mail sales@dalang.io</a>
       </p>
     </section>
 
     <!-- TXT verification demo -->
-    <section id="verify" class="border-y border-white/10 bg-panel">
-      <div class="mx-auto max-w-3xl px-4 py-20 sm:px-6 text-center">
-        <h2 class="text-3xl font-bold text-white sm:text-4xl">Domain verification by TXT</h2>
-        <p class="mx-auto mt-3 max-w-lg text-gray-400">
-          No manual approval, no back-and-forth. We auto-generate a unique TXT record — you paste it into your DNS and verify.
-        </p>
-        <div class="mt-8 rounded-xl border border-white/10 bg-ink p-6 text-left">
-          <div class="mb-4 font-mono text-sm text-gray-400">
-            <span class="text-emerald-400">netsekurity.com</span> · <span class="text-cyan-400">pending verification</span>
+    <section id="verify" class="border-y border-emerald-500/20 bg-[#04060c]">
+      <div class="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+        <h2 class="font-mono text-2xl font-bold text-white"><span class="text-cyan-400">$</span> verify --domain</h2>
+        <p class="mt-2 font-mono text-sm text-gray-500"># auto-generated TXT — paste into DNS, hit verify</p>
+        <div class="mt-6 rounded border border-cyan-500/30 bg-[#04060c] p-5">
+          <div class="mb-4 font-mono text-xs text-gray-500">
+            <span class="text-emerald-300">netsekurity.com</span> · <span class="text-cyan-300">status: pending</span>
           </div>
-          <button
-            hx-get="/api/txt"
-            hx-target="#txt-result"
-            hx-swap="innerHTML"
-            class="rounded-md bg-cyan-500 px-4 py-2 text-sm font-bold text-black hover:bg-cyan-400 transition-colors">
-            Generate TXT record
+          <button hx-get="/api/txt" hx-target="#txt-result" hx-swap="innerHTML"
+            class="rounded border border-cyan-400 bg-cyan-500/10 px-4 py-2 font-mono text-sm font-bold text-cyan-300 hover:bg-cyan-500/20 glow-cyan">
+            $ generate --txt
           </button>
           <div id="txt-result" class="mt-4"></div>
         </div>
@@ -283,82 +329,68 @@
     </section>
 
     <!-- FAQ -->
-    <section id="faq" class="mx-auto max-w-3xl px-4 py-20 sm:px-6">
-      <h2 class="text-center text-3xl font-bold text-white sm:text-4xl">FAQ</h2>
-      <div class="mt-10 space-y-3">
-        <div class="faq-item rounded-xl border border-white/10 bg-panel">
-          <button class="w-full px-5 py-4 text-left font-semibold text-white"
-            hx-get="/api/faq?q=1&amp;open=1" hx-target="next sibling" hx-swap="innerHTML">
-            How does pricing work?
+    <section id="faq" class="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+      <h2 class="font-mono text-2xl font-bold text-white"><span class="text-emerald-400">$</span> man faq</h2>
+      <div class="mt-6 space-y-2 font-mono text-sm">
+        <div class="faq-item rounded border border-white/10 bg-[#04060c]">
+          <button type="button" class="w-full px-4 py-3 text-left text-gray-200 hover:text-emerald-300"
+            hx-get="/api/faq?q=1&amp;open=1" hx-target="#faq-a-1" hx-swap="innerHTML">
+            ? how does pricing work
           </button>
-          <div></div>
+          <div id="faq-a-1" class="px-4 pb-1"></div>
         </div>
-        <div class="faq-item rounded-xl border border-white/10 bg-panel">
-          <button class="w-full px-5 py-4 text-left font-semibold text-white"
-            hx-get="/api/faq?q=2&amp;open=1" hx-target="next sibling" hx-swap="innerHTML">
-            What is covered in one pentest?
+        <div class="faq-item rounded border border-white/10 bg-[#04060c]">
+          <button type="button" class="w-full px-4 py-3 text-left text-gray-200 hover:text-emerald-300"
+            hx-get="/api/faq?q=2&amp;open=1" hx-target="#faq-a-2" hx-swap="innerHTML">
+            ? what is covered in one pentest
           </button>
-          <div></div>
+          <div id="faq-a-2" class="px-4 pb-1"></div>
         </div>
-        <div class="faq-item rounded-xl border border-white/10 bg-panel">
-          <button class="w-full px-5 py-4 text-left font-semibold text-white"
-            hx-get="/api/faq?q=3&amp;open=1" hx-target="next sibling" hx-swap="innerHTML">
-            How do I verify my domain?
+        <div class="faq-item rounded border border-white/10 bg-[#04060c]">
+          <button type="button" class="w-full px-4 py-3 text-left text-gray-200 hover:text-emerald-300"
+            hx-get="/api/faq?q=3&amp;open=1" hx-target="#faq-a-3" hx-swap="innerHTML">
+            ? how do i verify my domain
           </button>
-          <div></div>
+          <div id="faq-a-3" class="px-4 pb-1"></div>
         </div>
-        <div class="faq-item rounded-xl border border-white/10 bg-panel">
-          <button class="w-full px-5 py-4 text-left font-semibold text-white"
-            hx-get="/api/faq?q=4&amp;open=1" hx-target="next sibling" hx-swap="innerHTML">
-            Is it really automated?
+        <div class="faq-item rounded border border-white/10 bg-[#04060c]">
+          <button type="button" class="w-full px-4 py-3 text-left text-gray-200 hover:text-emerald-300"
+            hx-get="/api/faq?q=4&amp;open=1" hx-target="#faq-a-4" hx-swap="innerHTML">
+            ? is it really automated
           </button>
-          <div></div>
+          <div id="faq-a-4" class="px-4 pb-1"></div>
         </div>
-        <div class="faq-item rounded-xl border border-white/10 bg-panel">
-          <button class="w-full px-5 py-4 text-left font-semibold text-white"
-            hx-get="/api/faq?q=5&amp;open=1" hx-target="next sibling" hx-swap="innerHTML">
-            What if we have many subdomains?
+        <div class="faq-item rounded border border-white/10 bg-[#04060c]">
+          <button type="button" class="w-full px-4 py-3 text-left text-gray-200 hover:text-emerald-300"
+            hx-get="/api/faq?q=5&amp;open=1" hx-target="#faq-a-5" hx-swap="innerHTML">
+            ? many subdomains / custom scope
           </button>
-          <div></div>
+          <div id="faq-a-5" class="px-4 pb-1"></div>
         </div>
       </div>
     </section>
 
-    <!-- Contact -->
-    <section id="contact" class="border-t border-white/10 bg-panel">
-      <div class="mx-auto max-w-xl px-4 py-20 sm:px-6">
-        <h2 class="text-center text-3xl font-bold text-white">Get in touch</h2>
-        <p class="mt-3 text-center text-gray-400">Questions about scope, pricing, or compliance? Send us a message.</p>
-        <form class="mt-8 space-y-4" hx-post="/contact" hx-target="#contact-result" hx-swap="innerHTML">
-          <div>
-            <label class="mb-1 block text-sm text-gray-400" for="name">Name</label>
-            <input id="name" name="name" required class="w-full rounded-md border border-white/10 bg-ink px-4 py-2.5 text-white focus:border-emerald-400 focus:outline-none" placeholder="Jane Doe" />
-          </div>
-          <div>
-            <label class="mb-1 block text-sm text-gray-400" for="email">Email</label>
-            <input id="email" name="email" type="email" required class="w-full rounded-md border border-white/10 bg-ink px-4 py-2.5 text-white focus:border-emerald-400 focus:outline-none" placeholder="you@company.com" />
-          </div>
-          <div>
-            <label class="mb-1 block text-sm text-gray-400" for="message">Message</label>
-            <textarea id="message" name="message" rows="4" class="w-full rounded-md border border-white/10 bg-ink px-4 py-2.5 text-white focus:border-emerald-400 focus:outline-none" placeholder="Tell us about your scope..."></textarea>
-          </div>
-          <button type="submit" class="w-full rounded-md bg-emerald-500 px-4 py-3 font-bold text-black hover:bg-emerald-400 transition-colors">
-            Send message
-          </button>
-        </form>
-        <div id="contact-result" class="mt-4"></div>
+    <!-- Contact via email (no form) -->
+    <section class="border-t border-emerald-500/20 bg-[#04060c]">
+      <div class="mx-auto max-w-2xl px-4 py-16 sm:px-6 text-center">
+        <h2 class="font-mono text-2xl font-bold text-white"><span class="text-emerald-400">$</span> contact</h2>
+        <p class="mt-3 font-mono text-sm text-gray-400">Questions about scope, pricing, or compliance?</p>
+        <a href="mailto:sales@dalang.io" class="mt-6 inline-block rounded border-2 border-emerald-400 bg-emerald-500/10 px-6 py-3 font-mono text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 glow">
+          $ mail sales@dalang.io
+        </a>
+        <p class="mt-3 font-mono text-xs text-gray-500">we reply within 1 business day</p>
       </div>
     </section>
   </main>
 
-  <footer class="border-t border-white/10">
-    <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
-      <a href="#top" class="font-mono font-bold text-white"><span class="text-emerald-400">net</span>sekurity<span class="text-emerald-400">.com</span></a>
-      <p class="text-xs text-gray-500">&copy; 2026 Dalang Pte Ltd · netsekurity.com · Pentest as a Service</p>
-      <div class="flex gap-4 text-xs text-gray-500">
-        <a href="#pricing" class="hover:text-white">Pricing</a>
-        <a href="#verify" class="hover:text-white">Verification</a>
-        <a href="#faq" class="hover:text-white">FAQ</a>
+  <footer class="border-t border-emerald-500/20">
+    <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-8 sm:flex-row sm:px-6">
+      <a href="#top" class="font-mono font-bold text-white"><span class="text-emerald-400">net</span>sekurity<span class="text-emerald-500">.com</span></a>
+      <p class="font-mono text-[11px] text-gray-500">&copy; 2026 Dalang Pte Ltd · Pentest as a Service</p>
+      <div class="flex gap-4 font-mono text-[11px] text-gray-500">
+        <a href="/dashboard" class="hover:text-emerald-300">login</a>
+        <a href="#verify" class="hover:text-emerald-300">verify</a>
+        <a href="#faq" class="hover:text-emerald-300">faq</a>
       </div>
     </div>
   </footer>
