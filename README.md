@@ -25,8 +25,10 @@ auto-generated TXT record, and get a full, human-reviewed pentest report.
 ## Current Status
 
 - **Live (prod):** marketing landing page + **authenticated dashboard** — `http://netsekurity.com` (via Pingora on `:80`, origin port `8094`, systemd `netsekurity.service`).
-- **Implemented:** Google OAuth login, SQLite persistence, Xendit credit top-up (idempotent webhook credit), domain add + TXT verification, credits/dashboard.
-- **Planned:** the actual pentest scanning engine, report delivery, and retest workflow.
+- **Implemented:** Google OAuth login, SQLite persistence, Xendit credit top-up (idempotent webhook credit), domain add + TXT verification, credits/dashboard, **and the full on-demand pentest pipeline driven by the scanning agent** (queue → scan → report PDF → download).
+- **Scanning agent (bot):** a Hermes agent working the `pentests` queue. When a user clicks **Scan**, 1 credit is consumed and a `queued` job is created; the agent claims it, runs an **enterprise-grade scan**, uploads the report PDF (`YYYYMMDD-hh:mm-<domain>.pdf`), and marks it `completed` for the user to download.
+
+> See [`AGENT_WORKER.md`](AGENT_WORKER.md) for the authoritative behavior reference of the scanning agent.
 
 ---
 
@@ -58,16 +60,29 @@ Pingora proxy (:80) ── Host: netsekurity.com → 127.0.0.1:8094
 ```
 netsekurity.com/
 ├── main.go              # Go stdlib server + HTMX handlers
+├── pentests.go          # pentest: start / list / worker claim+report / report download
+├── dashboard.go         # authenticated dashboard (HTMX)
+├── admin.go             # super-admin panel + report serving
+├── payment.go           # Xendit credit top-up + webhook
+├── domains.go           # domain add / TXT verify / delete
 ├── go.mod
 ├── package.json         # Tailwind build scripts (dev only)
 ├── tailwind.config.js
 ├── assets/input.css     # Tailwind source
+├── assets/netsekurity_logo.png  # report PDF branding logo
+├── AGENT_WORKER.md      # scanning-agent behavior reference
+├── nsec_scan.py         # enterprise scanner (agent)
+├── nsec_io.sh           # claim/upload I/O helpers (agent)
+├── nsec_monitor.sh      # token-saver monitor (agent cron)
+├── nsec_worker.sh       # standalone one-shot worker (agent)
+├── deploy.sh            # test → build → commit+push → deploy to prod
+├── env.example          # environment template (placeholders)
 └── static/
     ├── index.html       # landing page (HTMX)
     └── css/styles.css   # built Tailwind output (embedded)
 ```
 
-Build CSS: `npm run build:css` → `go build -o netsekurity .`
+Build CSS: `npm run build:css` → `go build -o netsekurity .` — or just `./deploy.sh`.
 
 ---
 
@@ -142,6 +157,50 @@ Verification is required before a pentest can run — we only test domains the u
 
 ---
 
+## Agent Integration (automated pentest)
+
+The platform is driven end-to-end by a **scanning agent** (a Hermes agent). The web app only
+owns the queue + credits + storage; the agent owns the scan + report.
+
+### Flow
+
+```
+User clicks "scan"  →  /api/pentests/start   →  1 credit consumed, pentests(status='queued')
+Agent (every minute) →  nsec_monitor.sh      →  sees "JOB <pid> <domain>" (queue non-empty)
+                       →  /api/pentests/worker/claim  →  status='running'
+                       →  nsec_scan.py <domain>       →  enterprise scan → PDF
+                       →  /api/pentests/worker/report →  status='completed', report saved
+User dashboard       →  /reports/YYYYMMDD-hh:mm-<domain>.pdf  (owner/admin only)
+```
+
+### Worker endpoints (guarded by `X-Bot-Token`, from `BOT_AUTH_TOKEN`)
+
+| Endpoint | Method | Purpose |
+|---|---|---|
+| `/api/pentests/start` | POST | user triggers a scan (auth) |
+| `/api/pentests/list` | GET | user's pentests + download links (auth) |
+| `/api/pentests/worker/claim` | POST | agent claims next queued job |
+| `/api/pentests/worker/report` | POST | agent uploads completed PDF |
+| `/reports/{name}.pdf` | GET | report download (owner/admin) |
+
+### Files (in repo)
+
+- `pentests.go` — Go handlers for the endpoints above.
+- `nsec_scan.py` — deterministic enterprise scanner (recon, fingerprint, headers,
+  TLS/PKI, exposed assets, nikto/open-redirect on `--deep-scan`; CVSS+CWE grounded).
+- `nsec_io.sh` — claim/upload I/O helpers (token read from `.env` via SSH, never logged).
+- `nsec_monitor.sh` — token-saver monitor; suppresses the agent LLM when the queue is idle
+  (no AI tokens burned when nobody scans).
+- `nsec_worker.sh` — standalone one-shot worker (alternative to the cron).
+- `AGENT_WORKER.md` — full behavior reference.
+
+### Running the agent
+
+The agent is scheduled as a Hermes cron job (every minute). The monitor runs first and only
+wakes the LLM when a job is actually queued, so idle minutes cost nothing.
+
+---
+
 ## Environment Variables (`.env`)
 
 The app reads a `.env` file in its working directory. **Credentials can be reused from the
@@ -169,6 +228,9 @@ XENDIT_SECRET_KEY=
 XENDIT_CALLBACK_KEY=
 XENDIT_SUCCESS_URL=https://netsekurity.com/dashboard
 XENDIT_FAILURE_URL=https://netsekurity.com/pricing
+
+# Scan Worker — shared secret for agent→platform auth (X-Bot-Token)
+BOT_AUTH_TOKEN=
 ```
 
 | Var | Source |
@@ -176,6 +238,9 @@ XENDIT_FAILURE_URL=https://netsekurity.com/pricing
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | `dalang.io/.env` |
 | `XENDIT_SECRET_KEY` / `XENDIT_CALLBACK_KEY` | `api.dalang.io/.env` |
 | `JWT_SECRET` | `api.dalang.io/.env` |
+| `BOT_AUTH_TOKEN` | generate fresh — `openssl rand -hex 32` |
+
+> A full template with every variable is in [`env.example`](env.example).
 
 ---
 
