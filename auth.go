@@ -69,6 +69,7 @@ func handleGoogleLogin(w http.ResponseWriter, r *http.Request) {
 			"response_type": {"code"},
 			"scope":         {"openid email profile"},
 			"access_type":   {"online"},
+			"prompt":        {"select_account"}, // always show the Google account picker
 			"state":         {state},
 		}.Encode(),
 	}
@@ -141,6 +142,55 @@ func handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 func handleLogout(w http.ResponseWriter, r *http.Request) {
 	http.SetCookie(w, &http.Cookie{Name: authCookie, Value: "", Path: "/", HttpOnly: true, Secure: true, MaxAge: -1})
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+// handleOneTap accepts a Google One Tap ID token, verifies it with Google, and
+// creates a session — letting signed-in Chrome users log in with one tap.
+func handleOneTap(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	var body struct {
+		Credential string `json:"credential"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Credential == "" {
+		http.Error(w, "missing credential", http.StatusBadRequest)
+		return
+	}
+	resp, err := http.Get("https://oauth2.googleapis.com/tokeninfo?id_token=" + url.QueryEscape(body.Credential))
+	if err != nil {
+		http.Error(w, "verification failed", http.StatusBadGateway)
+		return
+	}
+	defer resp.Body.Close()
+	var info struct {
+		Sub           string `json:"sub"`
+		Email         string `json:"email"`
+		EmailVerified string `json:"email_verified"`
+		Name          string `json:"name"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&info); err != nil || info.Sub == "" || info.Email == "" {
+		http.Error(w, "invalid token", http.StatusUnauthorized)
+		return
+	}
+	if info.EmailVerified != "true" {
+		http.Error(w, "email not verified", http.StatusUnauthorized)
+		return
+	}
+	userID, err := ensureUser(info.Email, info.Name, "", info.Sub)
+	if err != nil {
+		http.Error(w, "failed to create user", http.StatusInternalServerError)
+		return
+	}
+	token, err := issueJWT(userID, info.Email)
+	if err != nil {
+		http.Error(w, "failed to issue token", http.StatusInternalServerError)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{Name: authCookie, Value: token, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: int((24 * time.Hour).Seconds())})
+	w.Header().Set("Content-Type", "application/json")
+	w.Write([]byte(`{"ok":true}`))
 }
 
 // currentUser extracts the JWT claims from the auth cookie.

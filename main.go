@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 )
 
 //go:embed static
@@ -31,13 +32,16 @@ func main() {
 	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/", http.FileServer(http.FS(sub)))
-	mux.HandleFunc("/css/", http.FileServer(http.FS(sub)).ServeHTTP)
+	// Landing page served through a handler so the Google client ID can be
+	// injected into the One Tap script (static assets stay on the FileServer).
+	mux.HandleFunc("/", handleIndex)
+	mux.Handle("/css/", http.FileServer(http.FS(sub)))
 
 	// Auth
 	mux.HandleFunc("/login", handleGoogleLogin)
 	mux.HandleFunc("/auth/google", handleGoogleLogin)
 	mux.HandleFunc("/auth/google/callback", handleGoogleCallback)
+	mux.HandleFunc("/auth/google/onetap", handleOneTap)
 	mux.HandleFunc("/logout", handleLogout)
 
 	// Dashboard (protected)
@@ -50,6 +54,7 @@ func main() {
 	// Domains
 	mux.HandleFunc("/api/domains", handleAddDomain)
 	mux.HandleFunc("/api/domains/verify", handleVerifyDomain)
+	mux.HandleFunc("/api/domains/delete", handleDeleteDomain)
 
 	// Marketing / HTMX fragments
 	mux.HandleFunc("/contact", handleContact)
@@ -62,4 +67,21 @@ func main() {
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// handleIndex serves the embedded landing page, injecting the Google client ID
+// into the One Tap script placeholder.
+func handleIndex(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path != "/" {
+		http.NotFound(w, r)
+		return
+	}
+	b, err := staticFS.ReadFile("static/index.html")
+	if err != nil {
+		http.Error(w, "index missing", http.StatusInternalServerError)
+		return
+	}
+	s := strings.ReplaceAll(string(b), "__GOOGLE_CLIENT_ID__", getenv("GOOGLE_CLIENT_ID", ""))
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write([]byte(s))
 }

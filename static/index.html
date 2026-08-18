@@ -7,6 +7,32 @@
   <meta name="description" content="On-demand pentesting, per domain, per credit. Verify your domain with an auto-generated TXT record and get a full pentest report. Starting at $50." />
   <link rel="stylesheet" href="/css/styles.css" />
   <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    // Google Identity Services (One Tap) — suggest the signed-in Google account
+    // as soon as a visitor lands on the page.
+    var NSK_CLIENT_ID = "__GOOGLE_CLIENT_ID__";
+    window.addEventListener("load", function () {
+      if (!NSK_CLIENT_ID || NSK_CLIENT_ID.indexOf("__") === 0) return;
+      if (typeof google === "undefined" || !google.accounts) return;
+      google.accounts.id.initialize({
+        client_id: NSK_CLIENT_ID,
+        callback: function (resp) {
+          if (!resp || !resp.credential) return;
+          fetch("/auth/google/onetap", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ credential: resp.credential })
+          })
+            .then(function (r) { return r.json(); })
+            .then(function (d) { if (d && d.ok) window.location.href = "/dashboard"; })
+            .catch(function () {});
+        },
+        cancel_on_tap_outside: false
+      });
+      google.accounts.id.prompt();
+    });
+  </script>
 </head>
 <body class="bg-ink text-gray-200 antialiased">
   <!-- Nav -->
@@ -328,7 +354,7 @@
   <footer class="border-t border-white/10">
     <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6">
       <a href="#top" class="font-mono font-bold text-white"><span class="text-emerald-400">net</span>sekurity<span class="text-emerald-400">.com</span></a>
-      <p class="text-xs text-gray-500">&copy; 2026 netsekurity.com · Pentest as a Service</p>
+      <p class="text-xs text-gray-500">&copy; 2026 Dalang Pte Ltd · netsekurity.com · Pentest as a Service</p>
       <div class="flex gap-4 text-xs text-gray-500">
         <a href="#pricing" class="hover:text-white">Pricing</a>
         <a href="#verify" class="hover:text-white">Verification</a>

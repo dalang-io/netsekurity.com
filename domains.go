@@ -74,9 +74,42 @@ func handleVerifyDomain(w http.ResponseWriter, r *http.Request) {
 	if matched {
 		db.Exec(`UPDATE domains SET status='verified', verified_at=? WHERE user_id=? AND domain=?`, now(), claims.Sub, domain)
 		fmt.Fprintf(w, `<div class="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"><strong>Verified!</strong> %s ownership confirmed — a pentest can now be scheduled.</div>`, domain)
-	} else {
-		fmt.Fprintf(w, `<div class="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">TXT record not found yet. Add <code class="font-mono">%s</code> at <code class="font-mono">_netsekurity.%s</code> and retry.</div>`, stored, domain)
+		return
 	}
+	// Not found yet — offer a retry.
+	fmt.Fprintf(w, `<div class="space-y-3">
+  <div class="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">TXT record not found yet. Add <code class="font-mono">%s</code> at <code class="font-mono">_netsekurity.%s</code> and retry.</div>
+  <button hx-post="/api/domains/verify" hx-vals='{"domain":"%s"}' hx-swap="outerHTML"
+    class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-bold text-black hover:bg-emerald-400">Retry verification</button>
+</div>`, stored, domain, domain)
+}
+
+// handleDeleteDomain removes a domain — but only while it is NOT verified.
+func handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	claims, err := currentUser(r)
+	if err != nil {
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	domain := strings.ToLower(strings.TrimSpace(r.FormValue("domain")))
+	var status string
+	err = db.QueryRow(`SELECT status FROM domains WHERE user_id=? AND domain=?`, claims.Sub, domain).Scan(&status)
+	if err != nil {
+		http.Error(w, "domain not found", http.StatusNotFound)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	if status == "verified" {
+		w.WriteHeader(http.StatusForbidden)
+		fmt.Fprintf(w, `<div class="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300"><strong>Cannot delete.</strong> %s is already verified — contact support to remove it.</div>`, domain)
+		return
+	}
+	db.Exec(`DELETE FROM domains WHERE user_id=? AND domain=?`, claims.Sub, domain)
+	fmt.Fprintf(w, `<div class="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-gray-300">%s removed.</div>`, domain)
 }
 
 func isValidDomain(domain string) bool {
