@@ -123,7 +123,7 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
   </div>
 </header>
 <main id="main" class="mx-auto max-w-6xl overflow-x-hidden px-4 py-5 sm:px-6">
-  <div class="grid w-full gap-4 lg:grid-cols-2">
+  <div class="grid w-full gap-4 lg:grid-cols-2>
     <!-- Left: balance + topup + transactions -->
     <div class="min-w-0 w-full space-y-4">
       <section class="min-w-0 w-full rounded border border-emerald-500/30 bg-[#04060c]">
