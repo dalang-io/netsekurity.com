@@ -56,7 +56,13 @@ func main() {
 	mux.HandleFunc("/su/users/role", requireAdmin(handleAdminSetRole))
 	mux.HandleFunc("/su/domains/pentest", requireAdmin(handleAdminPentest))
 	mux.HandleFunc("/su/reports/upload", requireAdmin(handleAdminUploadReport))
-	mux.HandleFunc("/reports/", requireAdmin(handleReport))
+	mux.HandleFunc("/reports/", requireAuth(handleReport))
+
+	// Pentests (user scan + worker intake)
+	mux.HandleFunc("/api/pentests/start", requireAuth(handleStartPentest))
+	mux.HandleFunc("/api/pentests/list", requireAuth(handlePentestList))
+	mux.HandleFunc("/api/pentests/worker/claim", handleWorkerClaim)
+	mux.HandleFunc("/api/pentests/worker/report", handleWorkerReport)
 
 	// Payments
 	mux.HandleFunc("/api/topup", handleTopUp)

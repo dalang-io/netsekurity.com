@@ -203,15 +203,37 @@ func handleAdminUploadReport(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/su", http.StatusSeeOther)
 }
 
-// handleReport serves a pentest report PDF.
+// handleReport serves a pentest report PDF to the owning user or an admin.
 func handleReport(w http.ResponseWriter, r *http.Request) {
 	name := strings.TrimPrefix(r.URL.Path, "/reports/")
 	if !strings.HasSuffix(strings.ToLower(name), ".pdf") {
 		http.NotFound(w, r)
 		return
 	}
+	// Find the pentest whose report_ref matches; resolve its owner.
+	var ownerID string
+	err := db.QueryRow(`SELECT p.user_id FROM pentests p WHERE p.report_ref=?`, name).Scan(&ownerID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	// Allow if authenticated and either the owner or an admin.
+	claims, err := currentUser(r)
+	if err != nil {
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+	if claims.Sub != ownerID {
+		var email string
+		db.QueryRow(`SELECT email FROM users WHERE id=?`, claims.Sub).Scan(&email)
+		if !isAdmin(email) {
+			http.NotFound(w, r)
+			return
+		}
+	}
 	http.ServeFile(w, r, filepath.Join(reportsDir(), name))
 }
+
 
 var suTpl = template.Must(template.New("su").Parse(suHTML))
 

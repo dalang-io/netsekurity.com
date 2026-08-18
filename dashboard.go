@@ -189,6 +189,10 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
                   class="rounded border border-red-400/50 px-2 py-0.5 text-[10px] font-bold text-red-300 hover:bg-red-500/15">del</button>
                 {{else}}
                 <span class="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">[verified]</span>
+                <button hx-post="/api/pentests/start" hx-vals='{"domain":"{{.Domain}}"}'
+                  hx-target="#pentest-result" hx-swap="innerHTML"
+                  hx-on::after-request="if(event.detail.successful) setTimeout(()=>location.reload(),800)"
+                  class="rounded border border-cyan-400/60 px-2 py-0.5 text-[10px] font-bold text-cyan-300 hover:bg-cyan-500/15">scan</button>
                 {{end}}
               </span>
             </div>
@@ -207,6 +211,10 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
         {{end}}
       </div>
     </section>
+  </div>
+  <div id="pentest-result" class="mt-3"></div>
+  <div id="pentest-list">
+    <div hx-get="/api/pentests/list" hx-trigger="load, every 10s" hx-swap="innerHTML"></div>
   </div>
 </main>
 </body>
