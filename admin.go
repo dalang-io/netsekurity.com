@@ -220,133 +220,153 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Super Admin — netsekurity</title>
+<title>super admin — netsekurity</title>
+<meta name="robots" content="noindex, nofollow"/>
 <link rel="stylesheet" href="/css/styles.css"/>
 <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
 </head>
-<body class="bg-ink text-gray-200 min-h-screen">
-<header class="border-b border-white/10 bg-ink/80">
+<body class="scanlines bg-ink text-gray-300 min-h-screen">
+<header class="border-b border-yellow-500/30 bg-ink/85">
   <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-    <a href="/" class="font-mono text-base font-bold text-white"><span class="text-emerald-400">net</span>sekurity <span class="text-xs text-yellow-300">/ su</span></a>
-    <div class="flex items-center gap-3 text-xs">
-      <a href="/dashboard" class="text-gray-500 hover:text-white">Dashboard</a>
-      <a href="/logout" class="text-gray-500 hover:text-white">Logout</a>
+    <a href="/" class="font-mono text-base font-bold text-white"><span class="text-emerald-400">net</span>sekurity<span class="text-emerald-500">.com</span> <span class="text-yellow-300">/su</span></a>
+    <div class="flex items-center gap-3 font-mono text-xs">
+      <a href="/dashboard" class="prompt text-gray-500 hover:text-white">dashboard</a>
+      <a href="/logout" class="prompt text-gray-500 hover:text-white">logout</a>
     </div>
   </div>
 </header>
-<main class="mx-auto max-w-6xl px-4 py-5 sm:px-6 space-y-5">
+<main class="mx-auto max-w-6xl px-4 py-5 sm:px-6 space-y-4">
+
   <!-- Users -->
-  <section class="rounded-lg border border-white/10 bg-panel p-3">
-    <div class="flex items-center justify-between">
-      <h2 class="text-sm font-bold text-white">Users</h2>
+  <section class="rounded border border-emerald-500/30 bg-[#04060c]">
+    <div class="flex items-center justify-between border-b border-emerald-500/20 px-3 py-2">
+      <div class="flex items-center gap-1.5">
+        <span class="h-2.5 w-2.5 rounded-full bg-emerald-500/70"></span>
+        <span class="font-mono text-[11px] text-gray-500">$ users</span>
+      </div>
       <form class="flex gap-2" method="post" action="/su/users/add">
-        <input name="email" required placeholder="new@email.com" class="rounded border border-white/10 bg-ink px-2 py-1 text-xs text-white"/>
-        <button class="rounded bg-cyan-500 px-3 py-1 text-xs font-bold text-black">Add user</button>
+        <input name="email" required placeholder="new@email.com" class="rounded border border-white/15 bg-ink px-2 py-1 font-mono text-xs text-white focus:border-emerald-400 focus:outline-none"/>
+        <button class="rounded border border-cyan-400 bg-cyan-500/10 px-2 py-1 font-mono text-xs font-bold text-cyan-300 hover:bg-cyan-500/20">add</button>
       </form>
     </div>
-    <table class="mt-2 w-full text-xs">
-      <thead><tr class="text-left text-gray-500">
-        <th class="py-1">Email</th><th>Name</th><th>Role</th><th>Credits</th><th>Action</th>
-      </tr></thead>
-      <tbody>
-      {{range .Users}}
-      <tr class="border-t border-white/10">
-        <td class="py-1 font-mono">{{.Email}}</td>
-        <td>{{.Name}}</td>
-        <td>{{.Role}}</td>
-        <td class="font-mono">{{printf "%.1f" .Credits}}</td>
-        <td>
-          <form method="post" action="/su/users/role" class="flex gap-1">
-            <input type="hidden" name="user_id" value="{{.ID}}"/>
-            <select name="role" class="rounded border border-white/10 bg-ink px-1 py-0.5 text-[11px] text-white">
-              <option value="user" {{if eq .Role "user"}}selected{{end}}>user</option>
-              <option value="admin" {{if eq .Role "admin"}}selected{{end}}>admin</option>
-            </select>
-            <button class="rounded bg-emerald-500/20 px-2 py-0.5 font-bold text-emerald-300">Save</button>
-          </form>
-        </td>
-      </tr>
-      {{end}}
-      </tbody>
-    </table>
+    <div class="overflow-x-auto p-3">
+      <table class="w-full font-mono text-xs">
+        <thead><tr class="text-left text-gray-500"><th class="py-1">email</th><th>name</th><th>role</th><th>credits</th><th>set role</th></tr></thead>
+        <tbody>
+        {{range .Users}}
+        <tr class="border-t border-white/10">
+          <td class="py-1 text-white">{{.Email}}</td>
+          <td>{{.Name}}</td>
+          <td>{{if eq .Role "admin"}}<span class="text-yellow-300">admin</span>{{else}}<span class="text-gray-400">user</span>{{end}}</td>
+          <td class="text-emerald-300">{{printf "%.1f" .Credits}}</td>
+          <td>
+            <form method="post" action="/su/users/role" class="flex gap-1">
+              <input type="hidden" name="user_id" value="{{.ID}}"/>
+              <select name="role" class="rounded border border-white/15 bg-ink px-1 py-0.5 font-mono text-[11px] text-white">
+                <option value="user" {{if eq .Role "user"}}selected{{end}}>user</option>
+                <option value="admin" {{if eq .Role "admin"}}selected{{end}}>admin</option>
+              </select>
+              <button class="rounded border border-emerald-400/60 px-2 py-0.5 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/15">set</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <!-- Transactions -->
-  <section class="rounded-lg border border-white/10 bg-panel p-3">
-    <h2 class="text-sm font-bold text-white">Transactions</h2>
-    <table class="mt-2 w-full text-xs">
-      <thead><tr class="text-left text-gray-500">
-        <th class="py-1">External ID</th><th>Package</th><th>Amount</th><th>Credits</th><th>Status</th><th>Created</th><th>Paid</th>
-      </tr></thead>
-      <tbody>
-      {{range .Trx}}
-      <tr class="border-t border-white/10">
-        <td class="py-1 font-mono">{{.ExternalID}}</td>
-        <td>{{.Package}}</td>
-        <td class="font-mono">${{printf "%.0f" .Amount}}</td>
-        <td class="font-mono">{{printf "%.0f" .Credits}}</td>
-        <td><span class="rounded px-1.5 py-0.5 {{if eq .Status "paid"}}bg-emerald-500/20 text-emerald-300{{else if eq .Status "expired"}}bg-red-500/20 text-red-300{{else}}bg-yellow-500/20 text-yellow-300{{end}}">{{.Status}}</span></td>
-        <td class="text-gray-500">{{.CreatedAt}}</td>
-        <td class="text-gray-500">{{.PaidAt}}</td>
-      </tr>
-      {{end}}
-      </tbody>
-    </table>
+  <section class="rounded border border-white/10 bg-[#04060c]">
+    <div class="flex items-center gap-1.5 border-b border-white/10 px-3 py-2">
+      <span class="h-2.5 w-2.5 rounded-full bg-red-500/70"></span>
+      <span class="font-mono text-[11px] text-gray-500">$ transactions</span>
+    </div>
+    <div class="overflow-x-auto p-3">
+      <table class="w-full font-mono text-xs">
+        <thead><tr class="text-left text-gray-500">
+          <th class="py-1">external_id</th><th>package</th><th>amount</th><th>credits</th><th>status</th><th>created</th><th>paid</th>
+        </tr></thead>
+        <tbody>
+        {{range .Trx}}
+        <tr class="border-t border-white/10">
+          <td class="py-1 text-gray-300">{{.ExternalID}}</td>
+          <td>{{.Package}}</td>
+          <td>${{printf "%.0f" .Amount}}</td>
+          <td>{{printf "%.0f" .Credits}}</td>
+          <td>
+            {{if eq .Status "paid"}}<span class="text-emerald-300">[paid]</span>
+            {{else if eq .Status "expired"}}<span class="text-red-300">[expired]</span>
+            {{else}}<span class="text-yellow-300">[{{.Status}}]</span>{{end}}
+          </td>
+          <td class="text-gray-500">{{.CreatedAt}}</td>
+          <td class="text-gray-500">{{.PaidAt}}</td>
+        </tr>
+        {{end}}
+        </tbody>
+      </table>
+    </div>
   </section>
 
-  <!-- Domains + pentest -->
-  <section class="rounded-lg border border-white/10 bg-panel p-3">
-    <h2 class="text-sm font-bold text-white">Websites (domains)</h2>
-    <table class="mt-2 w-full text-xs">
-      <thead><tr class="text-left text-gray-500">
-        <th class="py-1">User</th><th>Domain</th><th>Status</th><th>Pentest</th>
-      </tr></thead>
-      <tbody>
-      {{range .Domains}}
-      <tr class="border-t border-white/10">
-        <td class="py-1 font-mono">{{.UserEmail}}</td>
-        <td class="font-mono">{{.Domain}}</td>
-        <td><span class="rounded px-1.5 py-0.5 {{if eq .Status "verified"}}bg-emerald-500/20 text-emerald-300{{else}}bg-yellow-500/20 text-yellow-300{{end}}">{{.Status}}</span></td>
-        <td>
-          {{if eq .Status "verified"}}
-          <button hx-post="/su/domains/pentest" hx-vals='{"domain_id":"{{.ID}}"}' hx-target="closest td" hx-swap="innerHTML"
-            class="rounded bg-emerald-500 px-2 py-0.5 font-bold text-black">Pentest</button>
-          {{else}}<span class="text-gray-600">—</span>{{end}}
-        </td>
-      </tr>
-      {{end}}
-      </tbody>
-    </table>
+  <!-- Domains -->
+  <section class="rounded border border-cyan-500/30 bg-[#04060c]">
+    <div class="flex items-center gap-1.5 border-b border-cyan-500/20 px-3 py-2">
+      <span class="h-2.5 w-2.5 rounded-full bg-cyan-500/70"></span>
+      <span class="font-mono text-[11px] text-gray-500">$ websites (domains)</span>
+    </div>
+    <div class="overflow-x-auto p-3">
+      <table class="w-full font-mono text-xs">
+        <thead><tr class="text-left text-gray-500"><th class="py-1">user</th><th>domain</th><th>status</th><th>pentest</th></tr></thead>
+        <tbody>
+        {{range .Domains}}
+        <tr class="border-t border-white/10">
+          <td class="py-1 text-gray-300">{{.UserEmail}}</td>
+          <td class="text-white">{{.Domain}}</td>
+          <td>{{if eq .Status "verified"}}<span class="text-emerald-300">[verified]</span>{{else}}<span class="text-yellow-300">[{{.Status}}]</span>{{end}}</td>
+          <td>
+            {{if eq .Status "verified"}}
+            <button hx-post="/su/domains/pentest" hx-vals='{"domain_id":"{{.ID}}"}' hx-target="closest td" hx-swap="innerHTML"
+              class="rounded border border-emerald-400 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/20">run</button>
+            {{else}}<span class="text-gray-600">—</span>{{end}}
+          </td>
+        </tr>
+        {{end}}
+        </tbody>
+      </table>
+    </div>
   </section>
 
   <!-- Pentests / reports -->
-  <section class="rounded-lg border border-white/10 bg-panel p-3">
-    <h2 class="text-sm font-bold text-white">Pentests &amp; reports</h2>
-    <table class="mt-2 w-full text-xs">
-      <thead><tr class="text-left text-gray-500">
-        <th class="py-1">ID</th><th>User</th><th>Domain</th><th>Status</th><th>Report PDF</th><th>Upload</th>
-      </tr></thead>
-      <tbody>
-      {{range .Pentests}}
-      <tr class="border-t border-white/10">
-        <td class="py-1 font-mono">{{.ID}}</td>
-        <td class="font-mono">{{.UserEmail}}</td>
-        <td class="font-mono">{{.Domain}}</td>
-        <td>{{.Status}}</td>
-        <td>
-          {{if .ReportRef}}<a class="text-emerald-300 underline" href="/reports/{{.ReportRef}}">view PDF</a>{{else}}<span class="text-gray-600">—</span>{{end}}
-        </td>
-        <td>
-          <form method="post" action="/su/reports/upload" enctype="multipart/form-data" class="flex gap-1">
-            <input type="hidden" name="pentest_id" value="{{.ID}}"/>
-            <input type="file" name="file" accept=".pdf" class="text-[11px] text-gray-500"/>
-            <button class="rounded bg-cyan-500/20 px-2 py-0.5 font-bold text-cyan-300">Upload</button>
-          </form>
-        </td>
-      </tr>
-      {{end}}
-      </tbody>
-    </table>
+  <section class="rounded border border-white/10 bg-[#04060c]">
+    <div class="flex items-center gap-1.5 border-b border-white/10 px-3 py-2">
+      <span class="h-2.5 w-2.5 rounded-full bg-yellow-500/70"></span>
+      <span class="font-mono text-[11px] text-gray-500">$ pentests &amp; reports</span>
+    </div>
+    <div class="overflow-x-auto p-3">
+      <table class="w-full font-mono text-xs">
+        <thead><tr class="text-left text-gray-500">
+          <th class="py-1">id</th><th>user</th><th>domain</th><th>status</th><th>report</th><th>upload pdf</th>
+        </tr></thead>
+        <tbody>
+        {{range .Pentests}}
+        <tr class="border-t border-white/10">
+          <td class="py-1 text-gray-300">{{.ID}}</td>
+          <td>{{.UserEmail}}</td>
+          <td class="text-white">{{.Domain}}</td>
+          <td>{{.Status}}</td>
+          <td>{{if .ReportRef}}<a class="text-emerald-300 underline" href="/reports/{{.ReportRef}}">view</a>{{else}}<span class="text-gray-600">—</span>{{end}}</td>
+          <td>
+            <form method="post" action="/su/reports/upload" enctype="multipart/form-data" class="flex gap-1">
+              <input type="hidden" name="pentest_id" value="{{.ID}}"/>
+              <input type="file" name="file" accept=".pdf" class="font-mono text-[10px] text-gray-500"/>
+              <button class="rounded border border-cyan-400/60 px-2 py-0.5 text-[10px] font-bold text-cyan-300 hover:bg-cyan-500/15">up</button>
+            </form>
+          </td>
+        </tr>
+        {{end}}
+        </tbody>
+      </table>
+    </div>
   </section>
 </main>
 </body>

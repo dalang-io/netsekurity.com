@@ -6,12 +6,13 @@ import (
 )
 
 type dashboardData struct {
-	Name        string
-	Email       string
-	Balance     float64
-	Packages    []pkg
+	Name         string
+	Email        string
+	Balance      float64
+	IsAdmin      bool
+	Packages     []pkg
 	Transactions []txn
-	Domains     []dom
+	Domains      []dom
 }
 
 type pkg struct {
@@ -41,7 +42,7 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	db.QueryRow(`SELECT name, email FROM users WHERE id=?`, claims.Sub).Scan(&name, &email)
 	db.QueryRow(`SELECT balance FROM credit_balance WHERE user_id=?`, claims.Sub).Scan(&balance)
 
-	data := dashboardData{Name: name, Email: email, Balance: balance}
+	data := dashboardData{Name: name, Email: email, Balance: balance, IsAdmin: isAdmin(email)}
 
 	rows, _ := db.Query(`SELECT id, name, usd_price, credits FROM credit_packages WHERE is_active=1 ORDER BY usd_price`)
 	for rows.Next() {
@@ -75,110 +76,136 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Dashboard — netsekurity</title>
+<title>dashboard — netsekurity</title>
+<meta name="robots" content="noindex, nofollow"/>
 <link rel="stylesheet" href="/css/styles.css"/>
 <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
 </head>
-<body class="bg-ink text-gray-200 min-h-screen">
-<header class="border-b border-white/10 bg-ink/80">
+<body class="scanlines bg-ink text-gray-300 min-h-screen">
+<header class="border-b border-emerald-500/25 bg-ink/85">
   <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-    <a href="/" class="font-mono text-base font-bold text-white"><span class="text-emerald-400">net</span>sekurity</a>
-    <div class="flex items-center gap-3 text-xs">
+    <a href="/" class="font-mono text-base font-bold text-white"><span class="glow text-emerald-400">net</span>sekurity<span class="text-emerald-500">.com</span> <span class="text-xs text-cyan-300">/dashboard</span></a>
+    <div class="flex items-center gap-3 font-mono text-xs">
+      {{if .IsAdmin}}<a href="/su" class="text-yellow-300 hover:text-yellow-200">su</a>{{end}}
       <span class="hidden text-gray-500 sm:inline">{{.Name}} · {{.Email}}</span>
-      <a href="/logout" class="text-gray-500 hover:text-white">Logout</a>
+      <a href="/logout" class="prompt text-gray-500 hover:text-white">logout</a>
     </div>
   </div>
 </header>
 <main class="mx-auto max-w-6xl px-4 py-5 sm:px-6">
   <div class="grid gap-4 lg:grid-cols-2">
-    <!-- Left: balance + top up -->
+    <!-- Left: balance + topup + transactions -->
     <div class="space-y-4">
-      <section class="rounded-lg border border-emerald-500/40 bg-panel px-4 py-3">
-        <div class="flex items-baseline justify-between">
-          <h1 class="text-sm font-bold text-white">Credits</h1>
-          <span class="font-mono text-2xl font-bold text-emerald-400">{{printf "%.1f" .Balance}}</span>
+      <section class="rounded border border-emerald-500/30 bg-[#04060c]">
+        <div class="flex items-center gap-1.5 border-b border-emerald-500/20 px-3 py-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-emerald-500/70"></span>
+          <span class="ml-1 font-mono text-[11px] text-gray-500">$ balance</span>
         </div>
-        <p class="text-[11px] text-gray-500">1 credit = 1 pentest · 1 domain</p>
+        <div class="px-4 py-3">
+          <div class="flex items-baseline justify-between">
+            <span class="font-mono text-xs text-gray-400">credits</span>
+            <span class="font-mono text-3xl font-bold text-emerald-300 glow">{{printf "%.1f" .Balance}}</span>
+          </div>
+          <p class="mt-1 font-mono text-[10px] text-gray-600"># 1 credit = 1 pentest · 1 domain</p>
+        </div>
       </section>
 
-      <section class="rounded-lg border border-white/10 bg-panel p-3">
-        <h2 class="text-sm font-bold text-white">Top up</h2>
-        <div class="mt-2 grid grid-cols-2 gap-2">
-          {{range .Packages}}
-          <form hx-post="/api/topup" hx-target="#topup-result" hx-swap="innerHTML" class="rounded-md border border-white/10 bg-ink p-3">
-            <input type="hidden" name="package_id" value="{{.ID}}"/>
-            <div class="flex items-baseline justify-between">
-              <span class="text-sm font-bold text-white">{{.Name}}</span>
-              <span class="font-mono text-sm text-emerald-400">${{printf "%.0f" .USD}}</span>
-            </div>
-            <div class="text-[11px] text-gray-500">{{printf "%.0f" .Credits}} credits</div>
-            <button class="mt-2 w-full rounded bg-emerald-500 px-2 py-1.5 text-xs font-bold text-black hover:bg-emerald-400">Buy</button>
-          </form>
-          {{end}}
+      <section class="rounded border border-white/10 bg-[#04060c]">
+        <div class="flex items-center gap-1.5 border-b border-white/10 px-3 py-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-red-500/70"></span>
+          <span class="ml-1 font-mono text-[11px] text-gray-500">$ topup</span>
         </div>
-        <div id="topup-result" class="mt-2"></div>
+        <div class="p-3">
+          <div class="grid grid-cols-2 gap-2">
+            {{range .Packages}}
+            <form hx-post="/api/topup" hx-target="#topup-result" hx-swap="innerHTML" class="rounded border border-white/15 bg-ink p-3 hover:border-emerald-500/40">
+              <input type="hidden" name="package_id" value="{{.ID}}"/>
+              <div class="flex items-baseline justify-between">
+                <span class="font-mono text-sm text-white">{{.Name}}</span>
+                <span class="font-mono text-sm text-emerald-400">${{printf "%.0f" .USD}}</span>
+              </div>
+              <div class="font-mono text-[10px] text-gray-500">{{printf "%.0f" .Credits}} credits</div>
+              <button class="mt-2 w-full rounded border border-emerald-400 bg-emerald-500/10 px-2 py-1.5 font-mono text-xs font-bold text-emerald-300 hover:bg-emerald-500/20">buy</button>
+            </form>
+            {{end}}
+          </div>
+          <div id="topup-result" class="mt-2"></div>
+        </div>
       </section>
 
-      <section class="rounded-lg border border-white/10 bg-panel p-3">
-        <h2 class="text-sm font-bold text-white">Transactions</h2>
-        {{if .Transactions}}
-        <ul class="mt-2 divide-y divide-white/10 text-xs">
-          {{range .Transactions}}
-          <li class="flex items-center justify-between py-1.5">
-            <span class="{{if eq .Type "topup"}}text-emerald-300{{else}}text-yellow-300{{end}}">{{.Type}}</span>
-            <span class="text-gray-500">{{.Description}}</span>
-            <span class="font-mono {{if eq .Type "topup"}}text-emerald-400{{else}}text-gray-300{{end}}">{{if eq .Type "topup"}}+{{end}}{{printf "%.1f" .Amount}}</span>
-          </li>
+      <section class="rounded border border-white/10 bg-[#04060c]">
+        <div class="flex items-center gap-1.5 border-b border-white/10 px-3 py-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-yellow-500/70"></span>
+          <span class="ml-1 font-mono text-[11px] text-gray-500">$ history</span>
+        </div>
+        <div class="p-3">
+          {{if .Transactions}}
+          <table class="w-full font-mono text-xs">
+            <thead><tr class="text-left text-gray-500"><th class="py-1">type</th><th>desc</th><th class="text-right">amt</th></tr></thead>
+            <tbody>
+            {{range .Transactions}}
+            <tr class="border-t border-white/10">
+              <td class="py-1 {{if eq .Type "topup"}}text-emerald-300{{else}}text-yellow-300{{end}}">{{.Type}}</td>
+              <td class="text-gray-500">{{.Description}}</td>
+              <td class="text-right font-mono {{if eq .Type "topup"}}text-emerald-400{{else}}text-gray-300{{end}}">{{if eq .Type "topup"}}+{{end}}{{printf "%.1f" .Amount}}</td>
+            </tr>
+            {{end}}
+            </tbody>
+          </table>
+          {{else}}
+          <p class="font-mono text-xs text-gray-600"># no transactions yet</p>
           {{end}}
-        </ul>
-        {{else}}
-        <p class="mt-2 text-xs text-gray-500">No transactions yet.</p>
-        {{end}}
+        </div>
       </section>
     </div>
 
     <!-- Right: domains -->
-    <section class="rounded-lg border border-white/10 bg-panel p-3 h-fit">
-      <h2 class="text-sm font-bold text-white">Domains</h2>
-      <form class="mt-2 flex gap-2" hx-post="/api/domains" hx-target="#domain-result" hx-swap="innerHTML">
-        <input name="domain" required placeholder="example.com" class="flex-1 rounded border border-white/10 bg-ink px-2 py-1.5 text-xs text-white focus:border-emerald-400 focus:outline-none"/>
-        <button class="rounded bg-cyan-500 px-3 py-1.5 text-xs font-bold text-black hover:bg-cyan-400">Add</button>
-      </form>
-      <div id="domain-result" class="mt-2"></div>
-      {{if .Domains}}
-      <ul class="mt-2 space-y-1.5">
-        {{range .Domains}}
-        <li class="rounded border border-white/10 bg-ink px-2.5 py-1.5 text-xs">
-          <div class="flex items-center justify-between gap-2">
-            <span class="font-mono truncate">{{.Domain}}</span>
-            <span class="flex items-center gap-1.5">
-              {{if ne .Status "verified"}}
-              <button hx-post="/api/domains/verify" hx-vals='{"domain":"{{.Domain}}"}'
-                hx-target="#domain-result" hx-swap="innerHTML"
-                hx-on::after-request="if(event.detail.successful) setTimeout(()=>location.reload(),500)"
-                class="rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/30">Verify</button>
-              <button hx-post="/api/domains/delete" hx-vals='{"domain":"{{.Domain}}"}'
-                hx-target="#domain-result" hx-swap="innerHTML"
-                hx-on::after-request="if(event.detail.successful) setTimeout(()=>location.reload(),500)"
-                class="rounded bg-red-500/15 px-2 py-0.5 text-[11px] font-bold text-red-300 hover:bg-red-500/30">Delete</button>
-              {{else}}
-              <span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300">verified</span>
-              {{end}}
-            </span>
-          </div>
-          <div class="mt-1 flex items-center gap-1 font-mono text-[10px] text-gray-500">
-            <span class="text-cyan-400">_netsekurity</span>
-            <span class="text-gray-600">TXT</span>
-            <span class="truncate">{{.TXT}}</span>
-            <button class="shrink-0 text-cyan-400 hover:underline"
-              onclick="navigator.clipboard.writeText('{{.TXT}}');this.textContent='copied';setTimeout(()=>this.textContent='copy',1200)">copy</button>
-          </div>
-        </li>
+    <section class="rounded border border-cyan-500/30 bg-[#04060c] h-fit">
+      <div class="flex items-center gap-1.5 border-b border-cyan-500/20 px-3 py-2">
+        <span class="h-2.5 w-2.5 rounded-full bg-cyan-500/70"></span>
+        <span class="ml-1 font-mono text-[11px] text-gray-500">$ domains</span>
+      </div>
+      <div class="p-3">
+        <form class="flex gap-2" hx-post="/api/domains" hx-target="#domain-result" hx-swap="innerHTML">
+          <input name="domain" required placeholder="target.example.com" class="flex-1 rounded border border-white/15 bg-ink px-2 py-1.5 font-mono text-xs text-white focus:border-cyan-400 focus:outline-none"/>
+          <button class="rounded border border-cyan-400 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs font-bold text-cyan-300 hover:bg-cyan-500/20">add</button>
+        </form>
+        <div id="domain-result" class="mt-2"></div>
+        {{if .Domains}}
+        <ul class="mt-2 space-y-1.5">
+          {{range .Domains}}
+          <li class="rounded border border-white/10 bg-ink px-2.5 py-1.5 font-mono text-xs">
+            <div class="flex items-center justify-between gap-2">
+              <span class="truncate text-white">{{.Domain}}</span>
+              <span class="flex items-center gap-1.5">
+                {{if ne .Status "verified"}}
+                <button hx-post="/api/domains/verify" hx-vals='{"domain":"{{.Domain}}"}'
+                  hx-target="#domain-result" hx-swap="innerHTML"
+                  hx-on::after-request="if(event.detail.successful) setTimeout(()=>location.reload(),500)"
+                  class="rounded border border-emerald-400/60 px-2 py-0.5 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/15">verify</button>
+                <button hx-post="/api/domains/delete" hx-vals='{"domain":"{{.Domain}}"}'
+                  hx-target="#domain-result" hx-swap="innerHTML"
+                  hx-on::after-request="if(event.detail.successful) setTimeout(()=>location.reload(),500)"
+                  class="rounded border border-red-400/50 px-2 py-0.5 text-[10px] font-bold text-red-300 hover:bg-red-500/15">del</button>
+                {{else}}
+                <span class="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">[verified]</span>
+                {{end}}
+              </span>
+            </div>
+            <div class="mt-1 flex items-center gap-1 text-[10px] text-gray-500">
+              <span class="text-cyan-400">_netsekurity</span>
+              <span class="text-gray-600">TXT</span>
+              <span class="truncate">{{.TXT}}</span>
+              <button class="shrink-0 text-cyan-400 hover:underline"
+                onclick="navigator.clipboard.writeText('{{.TXT}}');this.textContent='copied';setTimeout(()=>this.textContent='copy',1200)">copy</button>
+            </div>
+          </li>
+          {{end}}
+        </ul>
+        {{else}}
+        <p class="mt-2 font-mono text-xs text-gray-600"># no domains — add one to start a pentest</p>
         {{end}}
-      </ul>
-      {{else}}
-      <p class="mt-2 text-xs text-gray-500">No domains yet. Add one to start a pentest.</p>
-      {{end}}
+      </div>
     </section>
   </div>
 </main>

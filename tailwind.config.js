@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: ["./static/index.html"],
+  content: ["./static/index.html", "./dashboard.go", "./admin.go"],
   theme: {
     extend: {
       colors: {
