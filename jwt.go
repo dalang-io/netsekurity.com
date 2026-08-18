@@ -19,15 +19,18 @@ type Claims struct {
 
 func b64url(b []byte) string { return base64.RawURLEncoding.EncodeToString(b) }
 
+// signPayload signs an already-encoded header.payload with the configured secret.
+func signPayload(payload string) string {
+	mac := hmac.New(sha256.New, []byte(getenv("JWT_SECRET", "dev-secret-change-me")))
+	mac.Write([]byte(payload))
+	return payload + "." + b64url(mac.Sum(nil))
+}
+
 // issueJWT signs an HS256 JWT with the configured JWT_SECRET.
 func issueJWT(sub, email string) (string, error) {
-	secret := []byte(getenv("JWT_SECRET", "dev-secret-change-me"))
 	header, _ := json.Marshal(map[string]string{"alg": "HS256", "typ": "JWT"})
 	claims, _ := json.Marshal(Claims{Sub: sub, Email: email, Exp: time.Now().Add(24 * time.Hour).Unix()})
-	payload := b64url(header) + "." + b64url(claims)
-	mac := hmac.New(sha256.New, secret)
-	mac.Write([]byte(payload))
-	return payload + "." + b64url(mac.Sum(nil)), nil
+	return signPayload(b64url(header) + "." + b64url(claims)), nil
 }
 
 // verifyJWT validates the signature and expiry, returning the claims.

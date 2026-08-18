@@ -113,11 +113,17 @@ func handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 }
 
 func isValidDomain(domain string) bool {
-	if len(domain) < 4 || len(domain) > 253 || !strings.Contains(domain, ".") {
+	if len(domain) < 3 || len(domain) > 253 || !strings.Contains(domain, ".") {
+		return false
+	}
+	if strings.HasPrefix(domain, "-") || strings.HasSuffix(domain, "-") {
 		return false
 	}
 	for _, label := range strings.Split(domain, ".") {
-		if label == "" {
+		if label == "" || len(label) > 63 {
+			return false
+		}
+		if strings.HasPrefix(label, "-") || strings.HasSuffix(label, "-") {
 			return false
 		}
 	}
