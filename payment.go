@@ -83,8 +83,11 @@ func handleTopUp(w http.ResponseWriter, r *http.Request) {
 	db.Exec(`INSERT INTO payments (user_id, external_id, xendit_invoice_id, package_id, amount_usd, credits, status, currency)
 		VALUES (?,?,?,?,?,?,'pending',?)`, claims.Sub, externalID, xr.ID, packageID, usd, credits, currency)
 
+	// Redirect the browser straight to the Xendit payment link (HTMX sees
+	// HX-Redirect and navigates to it). No extra "pay now" step.
+	w.Header().Set("HX-Redirect", xr.InvoiceURL)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprintf(w, `<a href="%s" target="_blank" class="inline-block rounded-md bg-emerald-500 px-4 py-2 font-bold text-black">Pay now — %v credits</a>`, xr.InvoiceURL, credits)
+	fmt.Fprintf(w, `<meta http-equiv="refresh" content="0;url=%s"><div class="rounded bg-emerald-500/15 px-3 py-2 text-xs text-emerald-300">Redirecting to payment… %v credits</div>`, xr.InvoiceURL, credits)
 }
 
 // topUpAmountUSD returns the invoice amount in the configured currency. USD is

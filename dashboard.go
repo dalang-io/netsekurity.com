@@ -12,6 +12,7 @@ type dashboardData struct {
 	IsAdmin      bool
 	Packages     []pkg
 	Transactions []txn
+	Payments     []pymt
 	Domains      []dom
 }
 
@@ -24,6 +25,13 @@ type pkg struct {
 type txn struct {
 	Type, Description, CreatedAt string
 	Amount                       float64
+}
+
+// pymt is an Xendit invoice shown in the transaction history (incl. pending/expired).
+type pymt struct {
+	ExternalID, Package, Status, CreatedAt string
+	AmountUSD                              float64
+	Credits                                float64
 }
 
 type dom struct {
@@ -62,6 +70,22 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	trows.Close()
 
+	// Mark overdue pending invoices as expired, then load the user's payment history
+	// (instances/pending/paid/expired) so the dashboard reflects real invoice state.
+	db.Exec(`UPDATE payments SET status='expired' WHERE user_id=? AND status='pending' AND created_at < datetime('now','-1 day')`, claims.Sub)
+	ptrows, _ := db.Query(`SELECT external_id, COALESCE(package_id,''), status, COALESCE(paid_at,''), amount_usd, credits, created_at
+		FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 20`, claims.Sub)
+	for ptrows.Next() {
+		var p pymt
+		var paidSrc string
+		_ = ptrows.Scan(&p.ExternalID, &p.Package, &p.Status, &paidSrc, &p.AmountUSD, &p.Credits, &p.CreatedAt)
+		if p.Status == "paid" && paidSrc != "" {
+			p.CreatedAt = paidSrc
+		}
+		data.Payments = append(data.Payments, p)
+	}
+	ptrows.Close()
+
 	drows, _ := db.Query(`SELECT domain, status, txt_verification_token FROM domains WHERE user_id=? ORDER BY created_at DESC`, claims.Sub)
 	for drows.Next() {
 		var d dom
@@ -84,7 +108,7 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
 </head>
-<body class="scanlines bg-ink text-gray-300 min-h-screen">
+<body class="scanlines bg-ink text-gray-300 min-h-screen overflow-x-hidden">
 <header class="border-b border-emerald-500/25 bg-ink/85">
   <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
     <a href="/" class="font-mono text-base font-bold text-white"><span class="glow text-emerald-400">net</span>sekurity<span class="text-emerald-500">.com</span> <span class="text-xs text-cyan-300">/dashboard</span></a>
@@ -119,7 +143,7 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
           <span class="ml-1 font-mono text-[11px] text-gray-500">$ topup</span>
         </div>
         <div class="p-3">
-          <div class="grid grid-cols-2 gap-2">
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {{range .Packages}}
             <form hx-post="/api/topup" hx-target="#topup-result" hx-swap="innerHTML" class="rounded border border-white/15 bg-ink p-3 hover:border-emerald-500/40">
               <input type="hidden" name="package_id" value="{{.ID}}"/>
@@ -143,7 +167,8 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
         </div>
         <div class="p-3">
           {{if .Transactions}}
-          <table class="w-full font-mono text-xs">
+          <div class="overflow-x-auto">
+          <table class="w-full min-w-[320px] font-mono text-xs">
             <thead><tr class="text-left text-gray-500"><th class="py-1">type</th><th>desc</th><th class="text-right">amt</th></tr></thead>
             <tbody>
             {{range .Transactions}}
@@ -155,8 +180,29 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
             {{end}}
             </tbody>
           </table>
+          </div>
           {{else}}
           <p class="font-mono text-xs text-gray-600"># no transactions yet</p>
+          {{end}}
+
+          {{if .Payments}}
+          <div class="mt-4 border-t border-white/10 pt-2">
+            <div class="mb-1 font-mono text-[11px] text-gray-500"># invoices (incl. pending / expired)</div>
+            <div class="overflow-x-auto">
+            <table class="w-full min-w-[320px] font-mono text-xs">
+              <thead><tr class="text-left text-gray-500"><th class="py-1">invoice</th><th>status</th><th class="text-right">credits</th></tr></thead>
+              <tbody>
+              {{range .Payments}}
+              <tr class="border-t border-white/10">
+                <td class="py-1 truncate max-w-[9rem]" title="{{.ExternalID}}">{{.ExternalID}}</td>
+                <td class="py-1"><span class="rounded px-1.5 py-0.5 text-[10px] font-bold {{if eq .Status "paid"}}bg-emerald-500/20 text-emerald-300{{else if eq .Status "pending"}}bg-yellow-500/20 text-yellow-300{{else}}bg-red-500/20 text-red-300{{end}}">{{.Status}}</span></td>
+                <td class="text-right font-mono text-emerald-400">{{printf "%.0f" .Credits}}</td>
+              </tr>
+              {{end}}
+              </tbody>
+            </table>
+            </div>
+          </div>
           {{end}}
         </div>
       </section>
