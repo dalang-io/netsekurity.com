@@ -114,6 +114,7 @@
 </head>
 
 <body class="scanlines bg-ink text-gray-300 antialiased">
+  <a href="#top" class="skip-link">Skip to content</a>
   <!-- Terminal nav bar -->
   <header class="sticky top-0 z-50 border-b border-emerald-500/25 bg-ink/85 backdrop-blur">
     <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
@@ -121,7 +122,7 @@
         <span class="glow text-emerald-400">net</span>sekurity<span class="text-emerald-500">.com</span>
         <span class="ml-2 hidden text-[11px] text-gray-500 sm:inline"># ptaas</span>
       </a>
-      <nav class="hidden items-center gap-5 text-[13px] text-gray-400 md:flex">
+      <nav aria-label="Main navigation" class="hidden items-center gap-5 text-[13px] text-gray-400 md:flex">
         <a href="#how" class="prompt hover:text-emerald-300">ls how</a>
         <a href="#features" class="prompt hover:text-emerald-300">cat features</a>
         <a href="#pricing" class="prompt hover:text-emerald-300">cat pricing</a>
@@ -137,7 +138,7 @@
     </div>
   </header>
 
-  <main id="top">
+  <main id="top" aria-label="Landing page content">
     <!-- Hero terminal -->
     <section class="relative overflow-hidden grid-bg">
       <div class="relative mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24">
@@ -196,19 +197,19 @@
       <div class="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-4 py-8 sm:px-6 md:grid-cols-4">
         <div class="text-center">
           <div class="font-mono text-2xl font-bold text-emerald-300 glow">60+</div>
-          <div class="mt-1 font-mono text-[11px] uppercase tracking-wide text-gray-500">checks / scan</div>
+          <div class="mt-1 font-mono text-xs uppercase tracking-wide text-gray-400">checks / scan</div>
         </div>
         <div class="text-center">
           <div class="font-mono text-2xl font-bold text-emerald-300 glow">&lt; 24h</div>
-          <div class="mt-1 font-mono text-[11px] uppercase tracking-wide text-gray-500">report turnaround</div>
+          <div class="mt-1 font-mono text-xs uppercase tracking-wide text-gray-400">report turnaround</div>
         </div>
         <div class="text-center">
           <div class="font-mono text-2xl font-bold text-cyan-300 glow-cyan">TXT</div>
-          <div class="mt-1 font-mono text-[11px] uppercase tracking-wide text-gray-500">auto domain verify</div>
+          <div class="mt-1 font-mono text-xs uppercase tracking-wide text-gray-400">auto domain verify</div>
         </div>
         <div class="text-center">
           <div class="font-mono text-2xl font-bold text-cyan-300 glow-cyan">OWASP</div>
-          <div class="mt-1 font-mono text-[11px] uppercase tracking-wide text-gray-500">top 10 mapped</div>
+          <div class="mt-1 font-mono text-xs uppercase tracking-wide text-gray-400">top 10 mapped</div>
         </div>
       </div>
     </section>

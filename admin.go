@@ -284,6 +284,7 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
 <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
 </head>
 <body class="scanlines bg-ink text-gray-300 min-h-screen">
+<a href="#main" class="skip-link">Skip to content</a>
 <header class="border-b border-yellow-500/30 bg-ink/85">
   <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
     <a href="/" class="font-mono text-base font-bold text-white"><span class="text-emerald-400">net</span>sekurity<span class="text-emerald-500">.com</span> <span class="text-yellow-300">/su</span></a>
@@ -293,7 +294,7 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
     </div>
   </div>
 </header>
-<main class="mx-auto max-w-6xl px-4 py-5 sm:px-6 space-y-4">
+<main id="main" class="mx-auto max-w-6xl px-4 py-5 sm:px-6 space-y-4">
 
   <!-- Users -->
   <section class="rounded border border-emerald-500/30 bg-[#04060c]">
@@ -303,7 +304,7 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
         <span class="font-mono text-[11px] text-gray-500">$ users</span>
       </div>
       <form class="flex gap-2" method="post" action="/su/users/add">
-        <input name="email" required placeholder="new@email.com" class="rounded border border-white/15 bg-ink px-2 py-1 font-mono text-xs text-white focus:border-emerald-400 focus:outline-none"/>
+        <input name="email" required placeholder="new@email.com" aria-label="New user email" class="rounded border border-white/15 bg-ink px-2 py-1 font-mono text-xs text-white focus:border-emerald-400 focus:outline-none"/>
         <button class="rounded border border-cyan-400 bg-cyan-500/10 px-2 py-1 font-mono text-xs font-bold text-cyan-300 hover:bg-cyan-500/20">add</button>
       </form>
     </div>
@@ -320,18 +321,18 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
           <td>
             <form method="post" action="/su/users/role" class="flex gap-1">
               <input type="hidden" name="user_id" value="{{.ID}}"/>
-              <select name="role" class="rounded border border-white/15 bg-ink px-1 py-0.5 font-mono text-[11px] text-white">
+              <select name="role" aria-label="Role" class="rounded border border-white/15 bg-ink px-1 py-0.5 font-mono text-[11px] text-white">
                 <option value="user" {{if eq .Role "user"}}selected{{end}}>user</option>
                 <option value="admin" {{if eq .Role "admin"}}selected{{end}}>admin</option>
               </select>
-              <button class="rounded border border-emerald-400/60 px-2 py-0.5 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/15">set</button>
+              <button class="rounded border border-emerald-400/60 px-2 py-0.5 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/15">set</button>
             </form>
           </td>
           <td>
             <form method="post" action="/su/users/credit" class="flex gap-1">
               <input type="hidden" name="user_id" value="{{.ID}}"/>
-              <input name="amount" type="number" step="0.5" min="0.5" placeholder="amt" class="w-16 rounded border border-white/15 bg-ink px-1 py-0.5 font-mono text-[11px] text-white"/>
-              <button class="rounded border border-cyan-400/60 px-2 py-0.5 text-[10px] font-bold text-cyan-300 hover:bg-cyan-500/15">+credit</button>
+              <input name="amount" type="number" step="0.5" min="0.5" placeholder="amt" aria-label="Credit amount" class="w-16 rounded border border-white/15 bg-ink px-1 py-0.5 font-mono text-[11px] text-white"/>
+              <button class="rounded border border-cyan-400/60 px-2 py-0.5 text-[11px] font-bold text-cyan-300 hover:bg-cyan-500/15">+credit</button>
             </form>
           </td>
         </tr>
@@ -391,7 +392,7 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
           <td>
             {{if eq .Status "verified"}}
             <button hx-post="/su/domains/pentest" hx-vals='{"domain_id":"{{.ID}}"}' hx-target="closest td" hx-swap="innerHTML"
-              class="rounded border border-emerald-400 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/20">run</button>
+              class="rounded border border-emerald-400 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/20">run</button>
             {{else}}<span class="text-gray-600">—</span>{{end}}
           </td>
         </tr>
@@ -423,8 +424,8 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
           <td>
             <form method="post" action="/su/reports/upload" enctype="multipart/form-data" class="flex gap-1">
               <input type="hidden" name="pentest_id" value="{{.ID}}"/>
-              <input type="file" name="file" accept=".pdf" class="font-mono text-[10px] text-gray-500"/>
-              <button class="rounded border border-cyan-400/60 px-2 py-0.5 text-[10px] font-bold text-cyan-300 hover:bg-cyan-500/15">up</button>
+              <input type="file" name="file" accept=".pdf" aria-label="Report PDF" class="font-mono text-[11px] text-gray-500"/>
+              <button class="rounded border border-cyan-400/60 px-2 py-0.5 text-[11px] font-bold text-cyan-300 hover:bg-cyan-500/15">up</button>
             </form>
           </td>
         </tr>

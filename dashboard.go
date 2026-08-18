@@ -84,6 +84,7 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
 <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
 </head>
 <body class="scanlines bg-ink text-gray-300 min-h-screen">
+<a href="#main" class="skip-link">Skip to content</a>
 <header class="border-b border-emerald-500/25 bg-ink/85">
   <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
     <a href="/" class="font-mono text-base font-bold text-white"><span class="glow text-emerald-400">net</span>sekurity<span class="text-emerald-500">.com</span> <span class="text-xs text-cyan-300">/dashboard</span></a>
@@ -94,7 +95,7 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
     </div>
   </div>
 </header>
-<main class="mx-auto max-w-6xl px-4 py-5 sm:px-6">
+<main id="main" class="mx-auto max-w-6xl px-4 py-5 sm:px-6">
   <div class="grid gap-4 lg:grid-cols-2">
     <!-- Left: balance + topup + transactions -->
     <div class="space-y-4">
@@ -108,7 +109,7 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
             <span class="font-mono text-xs text-gray-400">credits</span>
             <span class="font-mono text-3xl font-bold text-emerald-300 glow">{{printf "%.1f" .Balance}}</span>
           </div>
-          <p class="mt-1 font-mono text-[10px] text-gray-600"># 1 credit = 1 pentest · 1 domain</p>
+          <p class="mt-1 font-mono text-[11px] text-gray-600"># 1 credit = 1 pentest · 1 domain</p>
         </div>
       </section>
 
@@ -126,7 +127,7 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
                 <span class="font-mono text-sm text-white">{{.Name}}</span>
                 <span class="font-mono text-sm text-emerald-400">${{printf "%.0f" .USD}}</span>
               </div>
-              <div class="font-mono text-[10px] text-gray-500">{{printf "%.0f" .Credits}} credits</div>
+              <div class="font-mono text-[11px] text-gray-500">{{printf "%.0f" .Credits}} credits</div>
               <button class="mt-2 w-full rounded border border-emerald-400 bg-emerald-500/10 px-2 py-1.5 font-mono text-xs font-bold text-emerald-300 hover:bg-emerald-500/20">buy</button>
             </form>
             {{end}}
@@ -169,7 +170,7 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
       </div>
       <div class="p-3">
         <form class="flex gap-2" hx-post="/api/domains" hx-target="#domain-result" hx-swap="innerHTML">
-          <input name="domain" required placeholder="target.example.com" class="flex-1 rounded border border-white/15 bg-ink px-2 py-1.5 font-mono text-xs text-white focus:border-cyan-400 focus:outline-none"/>
+          <input name="domain" required placeholder="target.example.com" aria-label="Domain to verify" class="flex-1 rounded border border-white/15 bg-ink px-2 py-1.5 font-mono text-xs text-white focus:border-cyan-400 focus:outline-none"/>
           <button class="rounded border border-cyan-400 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs font-bold text-cyan-300 hover:bg-cyan-500/20">add</button>
         </form>
         <div id="domain-result" class="mt-2"></div>
@@ -184,21 +185,21 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
                 <button hx-post="/api/domains/verify" hx-vals='{"domain":"{{.Domain}}"}'
                   hx-target="#domain-result" hx-swap="innerHTML"
                   hx-on::after-request="if(event.detail.successful) setTimeout(()=>location.reload(),500)"
-                  class="rounded border border-emerald-400/60 px-2 py-0.5 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/15">verify</button>
+                  class="rounded border border-emerald-400/60 px-2 py-0.5 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/15">verify</button>
                 <button hx-post="/api/domains/delete" hx-vals='{"domain":"{{.Domain}}"}'
                   hx-target="#domain-result" hx-swap="innerHTML"
                   hx-on::after-request="if(event.detail.successful) setTimeout(()=>location.reload(),500)"
-                  class="rounded border border-red-400/50 px-2 py-0.5 text-[10px] font-bold text-red-300 hover:bg-red-500/15">del</button>
+                  class="rounded border border-red-400/50 px-2 py-0.5 text-[11px] font-bold text-red-300 hover:bg-red-500/15">del</button>
                 {{else}}
-                <span class="rounded bg-emerald-500/20 px-2 py-0.5 text-[10px] font-bold text-emerald-300">[verified]</span>
+                <span class="rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300">[verified]</span>
                 <button hx-post="/api/pentests/start" hx-vals='{"domain":"{{.Domain}}"}'
                   hx-target="#pentest-result" hx-swap="innerHTML"
                   hx-on::after-request="if(event.detail.successful) setTimeout(()=>location.reload(),800)"
-                  class="rounded border border-cyan-400/60 px-2 py-0.5 text-[10px] font-bold text-cyan-300 hover:bg-cyan-500/15">scan</button>
+                  class="rounded border border-cyan-400/60 px-2 py-0.5 text-[11px] font-bold text-cyan-300 hover:bg-cyan-500/15">scan</button>
                 {{end}}
               </span>
             </div>
-            <div class="mt-1 flex items-center gap-1 text-[10px] text-gray-500">
+            <div class="mt-1 flex items-center gap-1 text-[11px] text-gray-500">
               <span class="text-cyan-400">_netsekurity</span>
               <span class="text-gray-600">TXT</span>
               <span class="truncate">{{.TXT}}</span>

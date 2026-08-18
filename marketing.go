@@ -32,11 +32,11 @@ func handleTXT(w http.ResponseWriter, r *http.Request) {
     <div class="mt-2 text-cyan-400">Type</div><div class="text-gray-200">TXT</div>
     <div class="mt-2 text-cyan-400">Value</div><div class="break-all text-gray-200" id="txt-value">` + token + `</div>
   </div>
-  <button class="w-full rounded-md border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
+  <button type="button" aria-label="Copy TXT value" class="w-full rounded-md border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
     onclick="navigator.clipboard.writeText(document.getElementById('txt-value').textContent); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy TXT value',1500)">
     Copy TXT value
   </button>
-  <button class="w-full rounded-md bg-emerald-500 px-4 py-2 text-sm font-bold text-black hover:bg-emerald-400 transition-colors"
+  <button type="button" class="w-full rounded-md bg-emerald-500 px-4 py-2 text-sm font-bold text-black hover:bg-emerald-400 transition-colors"
     hx-post="/api/verify" hx-swap="outerHTML">Verify DNS record</button>
 </div>`))
 }
