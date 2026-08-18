@@ -81,6 +81,7 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
 <title>dashboard — netsekurity</title>
 <meta name="robots" content="noindex, nofollow"/>
 <link rel="stylesheet" href="/css/styles.css?v={{cssHash}}"/>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
 </head>
 <body class="scanlines bg-ink text-gray-300 min-h-screen">
