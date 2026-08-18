@@ -26,6 +26,14 @@ HOST = "163.128.54.5"
 KEY = "/opt/data/recon/keys/dalang_key"
 
 DEEP = "--deep-scan" in sys.argv
+# Detect destructive mode: --mode destructive (passed by the worker).
+MODE = "standard"
+try:
+    i = sys.argv.index("--mode")
+    if i + 1 < len(sys.argv) and sys.argv[i+1] == "destructive":
+        MODE = "destructive"
+except ValueError:
+    pass
 
 def sh(cmd, timeout=35):
     try:
@@ -52,7 +60,9 @@ def ensure_assessment(domain):
     c.close(); return aid
 
 def main():
-    domain = sys.argv[1].strip().lower().lstrip("*.")
+    # Domain is the first non-flag positional argument.
+    domain = next((a for a in sys.argv[1:] if not a.startswith("--")), "")
+    domain = domain.strip().lower().lstrip("*.")
     if not domain:
         print("ERR: domain required"); sys.exit(2)
     aid = ensure_assessment(domain)
@@ -308,8 +318,18 @@ class ScanEngine:
         self.tls()
         self.exposed()
         self.open_redirect()
-        if DEEP:
+        if DEEP or MODE == "destructive":
             self.nikto()
+        if MODE == "destructive":
+            # Destructive mode: agent performs active exploitation (RCE/webshell/
+            # takeover) in the cron worker; this note documents the intent.
+            self.add("INFO", "Destructive-mode scan requested", "recon",
+                     "A destructive-mode pentest was commissioned (2 credits). The worker "
+                     "performs active exploitation: RCE / command injection, webshell upload, "
+                     "malware/exploit injection, auth-bypass, privesc, and takeover attempts. "
+                     "Operator confirmed via AGREE-AND-PROCEED. Deep exploit results are "
+                     "recorded by the agent and merged into this assessment.",
+                     "mode=destructive", "—", "—")
         self.flush()
 
 if __name__ == "__main__":

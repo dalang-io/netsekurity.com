@@ -90,6 +90,7 @@ func initDB() error {
 			id TEXT PRIMARY KEY,
 			user_id TEXT NOT NULL,
 			domain_id INTEGER,
+			mode TEXT NOT NULL DEFAULT 'standard',
 			status TEXT NOT NULL DEFAULT 'queued',
 			report_ref TEXT,
 			started_at TEXT,
@@ -116,6 +117,13 @@ func initDB() error {
 	for _, p := range packages {
 		db.Exec(`INSERT OR IGNORE INTO credit_packages (id, name, usd_price, credits, is_active) VALUES (?,?,?,?,1)`,
 			p.id, p.name, p.usd, p.credits)
+	}
+
+	// Add pentests.mode if the column is missing (existing installs).
+	if !columnExists("pentests", "mode") {
+		if _, err := db.Exec(`ALTER TABLE pentests ADD COLUMN mode TEXT NOT NULL DEFAULT 'standard'`); err != nil {
+			return fmt.Errorf("add pentests.mode: %w", err)
+		}
 	}
 
 	// Add payments.url if the column is missing (existing installs).
