@@ -51,10 +51,11 @@ func handleVerify(w http.ResponseWriter, r *http.Request) {
 
 var faqAnswers = map[string]string{
 	"1": `How does pricing work? <strong>1 credit = 1 pentest on 1 domain.</strong> Buy a package, add a domain, verify ownership with the auto-generated TXT record, and a pentest is scheduled.`,
-	"2": `What is covered in one pentest? An automated vulnerability assessment mapped to OWASP Top 10: injection, auth flaws, misconfiguration, exposed secrets, and more — with a prioritized report.`,
+	"2": `What is covered in one pentest? An automated, OWASP-mapped vulnerability assessment of your verified domain's <strong>public, unauthenticated</strong> surface: recon &amp; subdomain discovery, tech/WAF fingerprint, full security-header review, TLS/PKI validation, exposed files &amp; secrets, and common web-vuln probing (SQLi, LFI/RFI, XSS, open redirect, path traversal, misconfiguration). You get a prioritized English report with CVSS v3.1 scores and remediation steps.`,
 	"3": `How do I verify my domain? We auto-generate a unique TXT record per domain. Add it in your DNS provider, hit verify, and ownership is confirmed in seconds. No manual approval.`,
 	"4": `Is it really automated? The scan is fully automated end-to-end. A human security engineer reviews and curates the findings before the report is delivered.`,
 	"5": `What if we have many subdomains? Each domain (hostname) costs 1 credit. A wildcard or an API surface can be scoped — contact us for a custom plan.`,
+	"6": `What is <strong>not</strong> covered? Scans are <strong>unauthenticated</strong> — we do not log in or test behind sessions. We detect vulnerabilities and misconfiguration but do not build deep multi-stage manual exploit chains. Testing is read-only and non-destructive. For critical or auth-heavy production apps we recommend pairing with a supplemental manual penetration test. See the full scope in the dashboard &amp; report.`,
 }
 
 // handleFAQ toggles FAQ answers (HTMX hx-get) into an element id "faq-a-<q>".
