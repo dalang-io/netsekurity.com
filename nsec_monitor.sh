@@ -18,6 +18,11 @@ STATE=$(ssh -i "$KEY" -o StrictHostKeyChecking=no -o ConnectTimeout=10 root@$H \
   "python3 -c \"
 import sqlite3
 c=sqlite3.connect('/home/dalang/netsekurity.com/data/netsekurity.db')
+# Stale-running recovery: reset jobs whose worker died > 45min ago (no LLM needed).
+c.execute(\\\"UPDATE pentests SET status='queued', started_at=NULL WHERE status='running' \" + \\
+  \\\"AND started_at IS NOT NULL AND started_at != '' \" + \\
+  \\\"AND replace(replace(started_at,'T',' '),'Z','') < datetime('now','-45 minutes')\\\")
+c.commit()
 q=c.execute(\\\"SELECT COUNT(*) FROM pentests WHERE status='queued'\\\").fetchone()[0]
 r=c.execute(\\\"SELECT COUNT(*) FROM pentests WHERE status='running'\\\").fetchone()[0]
 if r!=0: print('RUNNING')
