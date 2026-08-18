@@ -27,6 +27,9 @@ func ensureUser(email, name, picture, sub string) (string, error) {
 	err := db.QueryRow(`SELECT id FROM users WHERE google_sub = ?`, sub).Scan(&id)
 	if err == nil {
 		db.Exec(`UPDATE users SET email=?, name=?, picture=? WHERE id=?`, email, name, picture, id)
+		if email == getenv("SUPER_ADMIN_EMAIL", "hans@dalang.io") {
+			db.Exec(`UPDATE users SET role='admin' WHERE id=?`, id)
+		}
 		return id, nil
 	}
 	if err != sql.ErrNoRows {
@@ -36,14 +39,22 @@ func ensureUser(email, name, picture, sub string) (string, error) {
 	err = db.QueryRow(`SELECT id FROM users WHERE email = ?`, email).Scan(&id)
 	if err == nil {
 		db.Exec(`UPDATE users SET google_sub=?, name=?, picture=? WHERE id=?`, sub, name, picture, id)
+		// Super admin email is always an admin.
+		if email == getenv("SUPER_ADMIN_EMAIL", "hans@dalang.io") {
+			db.Exec(`UPDATE users SET role='admin' WHERE id=?`, id)
+		}
 		return id, nil
 	}
 	if err != sql.ErrNoRows {
 		return "", err
 	}
 	id = "u_" + randomHex(12)
-	if _, err := db.Exec(`INSERT INTO users (id, email, name, picture, google_sub) VALUES (?,?,?,?,?)`,
-		id, email, name, picture, sub); err != nil {
+	role := "user"
+	if email == getenv("SUPER_ADMIN_EMAIL", "hans@dalang.io") {
+		role = "admin"
+	}
+	if _, err := db.Exec(`INSERT INTO users (id, email, name, picture, google_sub, role) VALUES (?,?,?,?,?,?)`,
+		id, email, name, picture, sub, role); err != nil {
 		return "", err
 	}
 	// Ensure a credit balance row exists.
@@ -209,6 +220,34 @@ func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 			// HTMX requests get a redirect header so the client can navigate.
 			w.Header().Set("HX-Redirect", "/login")
 			http.Redirect(w, r, "/login", http.StatusFound)
+			return
+		}
+		next(w, r)
+	}
+}
+
+// isAdmin returns true for the super admin email or users whose role is admin.
+func isAdmin(email string) bool {
+	if email == getenv("SUPER_ADMIN_EMAIL", "hans@dalang.io") {
+		return true
+	}
+	var role string
+	db.QueryRow(`SELECT role FROM users WHERE email=?`, email).Scan(&role)
+	return role == "admin"
+}
+
+// requireAdmin is middleware that blocks non-admin users.
+func requireAdmin(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c, err := currentUser(r)
+		if err != nil {
+			http.Redirect(w, r, "/login", http.StatusFound)
+			return
+		}
+		var email string
+		db.QueryRow(`SELECT email FROM users WHERE id=?`, c.Sub).Scan(&email)
+		if !isAdmin(email) {
+			http.Error(w, "forbidden — admin only", http.StatusForbidden)
 			return
 		}
 		next(w, r)

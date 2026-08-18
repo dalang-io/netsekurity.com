@@ -47,6 +47,14 @@ func main() {
 	// Dashboard (protected)
 	mux.HandleFunc("/dashboard", requireAuth(handleDashboard))
 
+	// Super admin
+	mux.HandleFunc("/su", requireAdmin(handleAdmin))
+	mux.HandleFunc("/su/users/add", requireAdmin(handleAdminAddUser))
+	mux.HandleFunc("/su/users/role", requireAdmin(handleAdminSetRole))
+	mux.HandleFunc("/su/domains/pentest", requireAdmin(handleAdminPentest))
+	mux.HandleFunc("/su/reports/upload", requireAdmin(handleAdminUploadReport))
+	mux.HandleFunc("/reports/", requireAdmin(handleReport))
+
 	// Payments
 	mux.HandleFunc("/api/topup", handleTopUp)
 	mux.HandleFunc("/webhook/xendit", handleXenditWebhook)

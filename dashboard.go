@@ -26,7 +26,7 @@ type txn struct {
 }
 
 type dom struct {
-	Domain, Status string
+	Domain, Status, TXT string
 }
 
 // handleDashboard renders the authenticated dashboard.
@@ -59,10 +59,10 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 	trows.Close()
 
-	drows, _ := db.Query(`SELECT domain, status FROM domains WHERE user_id=? ORDER BY created_at DESC`, claims.Sub)
+	drows, _ := db.Query(`SELECT domain, status, txt_verification_token FROM domains WHERE user_id=? ORDER BY created_at DESC`, claims.Sub)
 	for drows.Next() {
 		var d dom
-		drows.Scan(&d.Domain, &d.Status)
+		drows.Scan(&d.Domain, &d.Status, &d.TXT)
 		data.Domains = append(data.Domains, d)
 	}
 	drows.Close()
@@ -148,22 +148,31 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
       {{if .Domains}}
       <ul class="mt-2 space-y-1.5">
         {{range .Domains}}
-        <li class="flex items-center justify-between gap-2 rounded border border-white/10 bg-ink px-2.5 py-1.5 text-xs">
-          <span class="font-mono truncate">{{.Domain}}</span>
-          <span class="flex items-center gap-1.5">
-            {{if ne .Status "verified"}}
-            <button hx-post="/api/domains/verify" hx-vals='{"domain":"{{.Domain}}"}'
-              hx-target="#domain-result" hx-swap="innerHTML"
-              hx-on::after-request="if(event.detail.successful) setTimeout(()=>location.reload(),500)"
-              class="rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/30">Verify</button>
-            <button hx-post="/api/domains/delete" hx-vals='{"domain":"{{.Domain}}"}'
-              hx-target="#domain-result" hx-swap="innerHTML"
-              hx-on::after-request="if(event.detail.successful) setTimeout(()=>location.reload(),500)"
-              class="rounded bg-red-500/15 px-2 py-0.5 text-[11px] font-bold text-red-300 hover:bg-red-500/30">Delete</button>
-            {{else}}
-            <span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300">verified</span>
-            {{end}}
-          </span>
+        <li class="rounded border border-white/10 bg-ink px-2.5 py-1.5 text-xs">
+          <div class="flex items-center justify-between gap-2">
+            <span class="font-mono truncate">{{.Domain}}</span>
+            <span class="flex items-center gap-1.5">
+              {{if ne .Status "verified"}}
+              <button hx-post="/api/domains/verify" hx-vals='{"domain":"{{.Domain}}"}'
+                hx-target="#domain-result" hx-swap="innerHTML"
+                hx-on::after-request="if(event.detail.successful) setTimeout(()=>location.reload(),500)"
+                class="rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/30">Verify</button>
+              <button hx-post="/api/domains/delete" hx-vals='{"domain":"{{.Domain}}"}'
+                hx-target="#domain-result" hx-swap="innerHTML"
+                hx-on::after-request="if(event.detail.successful) setTimeout(()=>location.reload(),500)"
+                class="rounded bg-red-500/15 px-2 py-0.5 text-[11px] font-bold text-red-300 hover:bg-red-500/30">Delete</button>
+              {{else}}
+              <span class="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300">verified</span>
+              {{end}}
+            </span>
+          </div>
+          <div class="mt-1 flex items-center gap-1 font-mono text-[10px] text-gray-500">
+            <span class="text-cyan-400">_netsekurity</span>
+            <span class="text-gray-600">TXT</span>
+            <span class="truncate">{{.TXT}}</span>
+            <button class="shrink-0 text-cyan-400 hover:underline"
+              onclick="navigator.clipboard.writeText('{{.TXT}}');this.textContent='copied';setTimeout(()=>this.textContent='copy',1200)">copy</button>
+          </div>
         </li>
         {{end}}
       </ul>

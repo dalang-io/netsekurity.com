@@ -104,8 +104,8 @@ func initDB() error {
 
 	// Seed credit packages (idempotent).
 	packages := []struct {
-		id, name      string
-		usd, credits  float64
+		id, name     string
+		usd, credits float64
 	}{
 		{"starter", "Starter", 50, 1},
 		{"standard", "Standard", 100, 3},
@@ -116,7 +116,43 @@ func initDB() error {
 		db.Exec(`INSERT OR IGNORE INTO credit_packages (id, name, usd_price, credits, is_active) VALUES (?,?,?,?,1)`,
 			p.id, p.name, p.usd, p.credits)
 	}
+
+	// Add users.role (admin / user) if the column is missing.
+	if !columnExists("users", "role") {
+		if _, err := db.Exec(`ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'`); err != nil {
+			return fmt.Errorf("add users.role: %w", err)
+		}
+	}
+
+	// Make sure the super admin exists (linked lazily on Google login) and is admin.
+	sa := getenv("SUPER_ADMIN_EMAIL", "hans@dalang.io")
+	db.Exec(`INSERT OR IGNORE INTO users (id, email, name, role) VALUES (?,?,?, 'admin')`, "u_super_admin", sa, "Super Admin")
+	db.Exec(`UPDATE users SET role='admin' WHERE email=?`, sa)
+
+	// Ensure the pentest report directory exists (next to the DB file).
+	if i := strings.LastIndex(path, "/"); i > 0 {
+		os.MkdirAll(path[:i]+"/reports", 0o755)
+	}
 	return nil
+}
+
+// columnExists reports whether a table has a given column.
+func columnExists(table, column string) bool {
+	rows, err := db.Query(`PRAGMA table_info(` + table + `)`)
+	if err != nil {
+		return false
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var cid int
+		var name, ctype string
+		var notnull, pk int
+		var dflt interface{}
+		if err := rows.Scan(&cid, &name, &ctype, &notnull, &dflt, &pk); err == nil && name == column {
+			return true
+		}
+	}
+	return false
 }
 
 func now() string { return time.Now().UTC().Format(time.RFC3339) }
