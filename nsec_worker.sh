@@ -25,21 +25,16 @@ DOMAIN=$(echo "$CLAIM" | python3 -c "import sys,json;print(json.load(sys.stdin)[
 echo "job: pid=$PID domain=$DOMAIN" >> "$LOG"
 [ -n "$PID" ] && [ -n "$DOMAIN" ] || { echo "bad claim" >> "$LOG"; exit 1; }
 
-# 2) Run scan. Use the existing Hermes assessment pipeline (report_auto.py).
-#    This is the seam: the scanner logic lives in the Hermes agent. For now invoke
-#    the SQLite→PDF generator as the report producer. (See note below.)
+# 2) Run scan. Use the on-demand scanner (creates assessment + PDF for ANY domain).
 REPORT_ROOT=/opt/data/report
 VE=$REPORT_ROOT/.venv/bin/python
-if [ ! -x "$VE" ]; then VE=python3; fi
-# Ensure assessment exists for this domain (create placeholder if absent) and build PDF.
-"$VE" "$REPORT_ROOT/templates/report_auto.py" --domain "$DOMAIN" --list >/dev/null 2>&1 \
-  && "$VE" "$REPORT_ROOT/templates/report_auto.py" --domain "$DOMAIN" >> "$LOG" 2>&1
-# report_auto writes to /opt/data/report/<domain>/<domain>_Assessment.pdf
-SRC=/opt/data/report/$DOMAIN/${DOMAIN}_Assessment.pdf
-[ -f "$SRC" ] || SRC=$(ls /opt/data/report/$DOMAIN/*Assessment*.pdf 2>/dev/null | head -1)
+[ -x "$VE" ] || VE=python3
+"$VE" /opt/data/netsekurity_draft/nsec_scan.py "$DOMAIN" >> "$LOG" 2>&1
+# nsec_scan prints PDF=<path>; extract it
+SRC=$(grep -oE '^PDF=.*' "$LOG" | tail -1 | cut -d= -f2-)
+[ -n "$SRC" ] && [ -f "$SRC" ] || SRC=$(ls /opt/data/report/$DOMAIN/*Assessment*.pdf 2>/dev/null | head -1)
 if [ -z "$SRC" ] || [ ! -f "$SRC" ]; then
   echo "scan produced no PDF" >> "$LOG"
-  # mark failed (no worker endpoint for error; leave as running → will be reclaimed later)
   exit 0
 fi
 echo "pdf: $SRC" >> "$LOG"
