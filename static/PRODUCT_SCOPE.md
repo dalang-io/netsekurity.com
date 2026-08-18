@@ -4,6 +4,30 @@ Client-facing scope of the automated pentest delivered per verified domain / cre
 
 ---
 
+## Testing Methodology: Blackbox
+
+Netsekurity scans are **blackbox** — performed from a public, external perspective without
+credentials, source code, or internal access. This reflects what an external attacker can
+see and exploit.
+
+---
+
+## Whitebox Options (source + credentials + human expert)
+
+For clients who need deeper assurance, **whitebox** testing is available — conducted by a
+human security engineer assisted by the agent, with source code access, credentials, and
+internal architecture knowledge.
+
+| Tier | What's included | Price |
+|------|-----------------|-------|
+| **Blackbox (automated)** | External, unauthenticated scan — this product | **Included in credits** ($50/credit) |
+| **Whitebox (agent + human expert)** | Source review, authenticated testing, business-logic & exploit-chain analysis, human-written report | **$10,000 USD per app / per domain** |
+
+> Whitebox engagements are scoped per application or per domain, and include a dedicated
+> human security engineer plus agent-assisted deep analysis. Contact us to schedule.
+
+---
+
 ## In Scope (included in every scan)
 
 | Area | Checks performed |
