@@ -284,11 +284,15 @@ func handleDocs(w http.ResponseWriter, r *http.Request) {
 	docsNav := []hdrLink{
 		{Href: "/", Text: "man home"},
 		{Href: "/docs", Text: "man docs"},
-		{Href: "/#cicd", Text: "$ pip install cicd"},
+		{Href: "/#cicd", Text: "pip install cicd"},
 		{Href: "/#pricing", Text: "cat pricing"},
 		{Href: "/#faq", Text: "man faq"},
 	}
+	// Auth-aware header: logged-in users see the dashboard button, anonymous see login.
 	authNav := `<a href="/login" class="whitespace-nowrap rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-300 hover:bg-emerald-500/20 glow">login</a>`
+	if _, err := currentUser(r); err == nil {
+		authNav = `<a href="/dashboard" class="whitespace-nowrap rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-300 hover:bg-emerald-500/20 glow">./dashboard<span class="cursor"></span></a>`
+	}
 	hdr := string(renderHeader(docsNav, template.HTML(authNav), "/")) + headerMobileJS
 	out := strings.ReplaceAll(docsHTMLRaw, "__DOCS_HEADER__", hdr)
 	out = strings.ReplaceAll(out, "__CSS_HASH__", cssHash)
