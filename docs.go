@@ -26,12 +26,42 @@ var docsHTML = template.Must(template.New("docs").Funcs(template.FuncMap{
   <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
     <a href="/" class="font-mono text-sm font-bold text-emerald-300 glow">netsekurity.com <span class="text-gray-500"># ptaas</span></a>
     <div class="flex items-center gap-3 font-mono text-xs">
-      <a href="/" class="prompt text-gray-400 hover:text-emerald-300">man</a>
-      <a href="/#pricing" class="prompt text-gray-400 hover:text-emerald-300">pricing</a>
-      <a href="/login" class="prompt text-gray-400 hover:text-emerald-300">login</a>
+      <div class="hidden items-center gap-3 md:flex">
+        <a href="/" class="prompt text-gray-400 hover:text-emerald-300">man</a>
+        <a href="/#pricing" class="prompt text-gray-400 hover:text-emerald-300">pricing</a>
+        <a href="/login" class="prompt text-gray-400 hover:text-emerald-300">login</a>
+      </div>
+      <button type="button" aria-label="Open menu" aria-expanded="false"
+        onclick="nskDocsToggleMobile()" id="nsk-docs-burger"
+        class="flex h-9 w-9 items-center justify-center rounded border border-white/15 font-mono text-lg text-emerald-300 hover:bg-white/5 md:hidden">☰</button>
     </div>
   </div>
+  <!-- Mobile menu (matches landing) -->
+  <div id="nsk-docs-mobile-menu" class="hidden border-t border-white/10 bg-ink/95 px-4 pb-4 pt-2 md:hidden">
+    <nav aria-label="Mobile navigation" class="flex flex-col gap-1 font-mono text-sm">
+      <a href="/" class="prompt rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">man home</a>
+      <a href="/docs" class="prompt rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">man docs</a>
+      <a href="/#cicd" class="prompt rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">$ pip install cicd</a>
+      <a href="/#pricing" class="prompt rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">cat pricing</a>
+      <a href="/#faq" class="prompt rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">man faq</a>
+      <div class="my-1 border-t border-white/10"></div>
+      <div class="flex flex-col gap-2 px-2">
+        <a href="/login" class="prompt text-gray-300 hover:text-emerald-300">login</a>
+      </div>
+    </nav>
+  </div>
 </header>
+
+<script>
+function nskDocsToggleMobile() {
+  var b = document.getElementById('nsk-docs-burger');
+  var m = document.getElementById('nsk-docs-mobile-menu');
+  var open = m.classList.contains('hidden');
+  if (open) { m.classList.remove('hidden'); b.setAttribute('aria-expanded','true'); b.textContent='×'; }
+  else { m.classList.add('hidden'); b.setAttribute('aria-expanded','false'); b.textContent='☰'; }
+  m.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', function(){ m.classList.add('hidden'); b.textContent='☰'; }); });
+}
+</script>
 
 <main class="mx-auto max-w-6xl overflow-x-hidden px-4 py-8 sm:px-6">
   <h1 class="font-mono text-2xl font-bold text-white"><span class="text-cyan-400">$</span> man netsekurity --cicd-integration</h1>
