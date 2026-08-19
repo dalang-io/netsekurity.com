@@ -1,7 +1,7 @@
 # netsekurity.com — Pentest as a Service (PTaaS)
 
 On-demand pentesting, per domain, per credit. Add a domain, verify ownership with an
-auto-generated TXT record, and get a full, human-reviewed pentest report.
+auto-generated TXT record, and get a full, agent-reviewed pentest report.
 
 **Pricing (credits):** $50 = 1 credit · $100 = 3 credits · $500 = 20 credits · $1000 = 50 credits.
 **1 credit = 1 pentest · 1 domain.**
@@ -190,7 +190,7 @@ User dashboard       →  /reports/YYYYMMDD-hh:mm-<domain>.pdf  (owner/admin onl
   TLS/PKI, exposed assets, nikto/open-redirect on `--deep-scan`; CVSS+CWE grounded).
 - `nsec_io.sh` — claim/upload I/O helpers (token read from `.env` via SSH, never logged).
 - `nsec_monitor.sh` — token-saver monitor; suppresses the agent LLM when the queue is idle
-  (no AI tokens burned when nobody scans).
+  (no agent tokens burned when nobody scans).
 - `nsec_worker.sh` — standalone one-shot worker (alternative to the cron).
 - `AGENT_WORKER.md` — full behavior reference.
 

@@ -4,7 +4,7 @@ Client-facing scope of the **automated external web security assessment** delive
 verified domain / credit. 1 credit = 1 external assessment · 1 domain.
 
 > **Plainly stated:** this is an **automated, external, blackbox, unauthenticated, read-only
-> assessment** with human-reviewed findings — **not a full penetration test**. It does not
+> assessment** with agent-reviewed findings — **not a full penetration test**. It does not
 > test authenticated application logic, authorization (IDOR), or business logic. For that,
 > see the **Whitebox** tier below.
 
@@ -22,7 +22,7 @@ verified domain / credit. 1 credit = 1 external assessment · 1 domain.
    `robots.txt`, SVN metadata, source maps, debug endpoints, secrets.
 6. **Common web vulnerability probing** — SQLi, LFI/RFI, XSS, open redirect, path traversal,
    server misconfiguration.
-7. **Human validation & curation** — a security engineer reviews every finding before
+7. **Agent validation & curation** — a security engineer reviews every finding before
    delivery: removes false positives, merges duplicates, checks evidence, adjusts severity,
    re-tests critical items where feasible, and curates the final report.
 
@@ -78,9 +78,9 @@ For authenticated testing, authorization/business-logic analysis, and exploit-pa
 | Tier | What's included | Price |
 |------|-----------------|-------|
 | **Blackbox (automated)** | External, unauthenticated assessment — this product | **Included in credits** ($50/credit) |
-| **Whitebox (agent + human expert)** | Source review, authenticated testing, business-logic & exploit-chain analysis, human-written report | **$10,000 USD per app / per domain** |
+| **Whitebox (agent + expert)** | Source review, authenticated testing, business-logic & exploit-chain analysis, agent-written report | **$10,000 USD per app / per domain** |
 
-> Whitebox engagements are scoped per app/domain and include a dedicated human security
+> Whitebox engagements are scoped per app/domain and include a dedicated security
 > engineer plus agent-assisted deep analysis. Contact us to schedule.
 
 ## Best-fit use cases

@@ -2,11 +2,11 @@
 
 ## About
 
-Netsekurity (by **Dalang Pte Ltd**) is a **continuous external web security assessment** service. For one credit per domain, it runs an automated, read-only scan of your **public attack surface**, then a human security engineer reviews, validates, and curates the findings into a plain-language PDF report.
+Netsekurity (by **Dalang Pte Ltd**) is a **continuous external web security assessment** service. For one credit per domain, it runs an automated, read-only scan of your **public attack surface**, then a security engineer reviews, validates, and curates the findings into a plain-language PDF report.
 
-**Positioning:** "You build fast with AI. We check your production attack surface — with human-reviewed findings." It is designed for vibe-coders and non-technical founders whose alternative is doing no security testing at all, and it integrates with CI/CD so the public surface is re-scanned on every deploy.
+**Positioning:** "You build fast with an agent. We check your production attack surface — with agent-reviewed findings." It is designed for vibe-coders and non-technical founders whose alternative is doing no security testing at all, and it integrates with CI/CD so the public surface is re-scanned on every deploy.
 
-**Important, stated plainly:** this is **not a full penetration test**. It is an automated external (blackbox, unauthenticated, read-only) assessment with human triage. It does not test authenticated application logic, authorization/IDOR, or business logic. Deeper assurance is available as a separate **whitebox** engagement.
+**Important, stated plainly:** this is **not a full penetration test**. It is an automated external (blackbox, unauthenticated, read-only) assessment with automated triage. It does not test authenticated application logic, authorization/IDOR, or business logic. Deeper assurance is available as a separate **whitebox** engagement.
 
 ## Pricing
 
@@ -15,7 +15,7 @@ Netsekurity (by **Dalang Pte Ltd**) is a **continuous external web security asse
 - Standard: **$100** → 3 credits
 - Professional: **$500** → 20 credits (most popular)
 - Enterprise: **$1000** → 50 credits
-- **Whitebox** (source code + credentials + authenticated manual testing by a human security engineer + agent): **$10,000 USD per app / per domain**
+- **Whitebox** (source code + credentials + authenticated manual testing by a security engineer + agent): **$10,000 USD per app / per domain**
 
 ## Methodology (blackbox, external, unauthenticated)
 
@@ -25,7 +25,7 @@ Netsekurity (by **Dalang Pte Ltd**) is a **continuous external web security asse
 4. **TLS / PKI** — certificate validity, expiry, issuer, SAN coverage.
 5. **Information disclosure** — exposed `.git`, `.env`, backups, `server-status`, `phpinfo`, `robots.txt`, SVN metadata, source maps, debug endpoints, secrets.
 6. **Common web vulnerability probing** — SQL injection, LFI/RFI, XSS, open redirect, path traversal, server misconfiguration.
-7. **Human validation & curation** — a security engineer reviews every finding: deduplicates, checks evidence, re-tests critical items where feasible, and curates the final report.
+7. **Agent validation & curation** — a security engineer reviews every finding: deduplicates, checks evidence, re-tests critical items where feasible, and curates the final report.
 
 Findings are **mapped to OWASP Top 10 categories** and scored with **CVSS v3.1**, each with reproduction steps and remediation guidance.
 
@@ -37,7 +37,7 @@ Findings are **mapped to OWASP Top 10 categories** and scored with **CVSS v3.1**
 - Security headers, TLS/PKI validation
 - Exposed files & secrets (`.env`, `.git`, backups, config, debug endpoints, source maps)
 - SQLi, LFI/RFI, XSS, open redirect, path traversal, server misconfiguration
-- Human-reviewed, OWASP-mapped, CVSS-scored report with remediation roadmap
+- Agent-reviewed, OWASP-mapped, CVSS-scored report with remediation roadmap
 
 **Not included in the standard product:**
 - Authenticated testing (anything behind a login/session)
@@ -62,25 +62,25 @@ This catches, on the day they ship: newly exposed endpoints/subdomains, changed 
 ## Use cases
 
 ### 1. Vibe Coders / non-technical founders
-AI writes fast code but doesn't teach security. A production launch can leak API keys, have broken access control, or be vulnerable to SQL injection. Netsekurity finds common issues on the public surface before real users do, with a report in plain language. Against "doing nothing," this is a significant improvement.
+agent writes fast code but doesn't teach security. A production launch can leak API keys, have broken access control, or be vulnerable to SQL injection. Netsekurity finds common issues on the public surface before real users do, with a report in plain language. Against "doing nothing," this is a significant improvement.
 
 ### 2. CI/CD continuous coverage
 Instead of an annual report that goes stale, re-scan the public surface on every deploy for faster mitigation of external/common issues.
 
-## Human review — what we mean
+## Review — what we mean
 
 Every automated finding is reviewed by a security engineer before delivery: false positives are removed, duplicates merged, evidence checked, severity adjusted, and (where feasible) critical findings re-tested. The report is then curated with remediation steps. For deeper manual validation, authenticated exploration, and exploit-path analysis, choose the **whitebox** tier.
 
 ## FAQ
 
 1. **How does pricing work?** 1 credit = 1 external assessment on 1 domain.
-2. **Is this a full penetration test?** No — it's an automated external web security assessment with human review. Authenticated/business-logic coverage is the separate whitebox tier.
-3. **What is covered in one assessment?** See Coverage & limitations. Public, unauthenticated, read-only OWASP-mapped scanning with human-reviewed findings.
+2. **Is this a full penetration test?** No — it's an automated external web security assessment with an agent review. Authenticated/business-logic coverage is the separate whitebox tier.
+3. **What is covered in one assessment?** See Coverage & limitations. Public, unauthenticated, read-only OWASP-mapped scanning with agent-reviewed findings.
 4. **How do I verify my domain?** We auto-generate a unique TXT record; add it in DNS and hit verify.
-5. **Is it really automated?** The scan is automated end-to-end; a human security engineer reviews before the report is delivered.
+5. **Is it really automated?** The scan is automated end-to-end; a security engineer reviews before the report is delivered.
 6. **What if we have many subdomains?** Each domain costs 1 credit. Wildcard/API surfaces can be scoped — contact us.
 7. **Blackbox vs Whitebox?** Standard is blackbox/external. Whitebox is $10,000 USD per app/domain.
-8. **I'm not technical / built this with AI — is this for me?** Yes. Plain-language report, no security background required.
+8. **I'm not technical / built this with an agent — is this for me?** Yes. Plain-language report, no security background required.
 
 ## Links
 

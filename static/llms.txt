@@ -1,8 +1,8 @@
 # Netsekurity.com
 
-> Continuous **external web security assessment** with human-reviewed findings — for apps built fast with AI. 1 credit = 1 domain. Verify ownership with an auto-generated TXT record; get a plain-language, human-reviewed report. From $50.
+> Continuous **external web security assessment** with agent-reviewed findings — for apps built fast with an agent. 1 credit = 1 domain. Verify ownership with an auto-generated TXT record; get a plain-language, agent-reviewed report. From $50.
 
-Netsekurity (by Dalang Pte Ltd) provides an **automated, external, read-only vulnerability assessment** of your public attack surface, with a human security engineer reviewing and curating the findings before the report is delivered. It is designed for AI-assisted ("vibe-coded") applications and non-technical founders who would otherwise do no security testing, and it integrates with CI/CD for a re-scan on every deploy.
+Netsekurity (by Dalang Pte Ltd) provides an **automated, external, read-only vulnerability assessment** of your public attack surface, with a security engineer reviewing and curating the findings before the report is delivered. It is designed for agent-assisted ("vibe-coded") applications and non-technical founders who would otherwise do no security testing, and it integrates with CI/CD for a re-scan on every deploy.
 
 **This is an external security assessment, not a full penetration test.** It does not test authenticated areas, authorization (IDOR), or business logic. For that, see the whitebox upgrade below.
 
@@ -24,7 +24,7 @@ Netsekurity (by Dalang Pte Ltd) provides an **automated, external, read-only vul
 | Professional | $500 | 20 |
 | Enterprise | $1000 | 50 |
 
-**Whitebox** (source review + authenticated manual testing by a human security engineer + agent): **$10,000 USD per app / per domain** — this is the deeper, full-pentest-style tier.
+**Whitebox** (source review + authenticated manual testing by a security engineer + agent): **$10,000 USD per app / per domain** — this is the deeper, full-pentest-style tier.
 
 ## Coverage & limitations
 
@@ -35,7 +35,7 @@ Netsekurity (by Dalang Pte Ltd) provides an **automated, external, read-only vul
 - Exposed files & secrets (`.env`, `.git`, backups, config, debug endpoints, source maps)
 - Common web-vuln probing: SQL injection, LFI/RFI, XSS, open redirect, path traversal, server misconfiguration
 - Findings OWASP-*mapped*, CVSS v3.1 scored, with evidence and remediation steps
-- Human security engineer reviews, deduplicates, and curates before delivery
+- Security engineer reviews, deduplicates, and curates before delivery
 
 **Not included (standard product):**
 - Authenticated testing (anything behind a login/session)
@@ -60,16 +60,16 @@ Add a one-line scan step to your pipeline and Netsekurity **re-scans your public
 3. Add a domain.
 4. Verify ownership with an auto-generated TXT record (`_netsekurity.<domain>`).
 5. Run an assessment (dashboard or CI/CD API token) — consumes 1 credit.
-6. Download the human-reviewed PDF report (owner or admin only).
+6. Download the agent-reviewed PDF report (owner or admin only).
 
 ## FAQ
 
 - **How does pricing work?** 1 credit = 1 external assessment on 1 domain.
-- **Is this a full penetration test?** No. It's an automated external web security assessment with human review. Authenticated/business-logic testing is available as the whitebox tier.
-- **What is covered?** Public, unauthenticated, read-only OWASP-mapped scanning with human-reviewed findings (see Coverage above).
+- **Is this a full penetration test?** No. It's an automated external web security assessment with an agent review. Authenticated/business-logic testing is available as the whitebox tier.
+- **What is covered?** Public, unauthenticated, read-only OWASP-mapped scanning with agent-reviewed findings (see Coverage above).
 - **How do I verify my domain?** We auto-generate a unique TXT record; add it to DNS and verify.
-- **Is it automated?** The scan is automated end-to-end; a human security engineer reviews before the report is delivered.
-- **I'm not technical / built this with AI — is this for me?** Yes. Plain-language report, no security background required — it's far better than doing nothing.
+- **Is it automated?** The scan is automated end-to-end; a security engineer reviews before the report is delivered.
+- **I'm not technical / built this with an agent — is this for me?** Yes. Plain-language report, no security background required — it's far better than doing nothing.
 - **Blackbox vs Whitebox?** Standard is blackbox/external. Whitebox (source + authenticated manual testing) is $10,000 USD per app/domain.
 
 ## Contact
