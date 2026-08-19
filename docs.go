@@ -18,7 +18,7 @@ var docsHTMLRaw = `<!DOCTYPE html>
 <meta name="description" content="Documentation &amp; tutorials to integrate Netsekurity automated pentests into your CI/CD pipeline, plus the HTTP API reference."/>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 <link rel="apple-touch-icon" href="/favicon-512.png"/>
-<link rel="stylesheet" href="/css/styles.css?v={{cssHash}}"/>
+<link rel="stylesheet" href="/css/styles.css?v=__CSS_HASH__"/>
 <style>pre{white-space:pre-wrap;word-break:break-word}code{font-family:ui-monospace,monospace}</style>
 </head>
 <body class="scanlines bg-ink text-gray-300 min-h-screen overflow-x-hidden">
