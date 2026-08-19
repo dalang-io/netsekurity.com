@@ -120,7 +120,7 @@ func renderStackTile(it stackItem) string {
 		col = "#22d3ee"
 	}
 	if it.Path != "" {
-		return fmt.Sprintf(`<div class="flex flex-col items-center gap-0.5 rounded border border-white/10 bg-ink p-1.5" title="%s">
+		return fmt.Sprintf(`<div class="crt-tile flex flex-col items-center gap-0.5 rounded border border-white/10 p-1.5" title="%s">
   <svg viewBox="0 0 24 24" width="22" height="22" role="img" aria-label="%s"><path fill="%s" d="%s"/></svg>
   <span class="truncate max-w-full font-mono text-[8px] leading-none text-gray-400">%s</span></div>`,
 			it.Name, it.Name, col, it.Path, it.Name)
@@ -135,7 +135,7 @@ func renderStackTile(it stackItem) string {
 	if len(initial) < 2 {
 		initial = it.Name[:2]
 	}
-	return fmt.Sprintf(`<div class="flex flex-col items-center gap-0.5 rounded border border-white/10 bg-ink p-1.5" title="%s">
+	return fmt.Sprintf(`<div class="crt-tile flex flex-col items-center gap-0.5 rounded border border-white/10 p-1.5" title="%s">
   <svg viewBox="0 0 24 24" width="22" height="22" role="img" aria-label="%s">
     <rect width="24" height="24" rx="4" fill="%s" opacity="0.15"/>
     <text x="12" y="16" font-family="monospace" font-size="11" font-weight="bold" fill="%s" text-anchor="middle">%s</text>
