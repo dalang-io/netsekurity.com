@@ -130,6 +130,8 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	s := strings.ReplaceAll(string(b), "__GOOGLE_CLIENT_ID__", getenv("GOOGLE_CLIENT_ID", ""))
 	s = strings.ReplaceAll(s, "__CSS_HASH__", cssHash)
+	// Shared stack coverage section (real SVG logos).
+	s = strings.ReplaceAll(s, "__STACK_BLOCK__", string(renderStack()))
 	// Shared header component (landing + docs use the same renderHeader).
 	landingNav := []hdrLink{
 		{Href: "#how", Text: "ls how"},
