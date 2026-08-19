@@ -1,0 +1,80 @@
+# Netsekurity.com — Full LLM content
+
+## About
+
+Netsekurity (by **Dalang Pte Ltd**) is a **Pentest as a Service (PTaaS)** platform. You get on-demand penetration testing per domain, per credit, with ownership verified by an auto-generated TXT record. Every scan is automated end-to-end and then reviewed by a human security engineer before a plain-language PDF report is delivered.
+
+Positioning: "You vibe code. We pentest." It is the safety net for apps built quickly with AI (vibe coding) and for non-technical founders who want security without a security team. It also integrates with CI/CD so an app is pentested on every deploy — security coverage never goes stale.
+
+## Pricing
+
+- **1 credit = 1 pentest · 1 domain**
+- Starter: **$50** → 1 credit
+- Standard: **$100** → 3 credits
+- Professional: **$500** → 20 credits (most popular)
+- Enterprise: **$1000** → 50 credits
+- Whitebox (source review + authenticated manual testing): **$10,000 USD per app/domain**
+
+## What a pentest includes
+
+An automated, **unauthenticated, read-only** assessment of a verified domain's public surface:
+
+- Recon & subdomain discovery
+- Technology / WAF fingerprinting
+- Full security-header review
+- TLS / PKI validation
+- Exposed files & secrets scanning
+- Common web vulnerability probing: SQL injection, LFI/RFI, XSS, open redirect, path traversal, misconfiguration
+- Findings mapped to OWASP Top 10, scored with CVSS v3.1, with reproduction steps and remediation guidance
+- Human security review before the report is delivered
+
+Scans are blackbox (external, no credentials, no source access). Testing is read-only and non-destructive.
+
+## How to use it
+
+1. **Sign in with Google** (no security background needed).
+2. **Buy credits** (pay via Xendit; credits auto-credit, no manual top-up).
+3. **Add a domain**.
+4. **Verify ownership** — we generate a unique TXT record (`_netsekurity.<domain>`); add it to your DNS and hit verify. No manual approval.
+5. **Run a pentest** — from the dashboard or automatically in CI/CD via an API token. Consumes 1 credit.
+6. **Download the human-reviewed PDF report** (owner or admin only).
+
+## Continuous security (CI/CD)
+
+Integrate with GitHub Actions, GitLab CI, Jenkins, or any CI tool:
+
+- Generate an **API token** in the dashboard (7/14/30/60/90-day expiry).
+- Add a one-line scan step to your pipeline after deploy.
+- Every deploy triggers a scan; new vulnerabilities are caught the day they ship instead of being discovered months later (or after a breach).
+- Cost is predictable: 1 credit per scan.
+
+This solves the "stale pentest" problem — an annual or semi-annual report is meaningless once you ship new code, dependencies, or config changes.
+
+## Use cases
+
+### 1. Vibe Coders / non-technical founders
+AI writes fast code but doesn't teach security. A weekend project launched to production can leak API keys, have broken access control, or be vulnerable to SQL injection. Netsekurity catches these before real users do — with a report written in plain language.
+
+### 2. CI/CD continuous security
+Instead of a yearly pentest that goes stale, scan on every deploy. Faster mitigation, never out of date.
+
+## FAQ
+
+1. **How does pricing work?** 1 credit = 1 pentest on 1 domain. Buy a package, add a domain, verify ownership with the TXT record, and a pentest is scheduled.
+2. **What is covered in one pentest?** An automated OWASP-mapped, unauthenticated vulnerability assessment of your verified domain's public surface, with a prioritized human-reviewed report.
+3. **How do I verify my domain?** We auto-generate a unique TXT record per domain. Add it in your DNS provider, hit verify, and ownership is confirmed in seconds.
+4. **Is it really automated?** The scan is fully automated end-to-end. A human security engineer reviews and curates the findings before the report is delivered.
+5. **What if we have many subdomains?** Each domain costs 1 credit. Wildcard or API surfaces can be scoped — contact us for a custom plan.
+6. **What is not covered?** Unauthenticated only — no logins, no deep multi-stage exploit chains. For auth-heavy production apps consider the whitebox option.
+7. **Blackbox vs Whitebox?** This service is blackbox. Whitebox is $10,000 USD per app/domain.
+8. **I'm not technical / built this with AI — is this for me?** Yes. Plain-language, human-reviewed reports; no security background required.
+
+## Links
+
+- Home: https://netsekurity.com/
+- Docs (CI/CD + API): https://netsekurity.com/docs
+- Product scope: https://netsekurity.com/PRODUCT_SCOPE.md
+
+## Contact
+
+sales@dalang.io — replies within 1 business day.

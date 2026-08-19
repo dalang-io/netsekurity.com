@@ -1,0 +1,52 @@
+# Netsekurity.com
+
+> You vibe code. We pentest. On-demand **Pentest as a Service (PTaaS)** — 1 credit = 1 pentest · 1 domain, verified with an auto-generated TXT record, delivered as a human-reviewed report. From $50.
+
+Netsekurity (by Dalang Pte Ltd) secures apps built with AI ("vibe coding") and gives CI/CD pipelines continuous security: a pentest on every deploy, so results never go stale.
+
+## Key pages
+
+- [Home](https://netsekurity.com/): product overview, pricing, use cases (Vibe Coder + CI/CD), TXT verification demo, FAQ.
+- [Docs — CI/CD integration & API](https://netsekurity.com/docs): GitHub Actions / GitLab CI / Jenkins setup, API token usage, HTTP API reference, scope & limitations.
+- [Full LLM content](https://netsekurity.com/llms-full.txt): everything below in one file.
+
+## Pricing (credits)
+
+1 credit = 1 pentest · 1 domain. Auto TXT domain verification. Human-reviewed report in under 24h.
+
+| Plan | Price (USD) | Credits |
+|------|------------|---------|
+| Starter | $50 | 1 |
+| Standard | $100 | 3 |
+| Professional | $500 | 20 |
+| Enterprise | $1000 | 50 |
+
+## What a pentest covers
+
+An automated, unauthenticated, read-only vulnerability assessment of a verified domain's public surface: recon & subdomain discovery, tech/WAF fingerprint, security headers, TLS/PKI validation, exposed files & secrets, and common web-vuln probing (SQLi, XSS, open redirect, path traversal, misconfiguration). Findings are OWASP-mapped, CVSS v3.1 scored, and human-reviewed before the report is delivered.
+
+## How it works
+
+1. Create an account (Google sign-in).
+2. Buy credits.
+3. Add a domain.
+4. Verify ownership with an auto-generated TXT record (`_netsekurity.<domain>`).
+5. Run a pentest (dashboard button or CI/CD API token) — consumes 1 credit.
+6. Download the human-reviewed PDF report.
+
+## Continuous security (CI/CD)
+
+Add a one-line step to your pipeline and scan on every deploy via an API token (GitHub Actions / GitLab CI / Jenkins / etc.). Catch regressions the day they ship instead of waiting for a yearly pentest.
+
+## FAQ
+
+- **How does pricing work?** 1 credit = 1 pentest on 1 domain. Buy a package, add a domain, verify with TXT, and a pentest is scheduled.
+- **What is covered?** Public, unauthenticated, read-only OWASP-mapped scanning with human-reviewed findings.
+- **How do I verify my domain?** We auto-generate a unique TXT record; add it to DNS and verify — no manual approval.
+- **Is it automated?** The scan is automated end-to-end; a human security engineer reviews before the report is delivered.
+- **I'm not technical / built this with AI — is this for me?** Yes. Plain-language report, no security background required.
+- **Blackbox vs Whitebox?** This service is blackbox. Whitebox (source review + authenticated manual testing) is $10,000 USD per app/domain.
+
+## Contact
+
+sales@dalang.io — replies within 1 business day.

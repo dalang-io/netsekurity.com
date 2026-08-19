@@ -1,0 +1,38 @@
+# robots.txt — netsekurity.com
+# Allow search engines and AI/LLM crawlers (GEO). Auth/private pages are noindex anyway.
+
+User-agent: *
+Allow: /
+
+# AI / LLM crawlers (GEO)
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: anthropic-ai
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Applebot-Extended
+Allow: /
+
+# Private/auth areas — not for crawlers
+Disallow: /dashboard
+Disallow: /su
+Disallow: /reports/
+Disallow: /auth/
+
+Sitemap: https://netsekurity.com/sitemap.xml
