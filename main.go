@@ -136,8 +136,8 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	landingNav := []hdrLink{
 		{Href: "#how", Text: "ls how"},
 		{Href: "#features", Text: "cat features"},
-		{Href: "#stack", Text: "$ cat stack"},
-		{Href: "#cicd", Text: "$ pip install cicd"},
+		{Href: "#stack", Text: "cat stack"},
+		{Href: "#cicd", Text: "pip install cicd"},
 		{Href: "/docs", Text: "man docs"},
 		{Href: "#pricing", Text: "cat pricing"},
 		{Href: "#verify", Text: "verify -d"},

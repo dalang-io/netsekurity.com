@@ -28,7 +28,7 @@ func renderHeader(nav []hdrLink, authNav template.HTML, brandURL string) templat
 		if l.NewTab {
 			target = ` target="_blank" rel="noopener"`
 		}
-		desktop.WriteString(`<a href="` + template.HTMLEscapeString(l.Href) + `"` + target + ` class="prompt hover:text-emerald-300">` + template.HTMLEscapeString(l.Text) + `</a>`)
+		desktop.WriteString(`<a href="` + template.HTMLEscapeString(l.Href) + `"` + target + ` class="prompt whitespace-nowrap hover:text-emerald-300">` + template.HTMLEscapeString(l.Text) + `</a>`)
 	}
 
 	var mobile strings.Builder
@@ -37,7 +37,7 @@ func renderHeader(nav []hdrLink, authNav template.HTML, brandURL string) templat
 		if l.NewTab {
 			target = ` target="_blank" rel="noopener"`
 		}
-		mobile.WriteString(`<a href="` + template.HTMLEscapeString(l.Href) + `"` + target + ` class="prompt rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">` + template.HTMLEscapeString(l.Text) + `</a>`)
+		mobile.WriteString(`<a href="` + template.HTMLEscapeString(l.Href) + `"` + target + ` class="prompt whitespace-nowrap rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">` + template.HTMLEscapeString(l.Text) + `</a>`)
 	}
 
 	auth := string(authNav)
