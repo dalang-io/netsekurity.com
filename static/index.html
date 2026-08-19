@@ -9,7 +9,7 @@
   <title>netsekurity.com — Pentest as a Service (PTaaS) | On-Demand Web Security</title>
 
   <!-- Primary SEO -->
-  <meta name="description" content="Vibe-coded an app with AI? Netsekurity is your safety net. One credit = one pentest per domain, verified with an auto-generated TXT record. Human-reviewed, plain-language report in under 24h. From $50. Secure your AI-generated app before production — not after the breach." />
+  <meta name="description" content="Vibe-coded an app with AI? Netsekurity is your safety net. One credit = one external, read-only web security assessment per domain, verified with an auto-generated TXT record. Human-reviewed, plain-language report in under 24h. From $50. Secure your AI-generated app before production — not after the breach." />
   <meta name="keywords" content="vibe coding security, secure AI-generated apps, pentest as a service, PTaaS, penetration testing, web security, vulnerability scan, OWASP Top 10, secure vibe code, non-technical security, startup security, indie hacker security, domain verification, ethical hacking" />
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#05070f" />
@@ -62,7 +62,7 @@
         "description": "On-demand penetration testing per domain, per credit. Verify domain ownership with an auto-generated TXT record, then receive a human-reviewed vulnerability report.",
         "areaServed": "Worldwide",
         "offers": [
-          { "@type": "Offer", "name": "Starter", "price": "50", "priceCurrency": "USD", "description": "1 credit = 1 pentest · 1 domain" },
+          { "@type": "Offer", "name": "Starter", "price": "50", "priceCurrency": "USD", "description": "1 credit = 1 external web security assessment · 1 domain" },
           { "@type": "Offer", "name": "Standard", "price": "100", "priceCurrency": "USD", "description": "3 credits" },
           { "@type": "Offer", "name": "Professional", "price": "500", "priceCurrency": "USD", "description": "20 credits" },
           { "@type": "Offer", "name": "Enterprise", "price": "1000", "priceCurrency": "USD", "description": "50 credits" }
@@ -83,7 +83,9 @@
           { "@type": "Question", "name": "What if we have many subdomains?",
             "acceptedAnswer": { "@type": "Answer", "text": "Each domain costs 1 credit. A wildcard or an API surface can be scoped — contact sales@dalang.io for a custom plan." } },
           { "@type": "Question", "name": "I'm not technical / I built my app with AI — is this for me?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Yes. If you vibe-coded an app with AI and don't have a security background, Netsekurity is exactly for you. Add your domain, verify it with an auto-generated TXT record, and you get a plain-language, human-reviewed report telling you what to fix before going to production." } }
+            "acceptedAnswer": { "@type": "Answer", "text": "Yes. If you vibe-coded an app with AI and don't have a security background, Netsekurity is exactly for you. Add your domain, verify it with an auto-generated TXT record, and you get a plain-language, human-reviewed report telling you what to fix before going to production." } },
+          { "@type": "Question", "name": "Is this a full penetration test?",
+            "acceptedAnswer": { "@type": "Answer", "text": "No. The standard product is an automated, external, read-only web security assessment of your public attack surface with human-reviewed findings. It does not test authenticated areas, authorization (IDOR), or business logic — deeper whitebox testing is available separately." } }
         ]
       }
     ]
@@ -149,9 +151,9 @@
               <span class="glow block text-emerald-400">Before attackers do.</span>
             </h1>
             <p class="font-mono text-sm leading-relaxed text-gray-400 sm:text-base">
-              One pentest. One domain. One credit. Verify ownership with an
-              auto-generated <span class="text-cyan-300">TXT</span> record, let our
-              engine hunt your surface, and get a <span class="text-emerald-300">human-reviewed</span> report.
+              One external security check. One domain. One credit. Verify ownership with an
+              auto-generated <span class="text-cyan-300">TXT</span> record, let our engine scan
+              your public surface, and get a <span class="text-emerald-300">human-reviewed</span> report.
             </p>
             <div class="flex flex-wrap gap-3 pt-2">
               <a href="/dashboard" class="rounded border-2 border-emerald-400 bg-emerald-500/10 px-5 py-2.5 font-mono text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 glow">
@@ -162,7 +164,8 @@
               </a>
             </div>
             <p class="font-mono text-xs text-gray-500">
-              <span class="text-emerald-400">1 credit</span> = 1 pentest · 1 domain · from <span class="text-white">$50</span>
+              <span class="text-emerald-400">1 credit</span> = 1 external assessment · 1 domain · from <span class="text-white">$50</span>
+              <span class="text-gray-600">· external · read-only · human-reviewed</span>
             </p>
           </div>
 
@@ -298,7 +301,7 @@
     <!-- Use Case 2: CI/CD -->
     <section id="cicd-use" class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
       <h2 class="font-mono text-2xl font-bold text-white"><span class="text-emerald-400">$</span> cat use_case — ci/cd</h2>
-      <p class="mt-2 font-mono text-sm text-gray-500"># pentest on every deploy — security never goes stale</p>
+      <p class="mt-2 font-mono text-sm text-gray-500"># re-scan your public attack surface on every deploy</p>
       <div class="mt-8 grid gap-6 lg:grid-cols-2">
         <!-- terminal narrative -->
         <div class="rounded border border-emerald-500/30 bg-[#04060c]">
@@ -328,12 +331,13 @@
             </p>
           </div>
           <div class="rounded border border-white/10 bg-ink p-5">
-            <div class="font-mono text-emerald-400">[+] pentest on every deploy</div>
+            <div class="font-mono text-emerald-400">[+] re-scan on every deploy</div>
             <ul class="mt-2 space-y-1 font-mono text-xs text-gray-400">
               <li>· add a one-line step to your pipeline (GitHub Actions / GitLab CI / Jenkins)</li>
-              <li>· scan with an API token, automatically after each deploy</li>
-              <li>· catch regressions the day they ship, not months later</li>
+              <li>· re-scan your public attack surface with an API token after each deploy</li>
+              <li>· catch external regressions the day they ship, not months later</li>
             </ul>
+            <p class="mt-2 font-mono text-[11px] leading-relaxed text-gray-600">note: covers the public/external surface — authenticated &amp; business-logic coverage needs the whitebox tier.</p>
           </div>
           <div class="rounded border border-white/10 bg-ink p-5">
             <div class="font-mono text-emerald-400">[+] faster mitigation, predictable cost</div>
@@ -424,7 +428,13 @@
     <!-- Pricing -->
     <section id="pricing" class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
       <h2 class="font-mono text-2xl font-bold text-white"><span class="text-emerald-400">$</span> cat pricing.txt</h2>
-      <p class="mt-2 font-mono text-sm text-gray-500"># 1 credit = 1 pentest · 1 domain</p>
+      <p class="mt-2 font-mono text-sm text-gray-500"># 1 credit = 1 external assessment · 1 domain</p>
+      <div class="mt-4 rounded border border-cyan-500/30 bg-[#04060c] p-4 font-mono text-xs leading-relaxed text-gray-400">
+        <span class="text-cyan-300 font-bold">[+] what this is:</span> an automated, <strong>external, read-only</strong>
+        web security assessment of your public attack surface, human-reviewed — <strong>not a full
+        penetration test</strong> (no authenticated / authorization / business-logic testing).
+        For deeper assurance, see <span class="text-emerald-300">whitebox</span> below.
+      </div>
       <div class="mt-8 overflow-x-auto rounded border border-emerald-500/25">
         <table class="w-full font-mono text-sm">
           <thead>
@@ -542,6 +552,13 @@
             ? i'm not technical / built this with ai — is this for me
           </button>
           <div id="faq-a-8" class="px-4 pb-1"></div>
+        </div>
+        <div class="faq-item rounded border border-white/10 bg-[#04060c]">
+          <button type="button" class="w-full px-4 py-3 text-left text-gray-200 hover:text-emerald-300"
+            hx-get="/api/faq?q=9&amp;open=1" hx-target="#faq-a-9" hx-swap="innerHTML">
+            ? is this a full penetration test
+          </button>
+          <div id="faq-a-9" class="px-4 pb-1"></div>
         </div>
         <p class="mt-3 px-4 font-mono text-[11px] text-gray-600">
           full scope &amp; limitations — <a href="/PRODUCT_SCOPE.md" class="text-cyan-400 hover:underline">man product-scope</a>

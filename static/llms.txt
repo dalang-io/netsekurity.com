@@ -1,18 +1,21 @@
 # Netsekurity.com
 
-> You vibe code. We pentest. On-demand **Pentest as a Service (PTaaS)** — 1 credit = 1 pentest · 1 domain, verified with an auto-generated TXT record, delivered as a human-reviewed report. From $50.
+> Continuous **external web security assessment** with human-reviewed findings — for apps built fast with AI. 1 credit = 1 domain. Verify ownership with an auto-generated TXT record; get a plain-language, human-reviewed report. From $50.
 
-Netsekurity (by Dalang Pte Ltd) secures apps built with AI ("vibe coding") and gives CI/CD pipelines continuous security: a pentest on every deploy, so results never go stale.
+Netsekurity (by Dalang Pte Ltd) provides an **automated, external, read-only vulnerability assessment** of your public attack surface, with a human security engineer reviewing and curating the findings before the report is delivered. It is designed for AI-assisted ("vibe-coded") applications and non-technical founders who would otherwise do no security testing, and it integrates with CI/CD for a re-scan on every deploy.
+
+**This is an external security assessment, not a full penetration test.** It does not test authenticated areas, authorization (IDOR), or business logic. For that, see the whitebox upgrade below.
 
 ## Key pages
 
-- [Home](https://netsekurity.com/): product overview, pricing, use cases (Vibe Coder + CI/CD), TXT verification demo, FAQ.
-- [Docs — CI/CD integration & API](https://netsekurity.com/docs): GitHub Actions / GitLab CI / Jenkins setup, API token usage, HTTP API reference, scope & limitations.
+- [Home](https://netsekurity.com/): overview, pricing, use cases (Vibe Coder + CI/CD), TXT verification demo, FAQ.
+- [Docs — CI/CD integration & API](https://netsekurity.com/docs): GitHub Actions / GitLab CI / Jenkins setup, API token usage, HTTP API reference.
+- [Product scope & methodology](https://netsekurity.com/PRODUCT_SCOPE.md): exact what's in/out of scope.
 - [Full LLM content](https://netsekurity.com/llms-full.txt): everything below in one file.
 
 ## Pricing (credits)
 
-1 credit = 1 pentest · 1 domain. Auto TXT domain verification. Human-reviewed report in under 24h.
+1 credit = 1 external assessment · 1 domain. Auto TXT domain verification. Report in under 24h.
 
 | Plan | Price (USD) | Credits |
 |------|------------|---------|
@@ -21,31 +24,53 @@ Netsekurity (by Dalang Pte Ltd) secures apps built with AI ("vibe coding") and g
 | Professional | $500 | 20 |
 | Enterprise | $1000 | 50 |
 
-## What a pentest covers
+**Whitebox** (source review + authenticated manual testing by a human security engineer + agent): **$10,000 USD per app / per domain** — this is the deeper, full-pentest-style tier.
 
-An automated, unauthenticated, read-only vulnerability assessment of a verified domain's public surface: recon & subdomain discovery, tech/WAF fingerprint, security headers, TLS/PKI validation, exposed files & secrets, and common web-vuln probing (SQLi, XSS, open redirect, path traversal, misconfiguration). Findings are OWASP-mapped, CVSS v3.1 scored, and human-reviewed before the report is delivered.
+## Coverage & limitations
+
+**Included (every scan):**
+- External recon & subdomain discovery (passive)
+- Technology / WAF / stack fingerprinting
+- Full security-header review, TLS/PKI validation
+- Exposed files & secrets (`.env`, `.git`, backups, config, debug endpoints, source maps)
+- Common web-vuln probing: SQL injection, LFI/RFI, XSS, open redirect, path traversal, server misconfiguration
+- Findings OWASP-*mapped*, CVSS v3.1 scored, with evidence and remediation steps
+- Human security engineer reviews, deduplicates, and curates before delivery
+
+**Not included (standard product):**
+- Authenticated testing (anything behind a login/session)
+- Authorization / IDOR / privilege escalation testing
+- Business-logic, workflow, or race-condition testing
+- Deep multi-stage exploit chains
+- SSRF, GraphQL, WebSocket, request-smuggling, cache-poisoning (not claimed)
+- Source-code analysis (blackbox only)
+
+**"OWASP-mapped" means findings are categorized per OWASP Top 10 — it is not a claim that every OWASP category is exhaustively tested.**
+
+## Continuous security (CI/CD) — what it actually means
+
+Add a one-line scan step to your pipeline and Netsekurity **re-scans your public attack surface on every deploy** (GitHub Actions / GitLab CI / Jenkins, via an API token). This catches newly exposed endpoints, changed headers, TLS mistakes, exposed files/secrets, and common injection regressions the day they ship — instead of waiting for a periodic assessment that goes stale.
+
+**It does not mean the authenticated application logic is re-tested.** If your risk is in authenticated authorization/business logic, pair with the whitebox tier or a manual pentest.
 
 ## How it works
 
-1. Create an account (Google sign-in).
-2. Buy credits.
+1. Sign in with Google (no security background needed).
+2. Buy credits (pay via Xendit; auto-credited).
 3. Add a domain.
 4. Verify ownership with an auto-generated TXT record (`_netsekurity.<domain>`).
-5. Run a pentest (dashboard button or CI/CD API token) — consumes 1 credit.
-6. Download the human-reviewed PDF report.
-
-## Continuous security (CI/CD)
-
-Add a one-line step to your pipeline and scan on every deploy via an API token (GitHub Actions / GitLab CI / Jenkins / etc.). Catch regressions the day they ship instead of waiting for a yearly pentest.
+5. Run an assessment (dashboard or CI/CD API token) — consumes 1 credit.
+6. Download the human-reviewed PDF report (owner or admin only).
 
 ## FAQ
 
-- **How does pricing work?** 1 credit = 1 pentest on 1 domain. Buy a package, add a domain, verify with TXT, and a pentest is scheduled.
-- **What is covered?** Public, unauthenticated, read-only OWASP-mapped scanning with human-reviewed findings.
-- **How do I verify my domain?** We auto-generate a unique TXT record; add it to DNS and verify — no manual approval.
+- **How does pricing work?** 1 credit = 1 external assessment on 1 domain.
+- **Is this a full penetration test?** No. It's an automated external web security assessment with human review. Authenticated/business-logic testing is available as the whitebox tier.
+- **What is covered?** Public, unauthenticated, read-only OWASP-mapped scanning with human-reviewed findings (see Coverage above).
+- **How do I verify my domain?** We auto-generate a unique TXT record; add it to DNS and verify.
 - **Is it automated?** The scan is automated end-to-end; a human security engineer reviews before the report is delivered.
-- **I'm not technical / built this with AI — is this for me?** Yes. Plain-language report, no security background required.
-- **Blackbox vs Whitebox?** This service is blackbox. Whitebox (source review + authenticated manual testing) is $10,000 USD per app/domain.
+- **I'm not technical / built this with AI — is this for me?** Yes. Plain-language report, no security background required — it's far better than doing nothing.
+- **Blackbox vs Whitebox?** Standard is blackbox/external. Whitebox (source + authenticated manual testing) is $10,000 USD per app/domain.
 
 ## Contact
 
