@@ -135,10 +135,43 @@
         <a href="#faq" class="prompt hover:text-emerald-300">man faq</a>
       </nav>
       <div class="flex items-center gap-3">
-        __HEADER_AUTH_NAV__
+        <div class="hidden items-center gap-3 md:flex">
+          __HEADER_AUTH_NAV__
+        </div>
+        <button type="button" aria-label="Open menu" aria-expanded="false"
+          onclick="nskToggleMobile()" id="nsk-burger"
+          class="flex h-9 w-9 items-center justify-center rounded border border-white/15 font-mono text-lg text-emerald-300 hover:bg-white/5 md:hidden">☰</button>
       </div>
     </div>
+    <!-- Mobile menu (hidden by default) -->
+    <div id="nsk-mobile-menu" class="hidden border-t border-emerald-500/25 bg-ink/95 px-4 pb-4 pt-2 md:hidden">
+      <nav aria-label="Mobile navigation" class="flex flex-col gap-1 font-mono text-sm">
+        <a href="#how" class="prompt rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">ls how</a>
+        <a href="#features" class="prompt rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">cat features</a>
+        <a href="#cicd" class="prompt rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">$ pip install cicd</a>
+        <a href="/docs" class="prompt rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">man docs</a>
+        <a href="#pricing" class="prompt rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">cat pricing</a>
+        <a href="#verify" class="prompt rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">verify -d</a>
+        <a href="#faq" class="prompt rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">man faq</a>
+        <div class="my-1 border-t border-white/10"></div>
+        <div class="flex flex-col gap-2 px-2">
+          __HEADER_AUTH_NAV__
+        </div>
+      </nav>
+    </div>
   </header>
+
+  <script>
+  function nskToggleMobile() {
+    var b = document.getElementById('nsk-burger');
+    var m = document.getElementById('nsk-mobile-menu');
+    var open = m.classList.contains('hidden');
+    if (open) { m.classList.remove('hidden'); b.setAttribute('aria-expanded','true'); b.textContent='×'; }
+    else { m.classList.add('hidden'); b.setAttribute('aria-expanded','false'); b.textContent='☰'; }
+    // close on anchor click
+    m.querySelectorAll('a').forEach(function(a){ a.addEventListener('click', function(){ m.classList.add('hidden'); b.textContent='☰'; }); });
+  }
+  </script>
 
   <main id="top" aria-label="Landing page content">
     <!-- Hero terminal -->
