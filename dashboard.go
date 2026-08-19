@@ -43,6 +43,8 @@ type dom struct {
 func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store, private")
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
+	// Sync any newly-paid payments so credits appear immediately (no webhook needed).
+	syncPendingPayments()
 	claims, err := currentUser(r)
 	if err != nil {
 		http.Redirect(w, r, "/login", http.StatusFound)

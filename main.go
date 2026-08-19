@@ -36,6 +36,9 @@ func main() {
 	if err := initDB(); err != nil {
 		log.Fatalf("db init: %v", err)
 	}
+	// Auto-credit poller: credits are added by checking Xendit periodically,
+	// independent of the (optional) webhook.
+	go startPaymentPolling()
 	// Ensure a landing placeholder for login/register CTA.
 	log.Printf("netsekurity ready (env: %s)", getenv("ENVIRONMENT", "dev"))
 

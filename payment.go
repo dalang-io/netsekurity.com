@@ -102,7 +102,76 @@ func topUpAmountUSD(usd float64, currency string, rate float64) int64 {
 	return int64(usd * rate)
 }
 
-// handleXenditWebhook credits the user's balance when an invoice is paid.
+// xenditInvoiceStatus returns the current status of an invoice on Xendit.
+func xenditInvoiceStatus(invoiceID string) (string, error) {
+	auth := base64.StdEncoding.EncodeToString([]byte(getenv("XENDIT_SECRET_KEY", "") + ":"))
+	req, _ := http.NewRequest("GET", "https://api.xendit.co/v2/invoices/"+invoiceID, nil)
+	req.Header.Set("Authorization", "Basic "+auth)
+	resp, err := (&http.Client{Timeout: 20 * time.Second}).Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	var x struct {
+		Status string `json:"status"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&x); err != nil {
+		return "", err
+	}
+	return strings.ToUpper(x.Status), nil
+}
+
+// syncPendingPayments polls Xendit for pending payments and credits any that are
+// paid/settled (idempotent) — so credits are added automatically WITHOUT relying
+// on the Xendit webhook. Also flips overdue pending invoices to expired.
+func syncPendingPayments() {
+	rows, err := db.Query(`SELECT external_id, xendit_invoice_id FROM payments
+		WHERE status='pending' AND xendit_invoice_id IS NOT NULL AND xendit_invoice_id != ''`)
+	if err != nil {
+		log.Printf("sync payments: query: %v", err)
+		return
+	}
+	defer rows.Close()
+	var batch []struct{ ext, inv string }
+	for rows.Next() {
+		var ext, inv string
+		if err := rows.Scan(&ext, &inv); err == nil {
+			batch = append(batch, struct{ ext, inv string }{ext, inv})
+		}
+	}
+	rows.Close()
+	for _, it := range batch {
+		st, err := xenditInvoiceStatus(it.inv)
+		if err != nil {
+			log.Printf("sync payments: check %s: %v", it.inv, err)
+			continue
+		}
+		switch st {
+		case "PAID", "SETTLED":
+			credited, err := creditPaymentByExternalID(it.ext)
+			if err != nil {
+				log.Printf("sync payments: credit %s: %v", it.ext, err)
+				continue
+			}
+			if credited {
+				log.Printf("sync payments: credited %s (no webhook)", it.ext)
+			}
+		case "EXPIRED", "FAILED":
+			db.Exec(`UPDATE payments SET status='expired' WHERE external_id=? AND status='pending'`, it.ext)
+		}
+	}
+}
+
+// startPaymentPolling runs syncPendingPayments on an interval (background).
+func startPaymentPolling() {
+	time.Sleep(15 * time.Second)
+	ticker := time.NewTicker(30 * time.Second)
+	for {
+		syncPendingPayments()
+		<-ticker.C
+	}
+}
+
 // Idempotent: keyed on the unique external_id.
 func handleXenditWebhook(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
