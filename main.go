@@ -58,6 +58,8 @@ func main() {
 	// Google client ID can be injected; all other paths fall through to the
 	// embedded FileServer (css, og.png, favicon, ...).
 	mux.HandleFunc("/", handleIndex)
+	// RFC 9116 security.txt (Go's FileServer hides dotfiles, so serve explicitly).
+	mux.HandleFunc("/.well-known/security.txt", handleSecurityTxt)
 
 	// Auth
 	mux.HandleFunc("/login", handleGoogleLogin)
@@ -113,6 +115,18 @@ func main() {
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// handleSecurityTxt serves the RFC 9116 security.txt file.
+func handleSecurityTxt(w http.ResponseWriter, r *http.Request) {
+	b, err := staticFS.ReadFile("static/security.txt")
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Write(b)
 }
 
 // handleIndex serves the embedded landing page (injecting the Google client ID
