@@ -96,6 +96,7 @@ func main() {
 
 	// Marketing / HTMX fragments
 	mux.HandleFunc("/contact", handleContact)
+	mux.HandleFunc("/docs", handleDocs)
 	mux.HandleFunc("/api/txt", handleTXT)
 	mux.HandleFunc("/api/verify", handleVerify)
 	mux.HandleFunc("/api/faq", handleFAQ)
