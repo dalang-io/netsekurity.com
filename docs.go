@@ -288,7 +288,7 @@ func handleDocs(w http.ResponseWriter, r *http.Request) {
 		{Href: "/#pricing", Text: "cat pricing"},
 		{Href: "/#faq", Text: "man faq"},
 	}
-	authNav := `<a href="/login" class="rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-300 hover:bg-emerald-500/20 glow">login</a>`
+	authNav := `<a href="/login" class="whitespace-nowrap rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-300 hover:bg-emerald-500/20 glow">login</a>`
 	hdr := string(renderHeader(docsNav, template.HTML(authNav), "/")) + headerMobileJS
 	out := strings.ReplaceAll(docsHTMLRaw, "__DOCS_HEADER__", hdr)
 	out = strings.ReplaceAll(out, "__CSS_HASH__", cssHash)

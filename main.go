@@ -145,8 +145,8 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	// Auth-aware nav: logged-in shows dashboard, anonymous shows login.
 	_, auErr := currentUser(r)
-	hdrNav := `<a href="/dashboard" class="rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-300 hover:bg-emerald-500/20 glow">./dashboard<span class="cursor"></span></a>`
-	loginNav := `<a href="/login" class="rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-300 hover:bg-emerald-500/20 glow">login</a>`
+	hdrNav := `<a href="/dashboard" class="whitespace-nowrap rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-300 hover:bg-emerald-500/20 glow">./dashboard<span class="cursor"></span></a>`
+	loginNav := `<a href="/login" class="whitespace-nowrap rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-300 hover:bg-emerald-500/20 glow">login</a>`
 	if auErr == nil {
 		s = strings.ReplaceAll(s, "__HEADER_BLOCK__", string(renderHeader(landingNav, template.HTML(hdrNav), "#top"))+headerMobileJS)
 		s = strings.ReplaceAll(s, "__FOOTER_AUTH_NAV__", `<a href="/dashboard" class="hover:text-emerald-300">dashboard</a>`)

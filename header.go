@@ -51,7 +51,7 @@ func renderHeader(nav []hdrLink, authNav template.HTML, brandURL string) templat
 
 	h := `<header class="sticky top-0 z-50 border-b border-emerald-500/25 bg-ink/85 backdrop-blur">
   <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
-    <a href="` + template.HTMLEscapeString(brandURL) + `" class="font-mono text-base font-bold text-white">
+    <a href="` + template.HTMLEscapeString(brandURL) + `" class="whitespace-nowrap font-mono text-base font-bold text-white">
       <span class="glow text-emerald-400">net</span>sekurity<span class="text-emerald-500">.com</span>
       <span class="ml-2 hidden text-[11px] text-gray-500 sm:inline"># ptaas</span>
     </a>
