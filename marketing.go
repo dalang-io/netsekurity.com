@@ -57,6 +57,7 @@ var faqAnswers = map[string]string{
 	"5": `What if we have many subdomains? Each domain (hostname) costs 1 credit. A wildcard or an API surface can be scoped — contact us for a custom plan.`,
 	"6": `What is <strong>not</strong> covered? Scans are <strong>unauthenticated</strong> — we do not log in or test behind sessions. We detect vulnerabilities and misconfiguration but do not build deep multi-stage manual exploit chains. Testing is read-only and non-destructive. For critical or auth-heavy production apps we recommend pairing with a supplemental manual penetration test. See the full scope in the dashboard &amp; report.`,
 	"7": `Blackbox vs Whitebox? This scan is <strong>blackbox</strong> (external, unauthenticated — no credentials or source). For <strong>whitebox</strong> (source review, authenticated testing, business-logic &amp; exploit-chain analysis by a human security engineer + agent), it is <strong>$10,000 USD per app / per domain</strong>. Contact us to schedule.`,
+	"8": `I'm not technical / built this with AI — is this for me? <strong>Yes.</strong> If you vibe-coded an app with AI and don't have a security background, Netsekurity is exactly for you: add your domain, verify it with an auto-generated TXT record, and get a plain-language, human-reviewed report telling you what to fix before going to production.`,
 }
 
 // handleFAQ toggles FAQ answers (HTMX hx-get) into an element id "faq-a-<q>".
