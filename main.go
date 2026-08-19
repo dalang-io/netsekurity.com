@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
+	"html/template"
 	"io/fs"
 	"log"
 	"net/http"
@@ -129,15 +130,25 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	s := strings.ReplaceAll(string(b), "__GOOGLE_CLIENT_ID__", getenv("GOOGLE_CLIENT_ID", ""))
 	s = strings.ReplaceAll(s, "__CSS_HASH__", cssHash)
+	// Shared header component (landing + docs use the same renderHeader).
+	landingNav := []hdrLink{
+		{Href: "#how", Text: "ls how"},
+		{Href: "#features", Text: "cat features"},
+		{Href: "#cicd", Text: "$ pip install cicd"},
+		{Href: "/docs", Text: "man docs"},
+		{Href: "#pricing", Text: "cat pricing"},
+		{Href: "#verify", Text: "verify -d"},
+		{Href: "#faq", Text: "man faq"},
+	}
 	// Auth-aware nav: logged-in shows dashboard, anonymous shows login.
 	_, auErr := currentUser(r)
 	hdrNav := `<a href="/dashboard" class="rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-300 hover:bg-emerald-500/20 glow">./dashboard<span class="cursor"></span></a>`
 	loginNav := `<a href="/login" class="rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-[13px] font-bold text-emerald-300 hover:bg-emerald-500/20 glow">login</a>`
 	if auErr == nil {
-		s = strings.ReplaceAll(s, "__HEADER_AUTH_NAV__", hdrNav)
+		s = strings.ReplaceAll(s, "__HEADER_BLOCK__", string(renderHeader(landingNav, template.HTML(hdrNav), "#top"))+headerMobileJS)
 		s = strings.ReplaceAll(s, "__FOOTER_AUTH_NAV__", `<a href="/dashboard" class="hover:text-emerald-300">dashboard</a>`)
 	} else {
-		s = strings.ReplaceAll(s, "__HEADER_AUTH_NAV__", loginNav)
+		s = strings.ReplaceAll(s, "__HEADER_BLOCK__", string(renderHeader(landingNav, template.HTML(loginNav), "#top"))+headerMobileJS)
 		s = strings.ReplaceAll(s, "__FOOTER_AUTH_NAV__", `<a href="/login" class="hover:text-emerald-300">login</a>`)
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
