@@ -169,7 +169,7 @@ func dnsQueryTXT(nameserver, name string) []string {
 	ancount := int(resp[6])<<8 | int(resp[7])
 	off := 12
 	off = skipDNSName(resp, off) // question name
-	off += 4                      // qtype + qclass
+	off += 4                     // qtype + qclass
 	var txts []string
 	for i := 0; i < ancount && off < len(resp); i++ {
 		off = skipDNSName(resp, off)

@@ -128,6 +128,7 @@
       <nav aria-label="Main navigation" class="hidden items-center gap-5 text-[13px] text-gray-400 md:flex">
         <a href="#how" class="prompt hover:text-emerald-300">ls how</a>
         <a href="#features" class="prompt hover:text-emerald-300">cat features</a>
+    <a href="#cicd" class="prompt hover:text-emerald-300">$ pip install cicd</a>
         <a href="#pricing" class="prompt hover:text-emerald-300">cat pricing</a>
         <a href="#verify" class="prompt hover:text-emerald-300">verify -d</a>
         <a href="#faq" class="prompt hover:text-emerald-300">man faq</a>
@@ -271,6 +272,42 @@
             <div class="font-mono text-emerald-400">[+] authorized</div>
             <p class="mt-2 font-mono text-xs leading-relaxed text-gray-400">Only test domains you own — verification is mandatory.</p>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CI/CD Integration -->
+    <section id="cicd" class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <h2 class="font-mono text-2xl font-bold text-white"><span class="text-emerald-400">$</span> cat cicd.tsv</h2>
+      <p class="mt-2 font-mono text-sm text-gray-500"># integrated with your CI/CD — pentest on every deploy</p>
+      <div class="mt-4 rounded border border-cyan-500/25 bg-[#04060c] p-5">
+        <div class="font-mono text-xs leading-relaxed text-gray-300">
+          <p>Generate an <span class="text-cyan-300">API token</span> in your dashboard, add it to your pipeline
+          as <code class="text-emerald-300">X-API-Token</code>, and Netsekurity automatically starts a pentest
+          against your updated app whenever it builds &amp; deploys:</p>
+          <pre class="mt-3 overflow-x-auto rounded bg-black/60 p-3 text-[11px] text-emerald-300"># .gitlab-ci.yml / workflow.yml / Jenkinsfile …
+  nsk-pentest:
+    script:
+      - curl -s -X POST https://netsekurity.com/api/v1/pentests \
+          -H "X-API-Token: $NETSEKURITY_TOKEN" \
+          -d "domain=app.example.com&mode=standard"
+    only:
+      - production</pre>
+        </div>
+        <div class="mt-4 flex flex-wrap items-center gap-3">
+          <span class="font-mono text-[10px] uppercase tracking-wide text-gray-500">works with</span>
+          <span class="rounded border border-white/10 bg-ink px-3 py-1 font-mono text-xs text-gray-200">GitHub Actions</span>
+          <span class="rounded border border-white/10 bg-ink px-3 py-1 font-mono text-xs text-gray-200">GitLab CI</span>
+          <span class="rounded border border-white/10 bg-ink px-3 py-1 font-mono text-xs text-gray-200">Jenkins</span>
+          <span class="rounded border border-white/10 bg-ink px-3 py-1 font-mono text-xs text-gray-200">CircleCI</span>
+          <span class="rounded border border-white/10 bg-ink px-3 py-1 font-mono text-xs text-gray-200">Azure DevOps</span>
+          <span class="rounded border border-white/10 bg-ink px-3 py-1 font-mono text-xs text-gray-200">Bitbucket Pipelines</span>
+          <span class="rounded border border-white/10 bg-ink px-3 py-1 font-mono text-xs text-gray-200">Travis CI</span>
+          <span class="rounded border border-white/10 bg-ink px-3 py-1 font-mono text-xs text-gray-200">TeamCity</span>
+          <span class="rounded border border-white/10 bg-ink px-3 py-1 font-mono text-xs text-gray-200">Buildkite</span>
+          <span class="rounded border border-white/10 bg-ink px-3 py-1 font-mono text-xs text-gray-200">Codefresh</span>
+          <span class="rounded border border-white/10 bg-ink px-3 py-1 font-mono text-xs text-gray-200">Semaphore</span>
+          <span class="rounded border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 font-mono text-xs font-bold text-cyan-200">+ any HTTP-capable CI</span>
         </div>
       </div>
     </section>

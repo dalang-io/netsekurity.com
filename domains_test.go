@@ -13,12 +13,12 @@ func TestIsValidDomain(t *testing.T) {
 		{"example.com", true},
 		{"sub.example.co.id", true},
 		{"a.b", true},
-		{"example", false},        // no dot
-		{"exa", false},            // too short
-		{"-bad.com", false},       // leading hyphen
-		{"bad-.com", false},       // trailing hyphen
-		{"exa..com", false},       // empty label
-		{"", false},               // empty
+		{"example", false},                // no dot
+		{"exa", false},                    // too short
+		{"-bad.com", false},               // leading hyphen
+		{"bad-.com", false},               // trailing hyphen
+		{"exa..com", false},               // empty label
+		{"", false},                       // empty
 		{strings.Repeat("a", 254), false}, // too long
 	}
 	for _, c := range cases {

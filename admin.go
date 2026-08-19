@@ -22,12 +22,12 @@ type suTrx struct {
 }
 
 type suDomain struct {
-	ID int64
+	ID                                        int64
 	UserEmail, Domain, Status, TXT, CreatedAt string
 }
 
 type suPentest struct {
-	ID, UserEmail, Domain, Status, ReportRef, CreatedAt string
+	ID, UserEmail, Domain, Status, Mode, ReportRef, CreatedAt string
 }
 
 type suData struct {
@@ -80,12 +80,12 @@ func handleAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 	drows.Close()
 
-	prows, _ := db.Query(`SELECT p.id, COALESCE(u.email,''), COALESCE(d.domain,''), p.status, COALESCE(p.report_ref,''), p.created_at
+	prows, _ := db.Query(`SELECT p.id, COALESCE(u.email,''), COALESCE(d.domain,''), p.status, COALESCE(p.mode,'standard'), COALESCE(p.report_ref,''), p.created_at
 		FROM pentests p LEFT JOIN users u ON u.id=p.user_id LEFT JOIN domains d ON d.id=p.domain_id
 		ORDER BY p.created_at DESC LIMIT 100`)
 	for prows.Next() {
 		var p suPentest
-		prows.Scan(&p.ID, &p.UserEmail, &p.Domain, &p.Status, &p.ReportRef, &p.CreatedAt)
+		prows.Scan(&p.ID, &p.UserEmail, &p.Domain, &p.Status, &p.Mode, &p.ReportRef, &p.CreatedAt)
 		data.Pentests = append(data.Pentests, p)
 	}
 	prows.Close()
@@ -130,11 +130,24 @@ func handleAdminSetRole(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/su", http.StatusSeeOther)
 }
 
-// handleAdminPentest triggers a pentest for a verified domain, consuming 1 credit.
+// handleAdminPentest triggers a pentest for a verified domain. Supports
+// mode=standard (1 credit) and mode=destructive (2 credits).
 func handleAdminPentest(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
+	}
+	mode := strings.ToLower(strings.TrimSpace(r.FormValue("mode")))
+	if mode == "" {
+		mode = "standard"
+	}
+	if mode != "standard" && mode != "destructive" {
+		http.Error(w, "invalid mode (standard|destructive)", http.StatusBadRequest)
+		return
+	}
+	cost := 1.0
+	if mode == "destructive" {
+		cost = 2.0
 	}
 	var domainID int64
 	var userID, status string
@@ -153,8 +166,8 @@ func handleAdminPentest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "domain must be verified first", http.StatusBadRequest)
 		return
 	}
-	// Consume one credit atomically.
-	res, err := db.Exec(`UPDATE credit_balance SET balance = balance - 1, updated_at=? WHERE user_id=? AND balance >= 1`, now(), userID)
+	// Consume credits atomically.
+	res, err := db.Exec(`UPDATE credit_balance SET balance = balance - ?, updated_at=? WHERE user_id=? AND balance >= ?`, cost, now(), userID, cost)
 	if err != nil {
 		http.Error(w, "db error", http.StatusInternalServerError)
 		return
@@ -163,10 +176,18 @@ func handleAdminPentest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "insufficient credits", http.StatusPaymentRequired)
 		return
 	}
-	db.Exec(`INSERT INTO credit_transactions (user_id, type, amount, description, reference_id) VALUES (?,'spend',1,'Pentest scheduled',?)`, userID, fmt.Sprintf("pentest-%d", domainID))
+	desc := "Pentest scheduled"
+	if mode == "destructive" {
+		desc = "Destructive pentest scheduled"
+	}
+	db.Exec(`INSERT INTO credit_transactions (user_id, type, amount, description, reference_id) VALUES (?,'spend',?,?,?)`, userID, cost, desc, fmt.Sprintf("pentest-%d", domainID))
 	pid := "pt_" + randomHex(8)
-	db.Exec(`INSERT INTO pentests (id, user_id, domain_id, status) VALUES (?,?,?,'queued')`, pid, userID, domainID)
-	fmt.Fprintf(w, `<div class="rounded bg-emerald-500/15 px-3 py-2 text-xs text-emerald-300">Pentest scheduled (%s) — 1 credit used.</div>`, pid)
+	db.Exec(`INSERT INTO pentests (id, user_id, domain_id, mode, status) VALUES (?,?,?,?,'queued')`, pid, userID, domainID, mode)
+	if mode == "destructive" {
+		fmt.Fprintf(w, `<div class="rounded bg-red-500/15 px-3 py-2 text-xs text-red-300">Destructive pentest scheduled (%s) — 2 credits used.</div>`, pid)
+	} else {
+		fmt.Fprintf(w, `<div class="rounded bg-emerald-500/15 px-3 py-2 text-xs text-emerald-300">Pentest scheduled (%s) — 1 credit used.</div>`, pid)
+	}
 }
 
 // handleAdminAddCredit adds credit to a user's balance (super admin).
@@ -269,7 +290,6 @@ func handleReport(w http.ResponseWriter, r *http.Request) {
 	}
 	http.ServeFile(w, r, filepath.Join(reportsDir(), name))
 }
-
 
 var suTpl = template.Must(template.New("su").Funcs(template.FuncMap{"cssHash": func() string { return cssHash }}).Parse(suHTML))
 
@@ -390,8 +410,15 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
           <td>{{if eq .Status "verified"}}<span class="text-emerald-300">[verified]</span>{{else}}<span class="text-yellow-300">[{{.Status}}]</span>{{end}}</td>
           <td>
             {{if eq .Status "verified"}}
-            <button hx-post="/su/domains/pentest" hx-vals='{"domain_id":"{{.ID}}"}' hx-target="closest td" hx-swap="innerHTML"
+            <div class="flex gap-1">
+            <button hx-post="/su/domains/pentest" hx-vals='{"domain_id":"{{.ID}}","mode":"standard"}' hx-target="closest td" hx-swap="innerHTML"
+              title="Standard scan — 1 credit (read-only)"
               class="rounded border border-emerald-400 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/20">run</button>
+            <button hx-post="/su/domains/pentest" hx-vals='{"domain_id":"{{.ID}}","mode":"destructive"}' hx-target="closest td" hx-swap="innerHTML"
+              onclick="return confirm('DESTRUCTIVE pentest — active exploitation (RCE/webshell/takeover) may damage the target. Use a dev server. Costs 2 credits. Continue?')"
+              title="Destructive scan — 2 credits (exploit/RCE/webshell/takeover). Use dev server."
+              class="rounded border border-red-400/70 bg-red-500/10 px-2 py-0.5 text-[11px] font-bold text-red-300 hover:bg-red-500/20">run -x</button>
+            </div>
             {{else}}<span class="text-gray-600">—</span>{{end}}
           </td>
         </tr>
@@ -410,7 +437,7 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
     <div class="overflow-x-auto p-3">
       <table class="w-full font-mono text-xs">
         <thead><tr class="text-left text-gray-500">
-          <th class="py-1">id</th><th>user</th><th>domain</th><th>status</th><th>report</th><th>upload pdf</th>
+          <th class="py-1">id</th><th>user</th><th>domain</th><th>mode</th><th>status</th><th>report</th><th>upload pdf</th>
         </tr></thead>
         <tbody>
         {{range .Pentests}}
@@ -418,6 +445,7 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
           <td class="py-1 text-gray-300">{{.ID}}</td>
           <td>{{.UserEmail}}</td>
           <td class="text-white">{{.Domain}}</td>
+          <td>{{if eq .Mode "destructive"}}<span class="text-red-300 font-bold">destructive</span>{{else}}<span class="text-cyan-300">{{.Mode}}</span>{{end}}</td>
           <td>{{.Status}}</td>
           <td>{{if .ReportRef}}<a class="text-emerald-300 underline" href="/reports/{{.ReportRef}}">view</a>{{else}}<span class="text-gray-600">—</span>{{end}}</td>
           <td>

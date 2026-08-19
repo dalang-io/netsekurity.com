@@ -209,6 +209,43 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
           {{end}}
         </div>
       </section>
+
+      <section class="rounded border border-white/10 bg-[#04060c]">
+        <div class="flex items-center gap-1.5 border-b border-white/10 px-3 py-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-cyan-500/70"></span>
+          <span class="ml-1 font-mono text-[11px] text-gray-500">$ api tokens (CI/CD)</span>
+        </div>
+        <div class="p-3">
+          <p class="font-mono text-[11px] text-gray-500">Generate a token for your CI/CD pipeline. On every
+            deploy, your pipeline calls <code class="text-cyan-300">POST /api/v1/pentests</code> with
+            <code class="text-cyan-300">X-API-Token</code> to start a pentest automatically.</p>
+          <div class="mt-2 flex items-end gap-2">
+            <div class="flex-1">
+              <label class="font-mono text-[10px] text-gray-500">expiry</label>
+              <select id="token-expiry" class="w-full rounded border border-white/15 bg-ink px-2 py-1.5 font-mono text-xs text-white focus:border-cyan-400 focus:outline-none">
+                <option value="7">7 days</option>
+                <option value="14">14 days</option>
+                <option value="30" selected>30 days</option>
+                <option value="60">60 days</option>
+                <option value="90">90 days</option>
+              </select>
+            </div>
+            <div class="flex-1">
+              <label class="font-mono text-[10px] text-gray-500">name</label>
+              <input id="token-name" type="text" value="CI/CD" class="w-full rounded border border-white/15 bg-ink px-2 py-1.5 font-mono text-xs text-white focus:border-cyan-400 focus:outline-none"/>
+            </div>
+            <button
+              hx-post="/api/tokens/create"
+              hx-vals='js:{"name": document.getElementById("token-name").value, "expiry_days": document.getElementById("token-expiry").value}'
+              hx-target="#token-result" hx-swap="innerHTML"
+              class="rounded border border-cyan-400 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs font-bold text-cyan-300 hover:bg-cyan-500/20">generate</button>
+          </div>
+          <div id="token-result" class="mt-2"></div>
+          <div id="token-list">
+            <div hx-get="/api/tokens" hx-trigger="load, every 15s" hx-swap="innerHTML"></div>
+          </div>
+        </div>
+      </section>
     </div>
 
     <!-- Right: domains -->

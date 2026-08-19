@@ -80,6 +80,11 @@ func main() {
 	mux.HandleFunc("/api/pentests/worker/claim", handleWorkerClaim)
 	mux.HandleFunc("/api/pentests/worker/report", handleWorkerReport)
 
+	// API tokens (user-managed for CI/CD)
+	mux.HandleFunc("/api/tokens", requireAuth(handleTokensList))          // GET list
+	mux.HandleFunc("/api/tokens/create", requireAuth(handleTokensCreate)) // POST create
+	mux.HandleFunc("/api/tokens/", requireAuth(handleTokensDelete))       // DELETE /api/tokens/{id}
+
 	// Payments
 	mux.HandleFunc("/api/topup", handleTopUp)
 	mux.HandleFunc("/webhook/xendit", handleXenditWebhook)
@@ -94,6 +99,9 @@ func main() {
 	mux.HandleFunc("/api/txt", handleTXT)
 	mux.HandleFunc("/api/verify", handleVerify)
 	mux.HandleFunc("/api/faq", handleFAQ)
+
+	// CI/CD integration (authenticated by X-API-Token)
+	mux.HandleFunc("/api/v1/pentests", handleAPICreatePentest)
 
 	addr := ":" + port
 	log.Printf("netsekurity.com listening on %s", addr)
