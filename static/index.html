@@ -295,6 +295,59 @@
       </div>
     </section>
 
+    <!-- Use Case 2: CI/CD -->
+    <section id="cicd-use" class="mx-auto max-w-6xl px-4 py-16 sm:px-6">
+      <h2 class="font-mono text-2xl font-bold text-white"><span class="text-emerald-400">$</span> cat use_case — ci/cd</h2>
+      <p class="mt-2 font-mono text-sm text-gray-500"># pentest on every deploy — security never goes stale</p>
+      <div class="mt-8 grid gap-6 lg:grid-cols-2">
+        <!-- terminal narrative -->
+        <div class="rounded border border-emerald-500/30 bg-[#04060c]">
+          <div class="flex items-center gap-1.5 border-b border-emerald-500/20 px-3 py-2">
+            <span class="h-3 w-3 rounded-full bg-red-500/80"></span>
+            <span class="h-3 w-3 rounded-full bg-yellow-500/80"></span>
+            <span class="h-3 w-3 rounded-full bg-emerald-500/80"></span>
+            <span class="ml-2 font-mono text-[11px] text-gray-500">ci: main → pipeline</span>
+          </div>
+          <div class="space-y-1.5 px-4 py-4 font-mono text-[13px] leading-relaxed">
+            <p class="term-line"><span class="text-emerald-400">$</span> git push origin main</p>
+            <p class="term-line text-gray-500">[1/4] build .................. ok</p>
+            <p class="term-line text-gray-500">[2/4] test ................... ok</p>
+            <p class="term-line text-gray-500">[3/4] deploy ................. live</p>
+            <p class="term-line text-gray-500">[4/4] nsk scan --token ....... running</p>
+            <p class="term-line text-yellow-300">[!] 2 new findings (auth · headers)</p>
+            <p class="term-line text-emerald-300">[✓] report ./reports/main.pdf</p>
+          </div>
+        </div>
+        <!-- value prop -->
+        <div class="space-y-4">
+          <div class="rounded border border-white/10 bg-ink p-5">
+            <div class="font-mono text-emerald-400">[+] the old way was broken</div>
+            <p class="mt-2 font-mono text-xs leading-relaxed text-gray-400">
+              A yearly or twice-a-year pentest goes stale the moment you ship. New code, new
+              dependency, new config — and last quarter's "clean" report means nothing.
+            </p>
+          </div>
+          <div class="rounded border border-white/10 bg-ink p-5">
+            <div class="font-mono text-emerald-400">[+] pentest on every deploy</div>
+            <ul class="mt-2 space-y-1 font-mono text-xs text-gray-400">
+              <li>· add a one-line step to your pipeline (GitHub Actions / GitLab CI / Jenkins)</li>
+              <li>· scan with an API token, automatically after each deploy</li>
+              <li>· catch regressions the day they ship, not months later</li>
+            </ul>
+          </div>
+          <div class="rounded border border-white/10 bg-ink p-5">
+            <div class="font-mono text-emerald-400">[+] faster mitigation, predictable cost</div>
+            <p class="mt-2 font-mono text-xs leading-relaxed text-gray-400">
+              1 credit per scan · only pay when you scan · human-reviewed findings land in your pipeline log.
+            </p>
+          </div>
+          <a href="/docs" class="inline-block rounded border-2 border-emerald-400 bg-emerald-500/10 px-5 py-2.5 font-mono text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 glow">
+            $ man docs — ci/cd setup
+          </a>
+        </div>
+      </div>
+    </section>
+
     <!-- Features -->
     <section id="features" class="border-y border-emerald-500/20 bg-[#04060c]">
       <div class="mx-auto max-w-6xl px-4 py-16 sm:px-6">

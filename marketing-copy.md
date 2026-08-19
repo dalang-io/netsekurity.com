@@ -42,6 +42,25 @@ Target: solo founders / indie hackers / non-technical builders using AI (Cursor,
 - "Your AI-generated app, pentest-checked."
 - "Secure your vibe code before the breach."
 
+## Use Case 2 — CI/CD auto-pentest
+Positioning: **"Pentest on every deploy — security never goes stale."**
+Pain: yearly/twice-a-year pentest reports go stale the moment you ship; new code &amp; deps break security silently.
+
+### Social hooks (X / LinkedIn)
+
+6. **Your last pentest is already out of date**
+   > You shipped 40 times since your yearly pentest. That "clean" report means nothing now.
+   > Add one line to your pipeline — netsekurity scans after every deploy. Catch regressions the day they ship, not months later.
+
+7. **Continuous security, not annual reports**
+   > Annual pentest = stale the moment you merge.
+   > CI/CD integration = a scan on every deploy via API token (GitHub Actions / GitLab CI / Jenkins). 1 credit per scan. Faster mitigation, predictable cost.
+
+### Ad headline options
+- "Pentest after every deploy."
+- "Your pentest report is stale. Fix that."
+- "Continuous security for your pipeline."
+
 ## Call-to-action
 `./run pentest` → netsekurity.com/dashboard
 
