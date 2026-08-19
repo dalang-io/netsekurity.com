@@ -99,7 +99,7 @@ func renderStack() template.HTML {
 	for _, g := range stackGroups {
 		fmt.Fprint(&b, `<div class="rounded border border-white/10 bg-[#04060c] p-5">`)
 		fmt.Fprintf(&b, `<div class="mb-3 flex flex-wrap items-center gap-3"><span class="font-mono text-[11px] font-bold text-gray-100">▸ %s</span><span class="text-[10px] text-gray-500">(%d of 200+ supported)</span></div>`, g.Title, len(g.Items))
-		b.WriteString(`<div class="grid grid-cols-4 gap-2 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10">`)
+		b.WriteString(`<div class="grid grid-cols-5 gap-1.5 sm:grid-cols-8 md:grid-cols-10 lg:grid-cols-12">`)
 		for _, it := range g.Items {
 			tile := renderStackTile(it)
 			b.WriteString(tile)
@@ -120,9 +120,9 @@ func renderStackTile(it stackItem) string {
 		col = "#22d3ee"
 	}
 	if it.Path != "" {
-		return fmt.Sprintf(`<div class="flex flex-col items-center gap-1 rounded border border-white/10 bg-ink px-2 py-2" title="%s">
-  <svg viewBox="0 0 24 24" width="26" height="26" role="img" aria-label="%s"><path fill="%s" d="%s"/></svg>
-  <span class="truncate font-mono text-[9px] text-gray-400">%s</span></div>`,
+		return fmt.Sprintf(`<div class="flex flex-col items-center gap-0.5 rounded border border-white/10 bg-ink p-1.5" title="%s">
+  <svg viewBox="0 0 24 24" width="22" height="22" role="img" aria-label="%s"><path fill="%s" d="%s"/></svg>
+  <span class="truncate max-w-full font-mono text-[8px] leading-none text-gray-400">%s</span></div>`,
 			it.Name, it.Name, col, it.Path, it.Name)
 	}
 	// SVG monogram fallback
@@ -135,11 +135,11 @@ func renderStackTile(it stackItem) string {
 	if len(initial) < 2 {
 		initial = it.Name[:2]
 	}
-	return fmt.Sprintf(`<div class="flex flex-col items-center gap-1 rounded border border-white/10 bg-ink px-2 py-2" title="%s">
-  <svg viewBox="0 0 24 24" width="26" height="26" role="img" aria-label="%s">
+	return fmt.Sprintf(`<div class="flex flex-col items-center gap-0.5 rounded border border-white/10 bg-ink p-1.5" title="%s">
+  <svg viewBox="0 0 24 24" width="22" height="22" role="img" aria-label="%s">
     <rect width="24" height="24" rx="4" fill="%s" opacity="0.15"/>
     <text x="12" y="16" font-family="monospace" font-size="11" font-weight="bold" fill="%s" text-anchor="middle">%s</text>
   </svg>
-  <span class="truncate font-mono text-[9px] text-gray-400">%s</span></div>`,
+  <span class="truncate max-w-full font-mono text-[8px] leading-none text-gray-400">%s</span></div>`,
 		it.Name, it.Name, col, col, initial, it.Name)
 }
