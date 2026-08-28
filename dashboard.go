@@ -199,19 +199,18 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
         <div class="p-3">
           <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {{range .Packages}}
-            <form hx-post="/api/topup" hx-target="#topup-result" hx-swap="innerHTML" class="rounded border border-white/15 bg-ink p-3 hover:border-emerald-500/40">
-              <input type="hidden" name="package_id" value="{{.ID}}"/>
+            <div class="rounded border border-white/15 bg-ink p-3 hover:border-emerald-500/40">
               <div class="flex items-baseline justify-between">
                 <span class="font-mono text-sm text-white">{{.Name}}</span>
                 <span class="font-mono text-sm text-emerald-400">${{printf "%.0f" .USD}}</span>
               </div>
               <div class="font-mono text-[11px] text-gray-500">{{printf "%.0f" .Credits}} credits</div>
-              <button onclick="fbq('track','InitiateCheckout',{content_name:'{{.Name}}',content_type:'product',value:{{.USD}},currency:'USD'})"
-                class="mt-2 w-full rounded border border-emerald-400 bg-emerald-500/10 px-2 py-1.5 font-mono text-xs font-bold text-emerald-300 hover:bg-emerald-500/20">buy</button>
-            </form>
+              <a href="/checkout?package={{.ID}}"
+                class="mt-2 block w-full rounded border border-emerald-400 bg-emerald-500/10 px-2 py-1.5 text-center font-mono text-xs font-bold text-emerald-300 hover:bg-emerald-500/20">buy</a>
+            </div>
             {{end}}
           </div>
-          <p class="mt-2 font-mono text-[11px] text-gray-600">All prices in USD.</p>
+          <p class="mt-2 font-mono text-[11px] text-gray-600">All prices in USD. You will see the total before paying.</p>
           <div id="topup-result" class="mt-2"></div>
         </div>
       </section>
