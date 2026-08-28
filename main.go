@@ -147,6 +147,9 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	s := strings.ReplaceAll(string(b), "__GOOGLE_CLIENT_ID__", getenv("GOOGLE_CLIENT_ID", ""))
 	s = strings.ReplaceAll(s, "__CSS_HASH__", cssHash)
+	// Meta Pixel: base snippet (PageView) in head + ViewContent on pricing section.
+	s = strings.ReplaceAll(s, "__FBPIXEL__", metaPixelSnippet(true))
+	s = strings.ReplaceAll(s, "__FB_VIEWCONTENT__", metaEventJS("ViewContent", `{"content_name":"Pricing","content_type":"product","currency":"USD","value":0.0}`))
 	// Shared stack coverage section (real SVG logos).
 	s = strings.ReplaceAll(s, "__STACK_BLOCK__", string(renderStack()))
 	// Shared header component (landing + docs use the same renderHeader).

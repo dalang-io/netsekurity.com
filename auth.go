@@ -146,6 +146,13 @@ func handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to issue token", http.StatusInternalServerError)
 		return
 	}
+	// Meta Pixel: Lead event (registration/login success) — server-side so it
+	// isn't lost to ad-blockers.
+	sendMetaEvent("Lead", map[string]interface{}{
+		"value":        0.0,
+		"currency":     "USD",
+		"content_name": "User registration",
+	})
 	http.SetCookie(w, &http.Cookie{Name: authCookie, Value: token, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: int((24 * time.Hour).Seconds())})
 	http.Redirect(w, r, "/dashboard", http.StatusFound)
 }

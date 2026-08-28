@@ -226,7 +226,9 @@ func creditPaymentByExternalID(externalID string) (bool, error) {
 
 	var userID string
 	var credits float64
-	if err := tx.QueryRow(`SELECT user_id, credits FROM payments WHERE external_id=?`, externalID).Scan(&userID, &credits); err != nil {
+	var amountUSD float64
+	var currency string
+	if err := tx.QueryRow(`SELECT user_id, credits, COALESCE(amount_usd,0), COALESCE(currency,'USD') FROM payments WHERE external_id=?`, externalID).Scan(&userID, &credits, &amountUSD, &currency); err != nil {
 		return false, err
 	}
 
@@ -243,5 +245,15 @@ func creditPaymentByExternalID(externalID string) (bool, error) {
 	if err := tx.Commit(); err != nil {
 		return false, err
 	}
+	// Meta Pixel: Purchase event (payment settled) — server-side with accurate
+	// value + currency. Fired only once per external_id (idempotent guard above).
+	sendMetaEvent("Purchase", map[string]interface{}{
+		"value":          amountUSD,
+		"currency":       currency,
+		"content_name":   "Credit top-up",
+		"content_type":   "product",
+		"num_items":      1,
+		"transaction_id": externalID,
+	})
 	return true, nil
 }

@@ -18,6 +18,7 @@ var docsHTMLRaw = `<!DOCTYPE html>
 <meta name="description" content="Documentation &amp; tutorials to integrate Netsekurity automated pentests into your CI/CD pipeline, plus the HTTP API reference."/>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 <link rel="apple-touch-icon" href="/favicon-512.png"/>
+__FBPIXEL__
 <link rel="stylesheet" href="/css/styles.css?v=__CSS_HASH__"/>
 <style>pre{white-space:pre-wrap;word-break:break-word}code{font-family:ui-monospace,monospace}</style>
 </head>
@@ -295,6 +296,7 @@ func handleDocs(w http.ResponseWriter, r *http.Request) {
 	}
 	hdr := string(renderHeader(docsNav, template.HTML(authNav), "/")) + headerMobileJS
 	out := strings.ReplaceAll(docsHTMLRaw, "__DOCS_HEADER__", hdr)
+	out = strings.ReplaceAll(out, "__FBPIXEL__", metaPixelSnippet(true))
 	out = strings.ReplaceAll(out, "__CSS_HASH__", cssHash)
 	w.Write([]byte(out))
 }

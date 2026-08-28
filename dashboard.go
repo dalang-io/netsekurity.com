@@ -110,7 +110,7 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
 <title>dashboard — netsekurity</title>
 <meta name="robots" content="noindex, nofollow"/>
 <link rel="stylesheet" href="/css/styles.css?v={{cssHash}}"/>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />{{fbpixel}}
 <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
 </head>
 <body class="scanlines bg-ink text-gray-300 min-h-screen overflow-x-hidden">
@@ -157,7 +157,8 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
                 <span class="font-mono text-sm text-emerald-400">${{printf "%.0f" .USD}}</span>
               </div>
               <div class="font-mono text-[11px] text-gray-500">{{printf "%.0f" .Credits}} credits</div>
-              <button class="mt-2 w-full rounded border border-emerald-400 bg-emerald-500/10 px-2 py-1.5 font-mono text-xs font-bold text-emerald-300 hover:bg-emerald-500/20">buy</button>
+              <button onclick="fbq('track','InitiateCheckout',{content_name:'{{.Name}}',content_type:'product',value:{{printf "%.0f" .USD}},currency:'USD'})"
+                class="mt-2 w-full rounded border border-emerald-400 bg-emerald-500/10 px-2 py-1.5 font-mono text-xs font-bold text-emerald-300 hover:bg-emerald-500/20">buy</button>
             </form>
             {{end}}
           </div>
@@ -383,4 +384,7 @@ function startDestructive() {
 </body>
 </html>{{end}}`
 
-var tmpl = template.Must(template.New("dashboard").Funcs(template.FuncMap{"cssHash": func() string { return cssHash }}).Parse(dashboardHTML))
+var tmpl = template.Must(template.New("dashboard").Funcs(template.FuncMap{
+	"cssHash": func() string { return cssHash },
+	"fbpixel": func() string { return metaPixelSnippet(true) },
+}).Parse(dashboardHTML))
