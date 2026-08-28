@@ -87,6 +87,7 @@ netsekurity.com/
 ├── nsec_monitor.sh    # agent token-saver monitor (Hermes cron)
 ├── nsec_worker.sh     # standalone one-shot worker
 ├── AGENT_WORKER.md    # agent behavior reference (authoritative)
+├── HERMES_UPDATE.md   # Hermes agent: update steps + verification runbook
 ├── marketing-copy.md  # social/ads copy (vibe-coder + CI/CD use cases)
 ├── env.example        # environment template
 ├── README.md          # this doc

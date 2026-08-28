@@ -78,13 +78,7 @@ Admins can supply the same string by hand when uploading a report from `/su`.
 a `git pull` in its checkout of this repo — no copying into
 `/opt/data/netsekurity_draft/` (that path stays as a fallback for older installs).
 
-```bash
-cd <hermes checkout of netsekurity.com> && git pull
-grep -c 'SEVERITY=' nsec_scan.py     # 1 = the scanner emits the breakdown
-grep -c 'findings=' nsec_worker.sh   # 1 = the worker forwards it
-```
-
-Then watch one real scan: `grep -E 'scanner:|severity:|upload-resp:' /tmp/nsk_worker.log`.
+Full steps, verification and troubleshooting: **[HERMES_UPDATE.md](HERMES_UPDATE.md)**.
 
 ## Report
 
