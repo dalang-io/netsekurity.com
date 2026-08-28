@@ -59,8 +59,10 @@ User dashboard ────────────────────> /re
 SEVERITY=critical=0,high=2,medium=7,low=3,info=9
 ```
 
-`nsec_worker.sh` forwards it to `/api/pentests/worker/report` as the optional
-form field `findings`. The platform stores it on the `pentests` row
+Both upload paths forward it to `/api/pentests/worker/report` as the optional
+form field `findings`: `nsec_worker.sh` (the cron path) reads it from the scan
+log, and `nsec_io.sh upload <pid> <pdf> [findings]` takes it as a third
+argument. The platform stores it on the `pentests` row
 (`findings_reported` plus one counter per level) and renders it as chips on the
 customer's dashboard card and in `/su`.
 

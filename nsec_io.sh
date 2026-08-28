@@ -4,8 +4,14 @@
 # claim and upload. This script only handles the platform I/O via SSH + curl.
 #
 # Usage:
-#   nsec_claim.sh            -> prints JSON from /worker/claim
-#   nsec_upload.sh <pid> <pdf>  -> uploads completed PDF
+#   nsec_claim.sh                          -> prints JSON from /worker/claim
+#   nsec_upload.sh <pid> <pdf> [findings]  -> uploads completed PDF
+#
+# findings is the optional severity breakdown, in the same format nsec_scan.py
+# prints on its SEVERITY= line:
+#   critical=0,high=2,medium=7,low=3,info=9
+# Omit it and the dashboard says the breakdown is in the report, rather than
+# implying the scan came back clean.
 set -uo pipefail
 H=163.128.54.5
 KEY=/opt/data/recon/keys/dalang_key
@@ -16,13 +22,14 @@ case "${1:-}" in
     curl -s -m 20 -X POST -H "X-Bot-Token: $TOKEN" "$API/api/pentests/worker/claim"
     ;;
   upload)
-    PID="${2:-}"; PDF="${3:-}"
+    PID="${2:-}"; PDF="${3:-}"; FINDINGS="${4:-}"
     [ -n "$PID" ] && [ -f "$PDF" ] || { echo '{"error":"bad args"}'; exit 1; }
     NAME=$(basename "$PDF")
     curl -s -m 90 -X POST -H "X-Bot-Token: $TOKEN" \
       -F "pentest_id=$PID" \
+      -F "findings=$FINDINGS" \
       -F "report=@$PDF;type=application/pdf;filename=$NAME" \
       "$API/api/pentests/worker/report"
     ;;
-  *) echo 'usage: nsec_claim.sh {claim|upload <pid> <pdf>}' ;;
+  *) echo 'usage: nsec_io.sh {claim|upload <pid> <pdf> [findings]}' ;;
 esac
