@@ -99,7 +99,13 @@ func initDB() error {
 			report_ref TEXT,
 			started_at TEXT,
 			completed_at TEXT,
-			created_at TEXT NOT NULL DEFAULT (datetime('now'))
+			created_at TEXT NOT NULL DEFAULT (datetime('now')),
+			findings_reported INTEGER NOT NULL DEFAULT 0,
+			findings_critical INTEGER NOT NULL DEFAULT 0,
+			findings_high INTEGER NOT NULL DEFAULT 0,
+			findings_medium INTEGER NOT NULL DEFAULT 0,
+			findings_low INTEGER NOT NULL DEFAULT 0,
+			findings_info INTEGER NOT NULL DEFAULT 0
 		)`,
 		`CREATE TABLE IF NOT EXISTS api_tokens (
 			id TEXT PRIMARY KEY,
@@ -144,6 +150,18 @@ func initDB() error {
 	if !columnExists("payments", "url") {
 		if _, err := db.Exec(`ALTER TABLE payments ADD COLUMN url TEXT`); err != nil {
 			return fmt.Errorf("add payments.url: %w", err)
+		}
+	}
+
+	// Severity breakdown uploaded with the report. findings_reported separates
+	// "the scanner told us there were none" from "the scanner never told us",
+	// which must not look the same on the dashboard.
+	for _, c := range []string{"findings_reported", "findings_critical", "findings_high",
+		"findings_medium", "findings_low", "findings_info"} {
+		if !columnExists("pentests", c) {
+			if _, err := db.Exec(`ALTER TABLE pentests ADD COLUMN ` + c + ` INTEGER NOT NULL DEFAULT 0`); err != nil {
+				return fmt.Errorf("add pentests.%s: %w", c, err)
+			}
 		}
 	}
 

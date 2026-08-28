@@ -79,8 +79,17 @@ def main():
     if pdfs:
         print(f"PDF={pdfs[0]}")
         # count findings for worker feedback
-        c = sqlite3.connect(DB); n = c.execute("SELECT COUNT(*) FROM findings WHERE assessment_id=?", (aid,)).fetchone()[0]; c.close()
+        c = sqlite3.connect(DB)
+        n = c.execute("SELECT COUNT(*) FROM findings WHERE assessment_id=?", (aid,)).fetchone()[0]
+        # Severity breakdown, uploaded with the report so the dashboard can show
+        # what the scan found without the customer opening the PDF.
+        by_sev = dict(c.execute(
+            "SELECT lower(severity), COUNT(*) FROM findings WHERE assessment_id=? GROUP BY lower(severity)",
+            (aid,)).fetchall())
+        c.close()
         print(f"TOTAL_FINDINGS={n}")
+        print("SEVERITY=" + ",".join(
+            f"{k}={int(by_sev.get(k, 0))}" for k in ("critical", "high", "medium", "low", "info")))
     else:
         print("PDF_ERROR"); sys.exit(1)
 

@@ -50,6 +50,26 @@ User dashboard ────────────────────> /re
   7. stores findings into `assessment.db`, then renders the PDF report.
 - Findings are CVSS-scored and CWE-mapped (OWASP-family).
 
+### Severity breakdown (`findings`)
+
+`nsec_scan.py` prints a machine-readable summary next to `PDF=` and
+`TOTAL_FINDINGS=`:
+
+```
+SEVERITY=critical=0,high=2,medium=7,low=3,info=9
+```
+
+`nsec_worker.sh` forwards it to `/api/pentests/worker/report` as the optional
+form field `findings`. The platform stores it on the `pentests` row
+(`findings_reported` plus one counter per level) and renders it as chips on the
+customer's dashboard card and in `/su`.
+
+The field is **optional and additive**: a worker that omits it leaves
+`findings_reported = 0`, and the dashboard then says *"severity breakdown is in
+the report"* rather than implying the scan came back clean. Unknown keys and
+malformed values are ignored; if nothing parses, the summary counts as absent.
+Admins can supply the same string by hand when uploading a report from `/su`.
+
 ## Report
 
 - **Language:** English only.
@@ -69,7 +89,7 @@ User dashboard ────────────────────> /re
 | `/api/pentests/start` | POST | session (user) | trigger scan; verify + cap + credit |
 | `/api/pentests/list` | GET | session (user) | HTMX list of user's pentests |
 | `/api/pentests/worker/claim` | POST | `X-Bot-Token` | agent claims next queued job |
-| `/api/pentests/worker/report` | POST | `X-Bot-Token` | agent uploads completed PDF |
+| `/api/pentests/worker/report` | POST | `X-Bot-Token` | agent uploads completed PDF (+ optional `findings`) |
 | `/reports/{name}.pdf` | GET | session (owner/admin) | report download |
 
 ## Security controls

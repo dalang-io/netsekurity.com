@@ -28,6 +28,9 @@ type suDomain struct {
 
 type suPentest struct {
 	ID, UserEmail, Domain, Status, Mode, ReportRef, CreatedAt string
+	// Findings is the severity breakdown reported by the scanner, pre-rendered;
+	// empty when the worker never sent one.
+	Findings template.HTML
 }
 
 // suStats are the aggregates the console needs at a glance. Without them the
@@ -133,12 +136,19 @@ func handleAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 	drows.Close()
 
-	prows, _ := db.Query(`SELECT p.id, COALESCE(u.email,''), COALESCE(d.domain,''), p.status, COALESCE(p.mode,'standard'), COALESCE(p.report_ref,''), p.created_at
+	prows, _ := db.Query(`SELECT p.id, COALESCE(u.email,''), COALESCE(d.domain,''), p.status, COALESCE(p.mode,'standard'), COALESCE(p.report_ref,''), p.created_at,
+			p.findings_reported, p.findings_critical, p.findings_high, p.findings_medium, p.findings_low, p.findings_info
 		FROM pentests p LEFT JOIN users u ON u.id=p.user_id LEFT JOIN domains d ON d.id=p.domain_id
 		ORDER BY p.created_at DESC LIMIT 100`)
 	for prows.Next() {
 		var p suPentest
-		prows.Scan(&p.ID, &p.UserEmail, &p.Domain, &p.Status, &p.Mode, &p.ReportRef, &p.CreatedAt)
+		var reported, crit, high, med, low, info int
+		prows.Scan(&p.ID, &p.UserEmail, &p.Domain, &p.Status, &p.Mode, &p.ReportRef, &p.CreatedAt,
+			&reported, &crit, &high, &med, &low, &info)
+		if reported == 1 {
+			p.Findings = template.HTML(severityChips(map[string]int{
+				"critical": crit, "high": high, "medium": med, "low": low, "info": info}))
+		}
 		data.Pentests = append(data.Pentests, p)
 	}
 	prows.Close()
@@ -320,6 +330,12 @@ func handleAdminUploadReport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	db.Exec(`UPDATE pentests SET report_ref=?, status='completed' WHERE id=?`, name, pid)
+	// Same optional severity breakdown as the worker upload path.
+	if f, ok := parseFindings(r.FormValue("findings")); ok {
+		db.Exec(`UPDATE pentests SET findings_reported=1, findings_critical=?, findings_high=?,
+			findings_medium=?, findings_low=?, findings_info=? WHERE id=?`,
+			f["critical"], f["high"], f["medium"], f["low"], f["info"], pid)
+	}
 	http.Redirect(w, r, "/su", http.StatusSeeOther)
 }
 
@@ -546,7 +562,7 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
     <div class="overflow-x-auto p-3">
       <table class="w-full font-mono text-xs">
         <thead class="sticky top-0 z-10 bg-[#04060c]"><tr class="text-left text-gray-500">
-          <th class="py-1">id</th><th>user</th><th>domain</th><th>mode</th><th>status</th><th>report</th><th>upload pdf</th>
+          <th class="py-1">id</th><th>user</th><th>domain</th><th>mode</th><th>status</th><th>findings</th><th>report</th><th>upload pdf</th>
         </tr></thead>
         <tbody>
         {{range .Pentests}}
@@ -556,13 +572,17 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
           <td class="text-white">{{.Domain}}</td>
           <td>{{if eq .Mode "destructive"}}<span class="text-red-300 font-bold">destructive</span>{{else}}<span class="text-cyan-300">{{.Mode}}</span>{{end}}</td>
           <td>{{.Status}}</td>
+          <td>{{if .Findings}}{{.Findings}}{{else}}<span class="text-gray-600">—</span>{{end}}</td>
           <td>{{if .ReportRef}}<a class="text-emerald-300 underline" href="/reports/{{.ReportRef}}">view</a>{{else}}<span class="text-gray-600">—</span>{{end}}</td>
           <td>
             <details>
               <summary class="cursor-pointer font-mono text-[11px] text-cyan-400 hover:underline">upload</summary>
-              <form method="post" action="/su/reports/upload" enctype="multipart/form-data" class="mt-1 flex gap-1">
+              <form method="post" action="/su/reports/upload" enctype="multipart/form-data" class="mt-1 flex flex-col gap-1">
                 <input type="hidden" name="pentest_id" value="{{.ID}}"/>
                 <input type="file" name="file" accept=".pdf" required aria-label="Report PDF" class="font-mono text-[11px] text-gray-500"/>
+                <input name="findings" placeholder="critical=0,high=2,medium=7,low=3,info=9" aria-label="Severity breakdown"
+                  title="Optional. Leave blank if you do not have the counts."
+                  class="w-56 rounded border border-white/15 bg-ink px-1 py-0.5 font-mono text-[10px] text-white"/>
                 <button class="rounded border border-cyan-400/60 px-2 py-0.5 text-[11px] font-bold text-cyan-300 hover:bg-cyan-500/15">up</button>
               </form>
             </details>

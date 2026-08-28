@@ -39,6 +39,13 @@ if [ -z "$SRC" ] || [ ! -f "$SRC" ]; then
 fi
 echo "pdf: $SRC" >> "$LOG"
 
+# Severity breakdown printed by nsec_scan.py, e.g.
+# SEVERITY=critical=0,high=2,medium=7,low=3,info=9
+# Uploaded with the report so the dashboard can show what the scan found without
+# the customer having to open the PDF. Optional: an older scanner simply omits it.
+SEVERITY=$(grep -oE '^SEVERITY=.*' "$LOG" | tail -1 | cut -d= -f2-)
+echo "severity: ${SEVERITY:-<none>}" >> "$LOG"
+
 # 3) Rename to completion-time format and upload
 TS=$(date -u +%Y%m%d-%H:%M)   # completion time
 OUT="$WORK/$TS-$DOMAIN.pdf"
@@ -46,6 +53,7 @@ cp "$SRC" "$OUT"
 echo "upload $OUT ..." >> "$LOG"
 RES=$(curl -s -m 60 -X POST -H "X-Bot-Token: $TOKEN" \
   -F "pentest_id=$PID" \
+  -F "findings=${SEVERITY:-}" \
   -F "report=@$OUT;type=application/pdf;filename=$(basename "$OUT")" \
   "$API/api/pentests/worker/report")
 echo "upload-resp: $RES" >> "$LOG"
