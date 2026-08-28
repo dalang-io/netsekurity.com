@@ -80,8 +80,11 @@ func handleTopUp(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to create invoice: "+xr.ErrorMsg, http.StatusBadGateway)
 		return
 	}
-	db.Exec(`INSERT INTO payments (user_id, external_id, xendit_invoice_id, url, package_id, amount_usd, credits, status, currency)
-		VALUES (?,?,?,?,?,?,?,'pending',?)`, claims.Sub, externalID, xr.ID, xr.InvoiceURL, packageID, usd, credits, currency)
+	// Capture the Meta Pixel cookies / IP / UA now: the settlement webhook is a
+	// server-to-server call from Xendit and has no browser context to attribute.
+	mu := metaUserFrom(r, email)
+	db.Exec(`INSERT INTO payments (user_id, external_id, xendit_invoice_id, url, package_id, amount_usd, credits, status, currency, meta_fbp, meta_fbc, meta_ip, meta_ua)
+		VALUES (?,?,?,?,?,?,?,'pending',?,?,?,?,?)`, claims.Sub, externalID, xr.ID, xr.InvoiceURL, packageID, usd, credits, currency, mu.FBP, mu.FBC, mu.IP, mu.UserAgent)
 
 	// Redirect the browser straight to the Xendit payment link (HTMX sees
 	// HX-Redirect and navigates to it). No extra "pay now" step.
@@ -227,8 +230,13 @@ func creditPaymentByExternalID(externalID string) (bool, error) {
 	var userID string
 	var credits float64
 	var amountUSD float64
-	var currency string
-	if err := tx.QueryRow(`SELECT user_id, credits, COALESCE(amount_usd,0), COALESCE(currency,'USD') FROM payments WHERE external_id=?`, externalID).Scan(&userID, &credits, &amountUSD, &currency); err != nil {
+	var mu metaUser
+	if err := tx.QueryRow(`SELECT p.user_id, p.credits, COALESCE(p.amount_usd,0),
+			COALESCE(u.email,''), COALESCE(p.meta_fbp,''), COALESCE(p.meta_fbc,''),
+			COALESCE(p.meta_ip,''), COALESCE(p.meta_ua,'')
+		FROM payments p LEFT JOIN users u ON u.id = p.user_id
+		WHERE p.external_id=?`, externalID).
+		Scan(&userID, &credits, &amountUSD, &mu.Email, &mu.FBP, &mu.FBC, &mu.IP, &mu.UserAgent); err != nil {
 		return false, err
 	}
 
@@ -247,13 +255,22 @@ func creditPaymentByExternalID(externalID string) (bool, error) {
 	}
 	// Meta Pixel: Purchase event (payment settled) — server-side with accurate
 	// value + currency. Fired only once per external_id (idempotent guard above).
-	sendMetaEvent("Purchase", map[string]interface{}{
-		"value":          amountUSD,
-		"currency":       currency,
-		"content_name":   "Credit top-up",
-		"content_type":   "product",
-		"num_items":      1,
-		"transaction_id": externalID,
+	// The currency is USD because the value reported is amount_usd; payments.currency
+	// is the Xendit charge currency (IDR by default) and would misprice the event.
+	// Sent from a goroutine so a slow Meta call never delays the webhook's 200.
+	go sendMetaEvent(metaEvent{
+		Name:      "Purchase",
+		ID:        externalID,
+		SourceURL: "https://netsekurity.com/dashboard",
+		User:      mu,
+		Custom: map[string]interface{}{
+			"value":          amountUSD,
+			"currency":       "USD",
+			"content_name":   "Credit top-up",
+			"content_type":   "product",
+			"num_items":      1,
+			"transaction_id": externalID,
+		},
 	})
 	return true, nil
 }

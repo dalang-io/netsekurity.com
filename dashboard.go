@@ -157,7 +157,7 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
                 <span class="font-mono text-sm text-emerald-400">${{printf "%.0f" .USD}}</span>
               </div>
               <div class="font-mono text-[11px] text-gray-500">{{printf "%.0f" .Credits}} credits</div>
-              <button onclick="fbq('track','InitiateCheckout',{content_name:'{{.Name}}',content_type:'product',value:{{printf "%.0f" .USD}},currency:'USD'})"
+              <button onclick="fbq('track','InitiateCheckout',{content_name:'{{.Name}}',content_type:'product',value:{{.USD}},currency:'USD'})"
                 class="mt-2 w-full rounded border border-emerald-400 bg-emerald-500/10 px-2 py-1.5 font-mono text-xs font-bold text-emerald-300 hover:bg-emerald-500/20">buy</button>
             </form>
             {{end}}
@@ -386,5 +386,7 @@ function startDestructive() {
 
 var tmpl = template.Must(template.New("dashboard").Funcs(template.FuncMap{
 	"cssHash": func() string { return cssHash },
-	"fbpixel": func() string { return metaPixelSnippet(true) },
+	// template.HTML, not string: html/template escapes a plain string in an
+	// element context and the pixel would render as literal &lt;script&gt; text.
+	"fbpixel": func() template.HTML { return template.HTML(metaPixelSnippet(true)) },
 }).Parse(dashboardHTML))

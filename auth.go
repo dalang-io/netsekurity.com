@@ -21,8 +21,10 @@ func randomHex(n int) string {
 	return hex.EncodeToString(b)
 }
 
-// ensureUser upserts a user by Google identity and returns the user row id.
-func ensureUser(email, name, picture, sub string) (string, error) {
+// ensureUser upserts a user by Google identity and returns the user row id plus
+// whether this call created the account (a first-time registration, as opposed
+// to a repeat login).
+func ensureUser(email, name, picture, sub string) (string, bool, error) {
 	var id string
 	err := db.QueryRow(`SELECT id FROM users WHERE google_sub = ?`, sub).Scan(&id)
 	if err == nil {
@@ -30,10 +32,10 @@ func ensureUser(email, name, picture, sub string) (string, error) {
 		if email == getenv("SUPER_ADMIN_EMAIL", "hans@dalang.io") {
 			db.Exec(`UPDATE users SET role='admin' WHERE id=?`, id)
 		}
-		return id, nil
+		return id, false, nil
 	}
 	if err != sql.ErrNoRows {
-		return "", err
+		return "", false, err
 	}
 	// Existing user by email but not yet linked to google_sub.
 	err = db.QueryRow(`SELECT id FROM users WHERE email = ?`, email).Scan(&id)
@@ -43,10 +45,10 @@ func ensureUser(email, name, picture, sub string) (string, error) {
 		if email == getenv("SUPER_ADMIN_EMAIL", "hans@dalang.io") {
 			db.Exec(`UPDATE users SET role='admin' WHERE id=?`, id)
 		}
-		return id, nil
+		return id, false, nil
 	}
 	if err != sql.ErrNoRows {
-		return "", err
+		return "", false, err
 	}
 	id = "u_" + randomHex(12)
 	role := "user"
@@ -55,11 +57,28 @@ func ensureUser(email, name, picture, sub string) (string, error) {
 	}
 	if _, err := db.Exec(`INSERT INTO users (id, email, name, picture, google_sub, role) VALUES (?,?,?,?,?,?)`,
 		id, email, name, picture, sub, role); err != nil {
-		return "", err
+		return "", false, err
 	}
 	// Ensure a credit balance row exists.
 	db.Exec(`INSERT OR IGNORE INTO credit_balance (user_id, balance) VALUES (?,0)`, id)
-	return id, nil
+	return id, true, nil
+}
+
+// trackSignupLead fires the Meta Lead event for a brand-new account. event_id is
+// derived from the user id so a replay can never double-count, and the call runs
+// in a goroutine so it cannot delay the login redirect.
+func trackSignupLead(r *http.Request, userID, email string) {
+	go sendMetaEvent(metaEvent{
+		Name:      "Lead",
+		ID:        "lead-" + userID,
+		SourceURL: "https://netsekurity.com/dashboard",
+		User:      metaUserFrom(r, email),
+		Custom: map[string]interface{}{
+			"value":        0.0,
+			"currency":     "USD",
+			"content_name": "User registration",
+		},
+	})
 }
 
 // handleGoogleLogin starts the Google OAuth authorization code flow.
@@ -136,7 +155,7 @@ func handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "userinfo failed", http.StatusBadGateway)
 		return
 	}
-	userID, err := ensureUser(gu.Email, gu.Name, "", gu.ID)
+	userID, created, err := ensureUser(gu.Email, gu.Name, "", gu.ID)
 	if err != nil {
 		http.Error(w, "failed to create user", http.StatusInternalServerError)
 		return
@@ -146,13 +165,11 @@ func handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "failed to issue token", http.StatusInternalServerError)
 		return
 	}
-	// Meta Pixel: Lead event (registration/login success) — server-side so it
-	// isn't lost to ad-blockers.
-	sendMetaEvent("Lead", map[string]interface{}{
-		"value":        0.0,
-		"currency":     "USD",
-		"content_name": "User registration",
-	})
+	// Meta Pixel: Lead on registration only — server-side so it isn't lost to
+	// ad-blockers. Repeat logins are not leads.
+	if created {
+		trackSignupLead(r, userID, gu.Email)
+	}
 	http.SetCookie(w, &http.Cookie{Name: authCookie, Value: token, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: int((24 * time.Hour).Seconds())})
 	http.Redirect(w, r, "/dashboard", http.StatusFound)
 }
@@ -196,7 +213,7 @@ func handleOneTap(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "email not verified", http.StatusUnauthorized)
 		return
 	}
-	userID, err := ensureUser(info.Email, info.Name, "", info.Sub)
+	userID, created, err := ensureUser(info.Email, info.Name, "", info.Sub)
 	if err != nil {
 		http.Error(w, "failed to create user", http.StatusInternalServerError)
 		return
@@ -205,6 +222,9 @@ func handleOneTap(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, "failed to issue token", http.StatusInternalServerError)
 		return
+	}
+	if created {
+		trackSignupLead(r, userID, info.Email)
 	}
 	http.SetCookie(w, &http.Cookie{Name: authCookie, Value: token, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: int((24 * time.Hour).Seconds())})
 	w.Header().Set("Content-Type", "application/json")

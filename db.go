@@ -74,7 +74,11 @@ func initDB() error {
 			status TEXT NOT NULL DEFAULT 'pending',
 			currency TEXT NOT NULL DEFAULT 'IDR',
 			created_at TEXT NOT NULL DEFAULT (datetime('now')),
-			paid_at TEXT
+			paid_at TEXT,
+			meta_fbp TEXT,
+			meta_fbc TEXT,
+			meta_ip TEXT,
+			meta_ua TEXT
 		)`,
 		`CREATE TABLE IF NOT EXISTS domains (
 			id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -140,6 +144,16 @@ func initDB() error {
 	if !columnExists("payments", "url") {
 		if _, err := db.Exec(`ALTER TABLE payments ADD COLUMN url TEXT`); err != nil {
 			return fmt.Errorf("add payments.url: %w", err)
+		}
+	}
+
+	// Meta Conversions API context captured at checkout and replayed when the
+	// payment settles — the Xendit webhook has no browser request of its own.
+	for _, c := range []string{"meta_fbp", "meta_fbc", "meta_ip", "meta_ua"} {
+		if !columnExists("payments", c) {
+			if _, err := db.Exec(`ALTER TABLE payments ADD COLUMN ` + c + ` TEXT`); err != nil {
+				return fmt.Errorf("add payments.%s: %w", c, err)
+			}
 		}
 	}
 
