@@ -19,15 +19,12 @@ type dashboardData struct {
 	Payments     []pymt // pending + paid
 	Expired      []pymt // expired, collapsed behind a disclosure
 	Domains      []dom
-	RateNote     string
 }
 
 type pkg struct {
 	ID, Name string
 	USD      float64
 	Credits  float64
-	// Local is the amount Xendit will actually charge, e.g. "Rp 825.000".
-	Local string
 }
 
 type txn struct {
@@ -96,13 +93,12 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	db.QueryRow(`SELECT name, email FROM users WHERE id=?`, claims.Sub).Scan(&name, &email)
 	db.QueryRow(`SELECT balance FROM credit_balance WHERE user_id=?`, claims.Sub).Scan(&balance)
 
-	data := dashboardData{Name: name, Email: email, Balance: balance, IsAdmin: isAdmin(email), RateNote: localRateNote()}
+	data := dashboardData{Name: name, Email: email, Balance: balance, IsAdmin: isAdmin(email)}
 
 	rows, _ := db.Query(`SELECT id, name, usd_price, credits FROM credit_packages WHERE is_active=1 ORDER BY usd_price`)
 	for rows.Next() {
 		var p pkg
 		rows.Scan(&p.ID, &p.Name, &p.USD, &p.Credits)
-		p.Local = localPrice(p.USD)
 		data.Packages = append(data.Packages, p)
 	}
 	rows.Close()
@@ -210,13 +206,12 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
                 <span class="font-mono text-sm text-emerald-400">${{printf "%.0f" .USD}}</span>
               </div>
               <div class="font-mono text-[11px] text-gray-500">{{printf "%.0f" .Credits}} credits</div>
-              {{if .Local}}<div class="mt-0.5 font-mono text-[11px] text-cyan-300">you pay {{.Local}}</div>{{end}}
               <button onclick="fbq('track','InitiateCheckout',{content_name:'{{.Name}}',content_type:'product',value:{{.USD}},currency:'USD'})"
-                class="mt-2 w-full rounded border border-emerald-400 bg-emerald-500/10 px-2 py-1.5 font-mono text-xs font-bold text-emerald-300 hover:bg-emerald-500/20">buy{{if .Local}} — {{.Local}}{{end}}</button>
+                class="mt-2 w-full rounded border border-emerald-400 bg-emerald-500/10 px-2 py-1.5 font-mono text-xs font-bold text-emerald-300 hover:bg-emerald-500/20">buy</button>
             </form>
             {{end}}
           </div>
-          {{if .RateNote}}<p class="mt-2 font-mono text-[11px] leading-relaxed text-gray-500">{{.RateNote}}</p>{{end}}
+          <p class="mt-2 font-mono text-[11px] text-gray-600">All prices in USD.</p>
           <div id="topup-result" class="mt-2"></div>
         </div>
       </section>

@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
-	"fmt"
 	"html/template"
 	"io/fs"
 	"log"
@@ -42,6 +41,9 @@ func main() {
 	go startPaymentPolling()
 	// Ensure a landing placeholder for login/register CTA.
 	log.Printf("netsekurity ready (env: %s)", getenv("ENVIRONMENT", "dev"))
+	if w := operatorCurrencyWarning(); w != "" {
+		log.Printf("WARNING: currency mismatch — %s", w)
+	}
 
 	port := getenv("PORT", "8094")
 	if v := os.Getenv("PORT"); v != "" {
@@ -146,22 +148,6 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	s := strings.ReplaceAll(string(b), "__GOOGLE_CLIENT_ID__", getenv("GOOGLE_CLIENT_ID", ""))
 	s = strings.ReplaceAll(s, "__CSS_HASH__", cssHash)
-	// Prices are quoted in USD but charged in the Xendit currency (IDR by default).
-	// Show both everywhere a price appears, so nobody meets an unfamiliar number
-	// for the first time on the payment page.
-	s = strings.ReplaceAll(s, "__PRICE_NOTE__", localRateNote())
-	heroLocal := ""
-	if l := localPrice(50); l != "" {
-		heroLocal = "you pay " + l
-	}
-	s = strings.ReplaceAll(s, "__PRICE_LOCAL_HERO__", heroLocal)
-	for _, usd := range []float64{50, 100, 500, 1000} {
-		local := localPrice(usd)
-		if local != "" {
-			local = "≈ " + local
-		}
-		s = strings.ReplaceAll(s, fmt.Sprintf("__IDR_%.0f__", usd), local)
-	}
 	s = strings.ReplaceAll(s, "__FAQ_BLOCK__", renderFAQ())
 
 	// Meta Pixel: base snippet (PageView) in head + ViewContent on pricing section.

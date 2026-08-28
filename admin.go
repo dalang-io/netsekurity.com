@@ -49,6 +49,10 @@ type suStats struct {
 }
 
 type suData struct {
+	// CurrencyWarning is non-empty when checkout bills in something other than
+	// the USD every price is quoted in. Customers never see this.
+	CurrencyWarning string
+
 	Users     []suUser
 	Trx       []suTrx
 	Domains   []suDomain
@@ -84,6 +88,8 @@ func handleAdmin(w http.ResponseWriter, r *http.Request) {
 	if claims, err := currentUser(r); err == nil {
 		data.CurrentID = claims.Sub
 	}
+
+	data.CurrencyWarning = operatorCurrencyWarning()
 
 	st := &data.Stats
 	db.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&st.Users)
@@ -398,6 +404,12 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
   </div>
 </header>
 <main id="main" class="mx-auto max-w-6xl px-4 py-5 sm:px-6 space-y-4">
+
+  {{if .CurrencyWarning}}
+  <div class="rounded border border-yellow-500/50 bg-yellow-500/10 px-3 py-2 font-mono text-xs leading-relaxed text-yellow-200">
+    <span class="font-bold">⚠ checkout currency</span> — {{.CurrencyWarning}}
+  </div>
+  {{end}}
 
   <!-- At-a-glance totals: the reason to open this page -->
   <section class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">

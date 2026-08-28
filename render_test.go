@@ -16,8 +16,7 @@ func TestDashboardTemplateExecutes(t *testing.T) {
 		{"empty", dashboardData{}},
 		{"zero balance", dashboardData{
 			Name: "Test", Email: "t@example.com", Balance: 0,
-			RateNote: localRateNote(),
-			Packages: []pkg{{ID: "starter", Name: "Starter", USD: 50, Credits: 1, Local: localPrice(50)}},
+			Packages: []pkg{{ID: "starter", Name: "Starter", USD: 50, Credits: 1}},
 			Domains:  []dom{{Domain: "example.com", Status: "verified", TXT: "ns-verify-abc"}},
 			Expired:  []pymt{{ExternalID: "NSK-1", Package: "starter", Status: "expired", Credits: 1, AmountUSD: 50}},
 		}},
@@ -66,8 +65,9 @@ func TestDashboardHidesScanAtZeroBalance(t *testing.T) {
 
 func TestSuTemplateExecutes(t *testing.T) {
 	data := suData{
-		CurrentID: "u_me",
-		Stats:     suStats{Users: 33, InvoicesPaid: 0, InvoicesExpired: 28, RevenueUSD: 0, CreditsOut: 21.5},
+		CurrentID:       "u_me",
+		CurrencyWarning: "test warning",
+		Stats:           suStats{Users: 33, InvoicesPaid: 0, InvoicesExpired: 28, RevenueUSD: 0, CreditsOut: 21.5},
 		Users: []suUser{
 			{ID: "u_me", Email: "me@example.com", Name: "Me", Role: "admin", Credits: 5},
 			{ID: "u_other", Email: "other@example.com", Name: "Other", Role: "user"},
@@ -89,26 +89,62 @@ func TestSuTemplateExecutes(t *testing.T) {
 	if !strings.Contains(out, "— you —") {
 		t.Error("current admin's row is not marked")
 	}
-	for _, want := range []string{"invoices paid", "su-destructive", "manual credit grants", "su-search"} {
+	for _, want := range []string{"invoices paid", "su-destructive", "manual credit grants", "su-search", "test warning"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q", want)
 		}
 	}
 }
 
-func TestLocalPriceFormatsCharge(t *testing.T) {
+// The audience is international and every price is quoted in USD. No customer
+// surface may render a converted amount.
+func TestNoConvertedCurrencyReachesCustomers(t *testing.T) {
 	env["XENDIT_CURRENCY"] = "IDR"
 	env["XENDIT_USD_RATE"] = "16500"
 	defer func() { delete(env, "XENDIT_CURRENCY"); delete(env, "XENDIT_USD_RATE") }()
-	if got := localPrice(50); got != "Rp 825.000" {
-		t.Errorf("localPrice(50) = %q, want %q", got, "Rp 825.000")
+
+	data := dashboardData{
+		Balance:  0,
+		Packages: []pkg{{ID: "starter", Name: "Starter", USD: 50, Credits: 1}},
+		Domains:  []dom{{Domain: "example.com", Status: "verified", TXT: "x"}},
 	}
-	if got := localPrice(1000); got != "Rp 16.500.000" {
-		t.Errorf("localPrice(1000) = %q, want %q", got, "Rp 16.500.000")
+	var b strings.Builder
+	if err := tmpl.ExecuteTemplate(&b, "dashboard", data); err != nil {
+		t.Fatal(err)
 	}
+	out := b.String()
+	for _, banned := range []string{"Rp ", "IDR", "you pay", "825.000"} {
+		if strings.Contains(out, banned) {
+			t.Errorf("dashboard leaks converted currency: %q", banned)
+		}
+	}
+	if !strings.Contains(out, "$50") {
+		t.Error("dashboard should quote the USD price")
+	}
+}
+
+// The mismatch is not hidden — it is routed to operators instead.
+func TestCurrencyMismatchWarnsOperators(t *testing.T) {
+	env["XENDIT_CURRENCY"] = "IDR"
+	env["XENDIT_USD_RATE"] = "16500"
+	defer func() { delete(env, "XENDIT_CURRENCY"); delete(env, "XENDIT_USD_RATE") }()
+
+	if !currencyMismatch() {
+		t.Fatal("IDR charge currency should count as a mismatch")
+	}
+	w := operatorCurrencyWarning()
+	for _, want := range []string{"IDR", "825.000", "XENDIT_CURRENCY=USD"} {
+		if !strings.Contains(w, want) {
+			t.Errorf("operator warning missing %q: %s", want, w)
+		}
+	}
+
 	env["XENDIT_CURRENCY"] = "USD"
-	if got := localPrice(50); got != "" {
-		t.Errorf("localPrice with USD charge currency = %q, want empty", got)
+	if currencyMismatch() {
+		t.Error("USD charge currency should not be a mismatch")
+	}
+	if got := operatorCurrencyWarning(); got != "" {
+		t.Errorf("no warning expected when charging USD, got %q", got)
 	}
 }
 
@@ -130,5 +166,21 @@ func TestNormalizeDomainStripsURLs(t *testing.T) {
 	}
 	if !isValidDomain(normalizeDomain("https://paroki.wensputra.my.id/")) {
 		t.Error("normalized hostname should be valid")
+	}
+}
+
+// USD is the default: the product is sold internationally and every price is
+// quoted in USD, so an unset XENDIT_CURRENCY must not silently bill in rupiah.
+func TestChargeCurrencyDefaultsToUSD(t *testing.T) {
+	delete(env, "XENDIT_CURRENCY")
+	if got := chargeCurrency(); got != "USD" {
+		t.Errorf("chargeCurrency() = %q with nothing configured, want USD", got)
+	}
+	if currencyMismatch() {
+		t.Error("the default must not read as a mismatch")
+	}
+	// USD is charged as-is, not converted.
+	if got := topUpAmountUSD(50, chargeCurrency(), usdRate()); got != 50 {
+		t.Errorf("invoice amount = %d, want 50", got)
 	}
 }

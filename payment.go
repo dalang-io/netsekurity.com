@@ -41,12 +41,11 @@ func handleTopUp(w http.ResponseWriter, r *http.Request) {
 	db.QueryRow(`SELECT email FROM users WHERE id=?`, claims.Sub).Scan(&email)
 
 	externalID := fmt.Sprintf("NSK-%s-%d", claims.Sub, time.Now().Unix())
-	// Xendit charges in the account's configured currency. Most accounts only
-	// support IDR (USD requires enabling with Xendit), so default to IDR and
-	// convert via XENDIT_USD_RATE; set XENDIT_CURRENCY=USD once the account
-	// supports it and the amount is charged in USD directly.
-	currency := strings.ToUpper(getenv("XENDIT_CURRENCY", "IDR"))
-	amount := topUpAmountUSD(usd, currency, parseFloat(getenv("XENDIT_USD_RATE", "16500")))
+	// One source of truth with the display side (pricing.go): this used to read
+	// XENDIT_CURRENCY itself, defaulting to IDR, so the invoice currency and the
+	// currency the site reasoned about could drift apart.
+	currency := chargeCurrency()
+	amount := topUpAmountUSD(usd, currency, usdRate())
 
 	payload, _ := json.Marshal(map[string]interface{}{
 		"external_id":          externalID,
