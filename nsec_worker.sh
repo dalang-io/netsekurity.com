@@ -29,9 +29,23 @@ echo "job: pid=$PID domain=$DOMAIN" >> "$LOG"
 REPORT_ROOT=/opt/data/report
 VE=$REPORT_ROOT/.venv/bin/python
 [ -x "$VE" ] || VE=python3
-"$VE" /opt/data/netsekurity_draft/nsec_scan.py "$DOMAIN" >> "$LOG" 2>&1
+
+# Prefer the nsec_scan.py sitting next to this script, so updating the agent is
+# just a `git pull` in its checkout. Fall back to the historical install path.
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCAN="$HERE/nsec_scan.py"
+[ -f "$SCAN" ] || SCAN=/opt/data/netsekurity_draft/nsec_scan.py
+echo "scanner: $SCAN" >> "$LOG"
+
+# Capture this run's output separately. $LOG is append-only and shared across
+# runs, so `grep ... | tail -1` on it can return a PREVIOUS scan's PDF= or
+# SEVERITY= line whenever the current run fails to print one — attributing
+# another domain's findings to this pentest.
+RUNLOG="$WORK/scan-$PID.log"
+"$VE" "$SCAN" "$DOMAIN" > "$RUNLOG" 2>&1
+cat "$RUNLOG" >> "$LOG"
 # nsec_scan prints PDF=<path>; extract it
-SRC=$(grep -oE '^PDF=.*' "$LOG" | tail -1 | cut -d= -f2-)
+SRC=$(grep -oE '^PDF=.*' "$RUNLOG" | tail -1 | cut -d= -f2-)
 [ -n "$SRC" ] && [ -f "$SRC" ] || SRC=$(ls /opt/data/report/$DOMAIN/*Assessment*.pdf 2>/dev/null | head -1)
 if [ -z "$SRC" ] || [ ! -f "$SRC" ]; then
   echo "scan produced no PDF" >> "$LOG"
@@ -43,7 +57,7 @@ echo "pdf: $SRC" >> "$LOG"
 # SEVERITY=critical=0,high=2,medium=7,low=3,info=9
 # Uploaded with the report so the dashboard can show what the scan found without
 # the customer having to open the PDF. Optional: an older scanner simply omits it.
-SEVERITY=$(grep -oE '^SEVERITY=.*' "$LOG" | tail -1 | cut -d= -f2-)
+SEVERITY=$(grep -oE '^SEVERITY=.*' "$RUNLOG" | tail -1 | cut -d= -f2-)
 echo "severity: ${SEVERITY:-<none>}" >> "$LOG"
 
 # 3) Rename to completion-time format and upload
@@ -58,6 +72,6 @@ RES=$(curl -s -m 60 -X POST -H "X-Bot-Token: $TOKEN" \
   "$API/api/pentests/worker/report")
 echo "upload-resp: $RES" >> "$LOG"
 # clean scratch
-rm -f "$OUT" 2>/dev/null
+rm -f "$OUT" "$RUNLOG" 2>/dev/null
 echo "done pid=$PID" >> "$LOG"
 exit 0

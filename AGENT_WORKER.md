@@ -72,6 +72,20 @@ the report"* rather than implying the scan came back clean. Unknown keys and
 malformed values are ignored; if nothing parses, the summary counts as absent.
 Admins can supply the same string by hand when uploading a report from `/su`.
 
+### Updating the agent
+
+`nsec_worker.sh` resolves `nsec_scan.py` next to itself, so updating the agent is
+a `git pull` in its checkout of this repo — no copying into
+`/opt/data/netsekurity_draft/` (that path stays as a fallback for older installs).
+
+```bash
+cd <hermes checkout of netsekurity.com> && git pull
+grep -c 'SEVERITY=' nsec_scan.py     # 1 = the scanner emits the breakdown
+grep -c 'findings=' nsec_worker.sh   # 1 = the worker forwards it
+```
+
+Then watch one real scan: `grep -E 'scanner:|severity:|upload-resp:' /tmp/nsk_worker.log`.
+
 ## Report
 
 - **Language:** English only.
