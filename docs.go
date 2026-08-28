@@ -282,12 +282,13 @@ blocks:
 // header is identical to the landing page.
 func handleDocs(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	// Plain nouns, matching the landing nav. The "$ " prefix comes from .prompt.
 	docsNav := []hdrLink{
-		{Href: "/", Text: "man home"},
-		{Href: "/docs", Text: "man docs"},
-		{Href: "/#cicd", Text: "pip install cicd"},
-		{Href: "/#pricing", Text: "cat pricing"},
-		{Href: "/#faq", Text: "man faq"},
+		{Href: "/", Text: "home"},
+		{Href: "/docs", Text: "docs"},
+		{Href: "/#cicd", Text: "ci/cd"},
+		{Href: "/#pricing", Text: "pricing"},
+		{Href: "/#faq", Text: "faq"},
 	}
 	// Auth-aware header: logged-in users see the dashboard button, anonymous see login.
 	authNav := `<a href="/login" class="whitespace-nowrap rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 glow">login</a>`

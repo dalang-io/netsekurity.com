@@ -131,3 +131,18 @@ input:focus, select:focus, textarea:focus {
 .crt-tile svg text {
   filter: drop-shadow(0 0 1px rgba(255, 255, 255, 0.35));
 }
+
+/* Running prose. The whole site is monospace by default, which carries the
+   identity in headings, labels and terminal panels — but 12px mono was also
+   where every value proposition lived, and it is the least readable setting
+   available. Prose switches to a sans face; everything else stays mono. */
+.copy {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+.copy code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.9em;
+}

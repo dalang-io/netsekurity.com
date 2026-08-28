@@ -1,9 +1,8 @@
 package main
 
 import (
-	"crypto/rand"
-	"encoding/hex"
 	"fmt"
+	"html/template"
 	"net/http"
 	"strings"
 )
@@ -22,33 +21,6 @@ func handleContact(w http.ResponseWriter, r *http.Request) {
 </div>`))
 }
 
-// handleTXT generates a mock auto-verification TXT record (HTMX hx-get).
-func handleTXT(w http.ResponseWriter, r *http.Request) {
-	token := "ns-verify-" + hex.EncodeToString(mustRand(16))
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(`<div class="space-y-3">
-  <div class="rounded-lg border border-cyan-500/40 bg-cyan-500/10 p-3 font-mono text-xs">
-    <div class="text-cyan-400">Name</div><div class="text-gray-200">_netsekurity</div>
-    <div class="mt-2 text-cyan-400">Type</div><div class="text-gray-200">TXT</div>
-    <div class="mt-2 text-cyan-400">Value</div><div class="break-all text-gray-200" id="txt-value">` + token + `</div>
-  </div>
-  <button type="button" aria-label="Copy TXT value" class="w-full rounded-md border border-white/20 bg-white/5 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
-    onclick="navigator.clipboard.writeText(document.getElementById('txt-value').textContent); this.textContent='Copied!'; setTimeout(()=>this.textContent='Copy TXT value',1500)">
-    Copy TXT value
-  </button>
-  <button type="button" class="w-full rounded-md bg-emerald-500 px-4 py-2 text-sm font-bold text-black hover:bg-emerald-400 transition-colors"
-    hx-post="/api/verify" hx-swap="outerHTML">Verify DNS record</button>
-</div>`))
-}
-
-// handleVerify simulates the DNS verification completing (HTMX hx-post).
-func handleVerify(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(`<div class="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300" role="status">
-  <strong>Verified!</strong> Domain ownership confirmed. Your pentest credit is now active.
-</div>`))
-}
-
 var faqAnswers = map[string]string{
 	"1": `How does pricing work? <strong>1 credit = 1 pentest on 1 domain.</strong> Buy a package, add a domain, verify ownership with the auto-generated TXT record, and a pentest is scheduled.`,
 	"2": `What is covered in one pentest? An automated, OWASP-mapped vulnerability assessment of your verified domain's <strong>public, unauthenticated</strong> surface: recon &amp; subdomain discovery, tech/WAF fingerprint, full security-header review, TLS/PKI validation, exposed files &amp; secrets, and common web-vuln probing (SQLi, LFI/RFI, XSS, open redirect, path traversal, misconfiguration). You get a prioritized English report with CVSS v3.1 scores and remediation steps.`,
@@ -61,30 +33,66 @@ var faqAnswers = map[string]string{
 	"9": `Is this a full penetration test? <strong>No.</strong> The standard product is an automated, <strong>external, read-only web security assessment</strong> of your public attack surface with agent-reviewed findings. It does not test authenticated areas, authorization (IDOR), or business logic. If your app has critical authenticated flows, pair it with our <strong>whitebox</strong> tier (source + authenticated manual testing by a security engineer, $10,000 USD per app/domain).`,
 }
 
-// handleFAQ toggles FAQ answers (HTMX hx-get) into an element id "faq-a-<q>".
-func handleFAQ(w http.ResponseWriter, r *http.Request) {
-	q := r.URL.Query().Get("q")
-	if r.URL.Query().Get("open") != "1" {
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		w.Write([]byte(``))
-		return
+// faqOrder fixes the display order of the questions (Go maps are unordered).
+var faqOrder = []struct{ ID, Q string }{
+	{"1", "How does pricing work?"},
+	{"2", "What is covered in one pentest?"},
+	{"3", "How do I verify my domain?"},
+	{"4", "Is it really automated?"},
+	{"5", "What if we have many subdomains?"},
+	{"6", "What is NOT covered?"},
+	{"7", "Blackbox vs whitebox?"},
+	{"8", "I'm not technical — is this for me?"},
+	{"9", "Is this a full penetration test?"},
+}
+
+// renderFAQ renders the FAQ as native <details> disclosures. It used to be nine
+// HTMX endpoints — one request to open each answer and another to close it — with
+// no open/closed affordance on the question itself. The answers are static, so
+// they belong in the page.
+func renderFAQ() string {
+	var b strings.Builder
+	for _, f := range faqOrder {
+		ans, ok := faqAnswers[f.ID]
+		if !ok {
+			continue
+		}
+		b.WriteString(`<details class="faq-item rounded border border-white/10 bg-[#04060c]">
+  <summary class="cursor-pointer list-none px-4 py-3 font-mono text-sm text-gray-200 marker:content-[''] hover:text-emerald-300">
+    <span class="text-emerald-400">?</span> ` + template.HTMLEscapeString(f.Q) + `
+  </summary>
+  <div class="copy border-t border-white/10 px-4 py-3 text-gray-300">` + ans + `</div>
+</details>
+`)
 	}
-	ans, ok := faqAnswers[q]
-	if !ok {
-		w.Write([]byte(``))
+	return b.String()
+}
+
+// handleProductScope renders PRODUCT_SCOPE.md inside the site shell. It used to be
+// linked as a raw .md file, which browsers show unrendered or download outright —
+// for an explicitly non-technical audience.
+func handleProductScope(w http.ResponseWriter, r *http.Request) {
+	md, err := staticFS.ReadFile("static/PRODUCT_SCOPE.md")
+	if err != nil {
+		http.NotFound(w, r)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprintf(w, `<div class="mt-2 rounded border border-emerald-500/30 bg-emerald-500/5 px-3 py-2 text-xs leading-relaxed text-gray-300">%s
-  <button class="mt-1 text-[10px] text-cyan-400 hover:underline"
-    hx-get="/api/faq?q=%s&amp;open=0" hx-target="#faq-a-%s" hx-swap="innerHTML">[x] hide</button>
-</div>`, ans, q, q)
-}
-
-func mustRand(n int) []byte {
-	b := make([]byte, n)
-	_, _ = rand.Read(b)
-	return b
+	fmt.Fprintf(w, `<!DOCTYPE html>
+<html lang="en"><head>
+<meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>product scope — netsekurity</title>
+<link rel="stylesheet" href="/css/styles.css?v=%s"/>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+</head>
+<body class="scanlines bg-ink text-gray-300">
+<main class="mx-auto max-w-3xl px-4 py-12 sm:px-6">
+  <a href="/" class="font-mono text-sm font-bold text-white"><span class="text-emerald-400">net</span>sekurity<span class="text-emerald-500">.com</span></a>
+  <h1 class="mt-6 font-mono text-2xl font-bold text-white"><span class="text-emerald-400">$</span> cat PRODUCT_SCOPE.md</h1>
+  <pre class="copy mt-6 whitespace-pre-wrap break-words rounded border border-white/10 bg-[%s] p-5 text-gray-300">%s</pre>
+  <p class="mt-6 font-mono text-xs"><a href="/#faq" class="text-cyan-400 hover:underline">&larr; back to faq</a></p>
+</main>
+</body></html>`, cssHash, "#04060c", template.HTMLEscapeString(string(md)))
 }
 
 var _ = strings.TrimSpace

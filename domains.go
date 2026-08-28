@@ -20,9 +20,13 @@ func handleAddDomain(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	domain := strings.ToLower(strings.TrimSpace(r.FormValue("domain")))
+	domain := normalizeDomain(r.FormValue("domain"))
 	if !isValidDomain(domain) {
-		http.Error(w, "invalid domain", http.StatusBadRequest)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusBadRequest)
+		fmt.Fprint(w, `<div class="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">`+
+			`<strong>That is not a hostname.</strong> Enter just the host — <code class="font-mono">app.example.com</code> — `+
+			`without <code class="font-mono">https://</code>, a path, or a trailing slash.</div>`)
 		return
 	}
 	token := "ns-verify-" + randomHex(12)
@@ -79,6 +83,7 @@ func handleVerifyDomain(w http.ResponseWriter, r *http.Request) {
 	if matched {
 		db.Exec(`UPDATE domains SET status='verified', verified_at=? WHERE user_id=? AND domain=?`, now(), claims.Sub, domain)
 		fmt.Fprintf(w, `<div class="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"><strong>Verified!</strong> %s ownership confirmed — a pentest can now be scheduled.</div>`, domain)
+		renderDomainListOOB(w, claims.Sub)
 		return
 	}
 	// Not found yet — offer a retry.
@@ -115,6 +120,7 @@ func handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	}
 	db.Exec(`DELETE FROM domains WHERE user_id=? AND domain=?`, claims.Sub, domain)
 	fmt.Fprintf(w, `<div class="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-gray-300">%s removed.</div>`, domain)
+	renderDomainListOOB(w, claims.Sub)
 }
 
 // lookupTXTAuth queries the TXT records for a name directly from the domain's
@@ -213,8 +219,35 @@ func skipDNSName(msg []byte, off int) int {
 	return off
 }
 
+// normalizeDomain reduces whatever the customer pasted to a bare hostname.
+// Customers paste full URLs: "https://app.example.com/" used to pass
+// isValidDomain (splitting on "." yields plausible-looking labels), get stored,
+// and then never verify, because the TXT lookup ran against a string containing
+// a scheme and a slash.
+func normalizeDomain(raw string) string {
+	d := strings.ToLower(strings.TrimSpace(raw))
+	if i := strings.Index(d, "://"); i >= 0 {
+		d = d[i+3:]
+	}
+	if i := strings.IndexAny(d, "/?#"); i >= 0 {
+		d = d[:i]
+	}
+	if i := strings.Index(d, "@"); i >= 0 { // user:pass@host
+		d = d[i+1:]
+	}
+	if i := strings.LastIndex(d, ":"); i >= 0 { // :port
+		d = d[:i]
+	}
+	return strings.Trim(strings.TrimSuffix(d, "."), ".")
+}
+
 func isValidDomain(domain string) bool {
 	if len(domain) < 3 || len(domain) > 253 || !strings.Contains(domain, ".") {
+		return false
+	}
+	// Reject anything a hostname can never contain, so a malformed paste fails
+	// loudly at the form instead of silently at DNS-lookup time.
+	if strings.ContainsAny(domain, "/:?#@ _") {
 		return false
 	}
 	if strings.HasPrefix(domain, "-") || strings.HasSuffix(domain, "-") {

@@ -1,9 +1,12 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
+	"strings"
 )
 
 type dashboardData struct {
@@ -13,14 +16,18 @@ type dashboardData struct {
 	IsAdmin      bool
 	Packages     []pkg
 	Transactions []txn
-	Payments     []pymt
+	Payments     []pymt // pending + paid
+	Expired      []pymt // expired, collapsed behind a disclosure
 	Domains      []dom
+	RateNote     string
 }
 
 type pkg struct {
 	ID, Name string
 	USD      float64
 	Credits  float64
+	// Local is the amount Xendit will actually charge, e.g. "Rp 825.000".
+	Local string
 }
 
 type txn struct {
@@ -39,6 +46,40 @@ type dom struct {
 	Domain, Status, TXT string
 }
 
+// renderDomainListOOB writes the shared domain list as an HTMX out-of-band swap.
+// Handlers that change a domain append it to their response so the list refreshes
+// in place — the dashboard used to force a full location.reload() instead, which
+// threw away the very message the user had just been shown.
+func renderDomainListOOB(w io.Writer, userID string) {
+	var d dashboardData
+	db.QueryRow(`SELECT balance FROM credit_balance WHERE user_id=?`, userID).Scan(&d.Balance)
+	rows, err := db.Query(`SELECT domain, status, txt_verification_token FROM domains WHERE user_id=? ORDER BY created_at DESC`, userID)
+	if err != nil {
+		return
+	}
+	for rows.Next() {
+		var dm dom
+		rows.Scan(&dm.Domain, &dm.Status, &dm.TXT)
+		d.Domains = append(d.Domains, dm)
+	}
+	rows.Close()
+	var b strings.Builder
+	if err := tmpl.ExecuteTemplate(&b, "domainlist", d); err != nil {
+		log.Printf("domainlist render error: %v", err)
+		return
+	}
+	io.WriteString(w, strings.Replace(b.String(),
+		`<div id="domain-list">`, `<div id="domain-list" hx-swap-oob="true">`, 1))
+}
+
+// renderBalanceOOB writes the credit balance as an HTMX out-of-band swap so an
+// action that spends credits updates the figure without a page reload.
+func renderBalanceOOB(w io.Writer, userID string) {
+	var balance float64
+	db.QueryRow(`SELECT balance FROM credit_balance WHERE user_id=?`, userID).Scan(&balance)
+	fmt.Fprintf(w, `<span id="credit-balance" hx-swap-oob="true" class="font-mono text-3xl font-bold text-emerald-300 glow">%.1f</span>`, balance)
+}
+
 // handleDashboard renders the authenticated dashboard.
 func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-store, private")
@@ -55,12 +96,13 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 	db.QueryRow(`SELECT name, email FROM users WHERE id=?`, claims.Sub).Scan(&name, &email)
 	db.QueryRow(`SELECT balance FROM credit_balance WHERE user_id=?`, claims.Sub).Scan(&balance)
 
-	data := dashboardData{Name: name, Email: email, Balance: balance, IsAdmin: isAdmin(email)}
+	data := dashboardData{Name: name, Email: email, Balance: balance, IsAdmin: isAdmin(email), RateNote: localRateNote()}
 
 	rows, _ := db.Query(`SELECT id, name, usd_price, credits FROM credit_packages WHERE is_active=1 ORDER BY usd_price`)
 	for rows.Next() {
 		var p pkg
 		rows.Scan(&p.ID, &p.Name, &p.USD, &p.Credits)
+		p.Local = localPrice(p.USD)
 		data.Packages = append(data.Packages, p)
 	}
 	rows.Close()
@@ -85,7 +127,13 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 		if p.Status == "paid" && paidSrc != "" {
 			p.CreatedAt = paidSrc
 		}
-		data.Payments = append(data.Payments, p)
+		// Expired invoices are noise on every page load — collapse them so the
+		// history panel leads with what the customer can still act on.
+		if p.Status == "expired" {
+			data.Expired = append(data.Expired, p)
+		} else {
+			data.Payments = append(data.Payments, p)
+		}
 	}
 	ptrows.Close()
 
@@ -136,9 +184,14 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
         <div class="px-4 py-3">
           <div class="flex items-baseline justify-between">
             <span class="font-mono text-xs text-gray-400">credits</span>
-            <span class="font-mono text-3xl font-bold text-emerald-300 glow">{{printf "%.1f" .Balance}}</span>
+            <span id="credit-balance" class="font-mono text-3xl font-bold text-emerald-300 glow">{{printf "%.1f" .Balance}}</span>
           </div>
           <p class="mt-1 font-mono text-[11px] text-gray-600"># 1 credit = 1 pentest · 1 domain</p>
+          {{if le .Balance 0.0}}
+          <p class="mt-2 rounded border border-yellow-500/30 bg-yellow-500/10 px-2 py-1.5 font-mono text-[11px] text-yellow-300">
+            No credits yet — buy a package below to run your first scan.
+          </p>
+          {{end}}
         </div>
       </section>
 
@@ -157,11 +210,13 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
                 <span class="font-mono text-sm text-emerald-400">${{printf "%.0f" .USD}}</span>
               </div>
               <div class="font-mono text-[11px] text-gray-500">{{printf "%.0f" .Credits}} credits</div>
+              {{if .Local}}<div class="mt-0.5 font-mono text-[11px] text-cyan-300">you pay {{.Local}}</div>{{end}}
               <button onclick="fbq('track','InitiateCheckout',{content_name:'{{.Name}}',content_type:'product',value:{{.USD}},currency:'USD'})"
-                class="mt-2 w-full rounded border border-emerald-400 bg-emerald-500/10 px-2 py-1.5 font-mono text-xs font-bold text-emerald-300 hover:bg-emerald-500/20">buy</button>
+                class="mt-2 w-full rounded border border-emerald-400 bg-emerald-500/10 px-2 py-1.5 font-mono text-xs font-bold text-emerald-300 hover:bg-emerald-500/20">buy{{if .Local}} — {{.Local}}{{end}}</button>
             </form>
             {{end}}
           </div>
+          {{if .RateNote}}<p class="mt-2 font-mono text-[11px] leading-relaxed text-gray-500">{{.RateNote}}</p>{{end}}
           <div id="topup-result" class="mt-2"></div>
         </div>
       </section>
@@ -193,15 +248,19 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
 
           {{if .Payments}}
           <div class="mt-4 border-t border-white/10 pt-2">
-            <div class="mb-1 font-mono text-[11px] text-gray-500"># invoices (incl. pending / expired)</div>
+            <div class="mb-1 font-mono text-[11px] text-gray-500"># invoices</div>
             <div class="overflow-x-auto">
             <table class="w-full min-w-[320px] font-mono text-xs">
               <thead><tr class="text-left text-gray-500"><th class="py-1">invoice</th><th>status</th><th class="text-right">credits</th></tr></thead>
               <tbody>
               {{range .Payments}}
               <tr class="border-t border-white/10">
-                <td class="py-1 truncate max-w-[9rem]" title="{{.ExternalID}}">{{.ExternalID}}</td>
-                <td class="py-1"><span class="rounded px-1.5 py-0.5 text-[10px] font-bold {{if eq .Status "paid"}}bg-emerald-500/20 text-emerald-300{{else if eq .Status "pending"}}bg-yellow-500/20 text-yellow-300{{else}}bg-red-500/20 text-red-300{{end}}">{{.Status}}</span>{{if eq .Status "pending"}}{{if .URL}}&nbsp;<a href="{{.URL}}" target="_blank" rel="noopener" class="rounded border border-emerald-400 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/20">pay →</a>{{end}}{{end}}</td>
+                <td class="py-1" title="{{.ExternalID}}">
+                  <span class="text-gray-200">{{if .Package}}{{.Package}}{{else}}top-up{{end}}</span>
+                  <span class="text-gray-500"> · ${{printf "%.0f" .AmountUSD}}</span>
+                  <span class="block text-[10px] text-gray-600">{{.CreatedAt}}</span>
+                </td>
+                <td class="py-1"><span class="rounded px-1.5 py-0.5 text-[10px] font-bold {{if eq .Status "paid"}}bg-emerald-500/20 text-emerald-300{{else}}bg-yellow-500/20 text-yellow-300{{end}}">{{.Status}}</span>{{if eq .Status "pending"}}{{if .URL}}&nbsp;<a href="{{.URL}}" target="_blank" rel="noopener" class="rounded border border-emerald-400 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/20">pay →</a>{{end}}{{end}}</td>
                 <td class="text-right font-mono text-emerald-400">{{printf "%.0f" .Credits}}</td>
               </tr>
               {{end}}
@@ -209,6 +268,27 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
             </table>
             </div>
           </div>
+          {{end}}
+
+          {{if .Expired}}
+          <details class="mt-3 border-t border-white/10 pt-2">
+            <summary class="cursor-pointer font-mono text-[11px] text-gray-600 hover:text-gray-400">
+              # {{len .Expired}} expired invoice(s) — unpaid within 24h
+            </summary>
+            <div class="mt-1 overflow-x-auto">
+            <table class="w-full min-w-[320px] font-mono text-xs">
+              <tbody>
+              {{range .Expired}}
+              <tr class="border-t border-white/10 text-gray-600">
+                <td class="py-1" title="{{.ExternalID}}">{{if .Package}}{{.Package}}{{else}}top-up{{end}} · ${{printf "%.0f" .AmountUSD}}</td>
+                <td class="py-1 text-[10px]">{{.CreatedAt}}</td>
+                <td class="text-right">{{printf "%.0f" .Credits}}</td>
+              </tr>
+              {{end}}
+              </tbody>
+            </table>
+            </div>
+          </details>
           {{end}}
         </div>
       </section>
@@ -251,67 +331,42 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
       </section>
     </div>
 
-    <!-- Right: domains -->
-    <section class="min-w-0 w-full rounded border border-cyan-500/30 bg-[#04060c] h-fit">
-      <div class="flex items-center gap-1.5 border-b border-cyan-500/20 px-3 py-2">
-        <span class="h-2.5 w-2.5 rounded-full bg-cyan-500/70"></span>
-        <span class="ml-1 font-mono text-[11px] text-gray-500">$ domains</span>
-      </div>
-      <div class="p-3">
-        <form class="flex min-w-0 gap-2" hx-post="/api/domains" hx-target="#domain-result" hx-swap="innerHTML">
-          <input name="domain" required placeholder="target.example.com" aria-label="Domain to verify" class="flex-1 rounded border border-white/15 bg-ink px-2 py-1.5 font-mono text-xs text-white focus:border-cyan-400 focus:outline-none"/>
-          <button class="rounded border border-cyan-400 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs font-bold text-cyan-300 hover:bg-cyan-500/20">add</button>
-        </form>
-        <div id="domain-result" class="mt-2"></div>
-        {{if .Domains}}
-        <ul class="mt-2 space-y-1.5">
-          {{range .Domains}}
-          <li class="rounded border border-white/10 bg-ink px-2.5 py-1.5 font-mono text-xs">
-            <div class="flex items-center justify-between gap-2">
-              <span class="truncate text-white">{{.Domain}}</span>
-              <span class="flex items-center gap-1.5">
-                {{if ne .Status "verified"}}
-                <button hx-post="/api/domains/verify" hx-vals='{"domain":"{{.Domain}}"}'
-                  hx-target="#domain-result" hx-swap="innerHTML"
-                  hx-on::after-request="if(event.detail.successful) setTimeout(()=>location.reload(),500)"
-                  class="rounded border border-emerald-400/60 px-2 py-0.5 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/15">verify</button>
-                <button hx-post="/api/domains/delete" hx-vals='{"domain":"{{.Domain}}"}'
-                  hx-target="#domain-result" hx-swap="innerHTML"
-                  hx-on::after-request="if(event.detail.successful) setTimeout(()=>location.reload(),500)"
-                  class="rounded border border-red-400/50 px-2 py-0.5 text-[11px] font-bold text-red-300 hover:bg-red-500/15">del</button>
-                {{else}}
-                <span class="rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300">[verified]</span>
-                <button hx-post="/api/pentests/start" hx-vals='{"domain":"{{.Domain}}","mode":"standard"}'
-                  hx-target="#pentest-result" hx-swap="innerHTML"
-                  hx-on::after-request="if(event.detail.successful) setTimeout(()=>location.reload(),800)"
-                  title="Standard scan — 1 credit (read-only, non-destructive)"
-                  class="rounded border border-cyan-400/60 px-2 py-0.5 text-[11px] font-bold text-cyan-300 hover:bg-cyan-500/15">scan</button>
-                <button type="button"
-                  onclick="openDestructiveModal('{{.Domain}}')"
-                  title="Destructive scan — 2 credits (exploit/RCE/webshell/takeover; may damage). Use a dev server."
-                  class="rounded border border-red-400/70 bg-red-500/10 px-2 py-0.5 text-[11px] font-bold text-red-300 hover:bg-red-500/20">scan -x</button>
-                {{end}}
-              </span>
-            </div>
-            <div class="mt-1 flex items-center gap-1 text-[11px] text-gray-500">
-              <span class="text-cyan-400">_netsekurity</span>
-              <span class="text-gray-600">TXT</span>
-              <span class="truncate">{{.TXT}}</span>
-              <button class="shrink-0 text-cyan-400 hover:underline"
-                onclick="navigator.clipboard.writeText('{{.TXT}}');this.textContent='copied';setTimeout(()=>this.textContent='copy',1200)">copy</button>
-            </div>
-          </li>
-          {{end}}
-        </ul>
-        {{else}}
-        <p class="mt-2 font-mono text-xs text-gray-600"># no domains — add one to start a pentest</p>
-        {{end}}
-      </div>
-    </section>
-  </div>
-  <div id="pentest-result" class="mt-3"></div>
-  <div id="pentest-list">
-    <div hx-get="/api/pentests/list" hx-trigger="load, every 10s" hx-swap="innerHTML"></div>
+    <!-- Right: scans first (what the customer paid for), then domains -->
+    <div class="min-w-0 w-full space-y-4">
+
+      <section class="min-w-0 w-full rounded border border-emerald-500/30 bg-[#04060c]">
+        <div class="flex items-center gap-1.5 border-b border-emerald-500/20 px-3 py-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-emerald-500/70"></span>
+          <span class="ml-1 font-mono text-[11px] text-gray-500">$ scans</span>
+        </div>
+        <div class="p-3">
+          <div id="pentest-result"></div>
+          <div id="pentest-list" hx-get="/api/pentests/list" hx-trigger="load, every 10s, refresh" hx-swap="innerHTML">
+            <p class="font-mono text-xs text-gray-600"># loading…</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="min-w-0 w-full rounded border border-cyan-500/30 bg-[#04060c] h-fit">
+        <div class="flex items-center gap-1.5 border-b border-cyan-500/20 px-3 py-2">
+          <span class="h-2.5 w-2.5 rounded-full bg-cyan-500/70"></span>
+          <span class="ml-1 font-mono text-[11px] text-gray-500">$ domains</span>
+        </div>
+        <div class="p-3">
+          <form class="flex min-w-0 gap-2" hx-post="/api/domains" hx-target="#domain-result" hx-swap="innerHTML">
+            <input name="domain" required placeholder="app.example.com" aria-label="Domain to verify"
+              pattern="[A-Za-z0-9]([A-Za-z0-9\-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9\-]*[A-Za-z0-9])?)+"
+              title="Hostname only — no https:// and no trailing slash"
+              class="flex-1 rounded border border-white/15 bg-ink px-2 py-1.5 font-mono text-xs text-white focus:border-cyan-400 focus:outline-none"/>
+            <button class="rounded border border-cyan-400 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs font-bold text-cyan-300 hover:bg-cyan-500/20">add</button>
+          </form>
+          <p class="mt-1 font-mono text-[10px] text-gray-600">hostname only — <span class="text-gray-500">app.example.com</span>, not https://app.example.com/</p>
+          <div id="domain-result" class="mt-2"></div>
+          {{template "domainlist" .}}
+        </div>
+      </section>
+
+    </div>
   </div>
 </main>
 
@@ -374,15 +429,75 @@ function startDestructive() {
   xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
   xhr.setRequestHeader('HX-Request', 'true');
   xhr.onload = function () {
-    document.getElementById('pentest-result').innerHTML = xhr.responseText;
+    // htmx.swap processes the out-of-band balance and domain-list fragments the
+    // handler returns alongside the message, so nothing needs a page reload.
+    if (window.htmx) {
+      htmx.swap('#pentest-result', xhr.responseText, { swapStyle: 'innerHTML' });
+      htmx.trigger('#pentest-list', 'refresh');
+    } else {
+      document.getElementById('pentest-result').innerHTML = xhr.responseText;
+    }
     closeDestructiveModal();
-    setTimeout(function(){ location.reload(); }, 1200);
   };
   xhr.send(body);
 }
 </script>
 </body>
-</html>{{end}}`
+</html>{{end}}
+
+{{define "domainlist"}}<div id="domain-list">
+{{if .Domains}}
+<ul class="mt-2 space-y-1.5">
+  {{range .Domains}}
+  <li class="rounded border border-white/10 bg-ink px-2.5 py-1.5 font-mono text-xs">
+    <div class="flex items-center justify-between gap-2">
+      <span class="truncate text-white">{{.Domain}}</span>
+      <span class="flex items-center gap-1.5">
+        {{if ne .Status "verified"}}
+        <button hx-post="/api/domains/verify" hx-vals='{"domain":"{{.Domain}}"}'
+          hx-target="#domain-result" hx-swap="innerHTML"
+          class="rounded border border-emerald-400/60 px-2 py-0.5 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/15">verify</button>
+        <button hx-post="/api/domains/delete" hx-vals='{"domain":"{{.Domain}}"}'
+          hx-target="#domain-result" hx-swap="innerHTML"
+          hx-confirm="Remove {{.Domain}}?"
+          class="rounded border border-red-400/50 px-2 py-0.5 text-[11px] font-bold text-red-300 hover:bg-red-500/15">del</button>
+        {{else}}
+        <span class="rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300">[verified]</span>
+        {{if le $.Balance 0.0}}
+        <button type="button" disabled title="No credits — buy a package to run a scan."
+          class="cursor-not-allowed rounded border border-white/15 px-2 py-0.5 text-[11px] font-bold text-gray-600">scan</button>
+        {{else}}
+        <button hx-post="/api/pentests/start" hx-vals='{"domain":"{{.Domain}}","mode":"standard"}'
+          hx-target="#pentest-result" hx-swap="innerHTML"
+          title="Standard scan — 1 credit (read-only, non-destructive)"
+          class="rounded border border-cyan-400/60 px-2 py-0.5 text-[11px] font-bold text-cyan-300 hover:bg-cyan-500/15">scan</button>
+        {{end}}
+        {{end}}
+      </span>
+    </div>
+    <div class="mt-1 flex items-center gap-1 text-[11px] text-gray-500">
+      <span class="text-cyan-400">_netsekurity</span>
+      <span class="text-gray-600">TXT</span>
+      <span class="truncate">{{.TXT}}</span>
+      <button type="button" class="shrink-0 text-cyan-400 hover:underline"
+        onclick="navigator.clipboard.writeText('{{.TXT}}');this.textContent='copied';setTimeout(()=>this.textContent='copy',1200)">copy</button>
+    </div>
+    {{if eq .Status "verified"}}
+    <div class="mt-1 border-t border-white/5 pt-1">
+      <button type="button" onclick="openDestructiveModal('{{.Domain}}')"
+        {{if le $.Balance 2.0}}disabled title="Destructive mode costs 2 credits."{{end}}
+        class="font-mono text-[10px] text-red-400/70 underline decoration-dotted hover:text-red-300 disabled:cursor-not-allowed disabled:text-gray-700 disabled:no-underline">
+        advanced: destructive scan (2 credits)
+      </button>
+    </div>
+    {{end}}
+  </li>
+  {{end}}
+</ul>
+{{else}}
+<p class="mt-2 font-mono text-xs text-gray-600"># no domains — add one to start a scan</p>
+{{end}}
+</div>{{end}}`
 
 var tmpl = template.Must(template.New("dashboard").Funcs(template.FuncMap{
 	"cssHash": func() string { return cssHash },

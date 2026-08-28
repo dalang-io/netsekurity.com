@@ -58,7 +58,10 @@ func renderHeader(nav []hdrLink, authNav template.HTML, brandURL string) templat
     <nav aria-label="Main navigation" class="hidden items-center gap-3 text-xs text-gray-400 lg:flex">` + desktop.String() + `
     </nav>
     <div class="flex items-center gap-3">
-      <div class="hidden items-center gap-3 md:flex">` + authDesktop + `</div>
+      <!-- The auth CTA stays visible at every width. It used to be md:flex, which
+           hid the only call to action on phones behind the burger menu — where the
+           majority of ad traffic lands. -->
+      <div class="flex items-center gap-3">` + authDesktop + `</div>
       <button type="button" aria-label="Open menu" aria-expanded="false"
         onclick="nskToggleMobile()" id="nsk-burger"
         class="flex h-9 w-9 items-center justify-center rounded border border-white/15 font-mono text-lg text-emerald-300 hover:bg-white/5 lg:hidden">☰</button>

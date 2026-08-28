@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"embed"
 	"encoding/hex"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"log"
@@ -103,9 +104,7 @@ func main() {
 	// Marketing / HTMX fragments
 	mux.HandleFunc("/contact", handleContact)
 	mux.HandleFunc("/docs", handleDocs)
-	mux.HandleFunc("/api/txt", handleTXT)
-	mux.HandleFunc("/api/verify", handleVerify)
-	mux.HandleFunc("/api/faq", handleFAQ)
+	mux.HandleFunc("/product-scope", handleProductScope)
 
 	// CI/CD integration (authenticated by X-API-Token)
 	mux.HandleFunc("/api/v1/pentests", handleAPICreatePentest)
@@ -147,26 +146,57 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	}
 	s := strings.ReplaceAll(string(b), "__GOOGLE_CLIENT_ID__", getenv("GOOGLE_CLIENT_ID", ""))
 	s = strings.ReplaceAll(s, "__CSS_HASH__", cssHash)
+	// Prices are quoted in USD but charged in the Xendit currency (IDR by default).
+	// Show both everywhere a price appears, so nobody meets an unfamiliar number
+	// for the first time on the payment page.
+	s = strings.ReplaceAll(s, "__PRICE_NOTE__", localRateNote())
+	heroLocal := ""
+	if l := localPrice(50); l != "" {
+		heroLocal = "you pay " + l
+	}
+	s = strings.ReplaceAll(s, "__PRICE_LOCAL_HERO__", heroLocal)
+	for _, usd := range []float64{50, 100, 500, 1000} {
+		local := localPrice(usd)
+		if local != "" {
+			local = "≈ " + local
+		}
+		s = strings.ReplaceAll(s, fmt.Sprintf("__IDR_%.0f__", usd), local)
+	}
+	s = strings.ReplaceAll(s, "__FAQ_BLOCK__", renderFAQ())
+
 	// Meta Pixel: base snippet (PageView) in head + ViewContent on pricing section.
 	s = strings.ReplaceAll(s, "__FBPIXEL__", metaPixelSnippet(true))
 	s = strings.ReplaceAll(s, "__FB_VIEWCONTENT__", metaEventJS("ViewContent", `{"content_name":"Pricing","content_type":"product","currency":"USD","value":0.0}`))
 	// Shared stack coverage section (real SVG logos).
 	s = strings.ReplaceAll(s, "__STACK_BLOCK__", string(renderStack()))
 	// Shared header component (landing + docs use the same renderHeader).
+	// Plain nouns, not shell commands. The links render with a "$ " prefix from
+	// the .prompt class, so the terminal flavour survives while each label stays
+	// scannable — "pip install cicd" did not read as "integrations" at a glance.
 	landingNav := []hdrLink{
-		{Href: "#how", Text: "ls how"},
-		{Href: "#features", Text: "cat features"},
-		{Href: "#stack", Text: "cat stack"},
-		{Href: "#cicd", Text: "pip install cicd"},
-		{Href: "/docs", Text: "man docs"},
-		{Href: "#pricing", Text: "cat pricing"},
-		{Href: "#verify", Text: "verify -d"},
-		{Href: "#faq", Text: "man faq"},
+		{Href: "#how", Text: "how it works"},
+		{Href: "#features", Text: "features"},
+		{Href: "#stack", Text: "stack"},
+		{Href: "#cicd", Text: "ci/cd"},
+		{Href: "/docs", Text: "docs"},
+		{Href: "#pricing", Text: "pricing"},
+		{Href: "#faq", Text: "faq"},
 	}
 	// Auth-aware nav: logged-in shows dashboard, anonymous shows login.
 	_, auErr := currentUser(r)
 	hdrNav := `<a href="/dashboard" class="whitespace-nowrap rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 glow">./dashboard<span class="cursor"></span></a>`
 	loginNav := `<a href="/login" class="whitespace-nowrap rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 glow">login</a>`
+	heroBtn := `<a href="/dashboard" class="rounded border-2 border-emerald-400 bg-emerald-500/10 px-5 py-2.5 font-mono text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 glow">./run pentest</a>`
+	verifyCTA := `<a href="/dashboard" class="mt-4 inline-block rounded border-2 border-cyan-400 bg-cyan-500/10 px-5 py-2.5 font-mono text-sm font-bold text-cyan-300 hover:bg-cyan-500/20 glow-cyan">add your domain →</a>`
+	if auErr != nil {
+		// Anonymous visitors are sent to Google OAuth by /dashboard. Say so on the
+		// button instead of surprising them with a consent screen.
+		heroBtn = `<a href="/login" class="rounded border-2 border-emerald-400 bg-emerald-500/10 px-5 py-2.5 font-mono text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 glow">./start — sign in with Google</a>`
+		verifyCTA = `<a href="/login" class="mt-4 inline-block rounded border-2 border-cyan-400 bg-cyan-500/10 px-5 py-2.5 font-mono text-sm font-bold text-cyan-300 hover:bg-cyan-500/20 glow-cyan">sign in to verify your domain →</a>`
+	}
+	s = strings.ReplaceAll(s, "__HERO_CTA__", heroBtn)
+	s = strings.ReplaceAll(s, "__VERIFY_CTA__", verifyCTA)
+
 	if auErr == nil {
 		s = strings.ReplaceAll(s, "__HEADER_BLOCK__", string(renderHeader(landingNav, template.HTML(hdrNav), "#top"))+headerMobileJS)
 		s = strings.ReplaceAll(s, "__FOOTER_AUTH_NAV__", `<a href="/dashboard" class="hover:text-emerald-300">dashboard</a>`)
