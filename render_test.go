@@ -76,6 +76,7 @@ func TestSuTemplateExecutes(t *testing.T) {
 		Domains:  []suDomain{{ID: 1, UserEmail: "other@example.com", Domain: "example.com", Status: "verified"}},
 		Pentests: []suPentest{{ID: "pt_1", UserEmail: "other@example.com", Domain: "example.com", Status: "completed", Mode: "standard"}},
 		Credits:  []suCredit{{Email: "other@example.com", Amount: "5.0", Description: "Admin credit", CreatedAt: "2026-08-28"}},
+		Contacts: []suContact{{ID: 1, Name: "Lead", Email: "lead@example.com", Message: "wildcard pricing?", Source: "landing", CreatedAt: "2026-09-10"}},
 	}
 	var b strings.Builder
 	if err := suTpl.ExecuteTemplate(&b, "su", data); err != nil {
@@ -89,7 +90,11 @@ func TestSuTemplateExecutes(t *testing.T) {
 	if !strings.Contains(out, "— you —") {
 		t.Error("current admin's row is not marked")
 	}
-	for _, want := range []string{"invoices paid", "su-destructive", "manual credit grants", "su-search", "test warning"} {
+	// The 2-credit destructive option is gone from every surface.
+	if strings.Contains(strings.ToLower(out), "destructive") {
+		t.Error("/su still offers a destructive scan")
+	}
+	for _, want := range []string{"invoices paid", "su-contacts", "lead@example.com", "manual credit grants", "su-search", "test warning"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q", want)
 		}

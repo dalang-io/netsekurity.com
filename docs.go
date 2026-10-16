@@ -15,10 +15,11 @@ var docsHTMLRaw = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>docs — netsekurity.com / CI/CD integration</title>
 <meta name="robots" content="index,follow"/>
-<meta name="description" content="Documentation &amp; tutorials to integrate Netsekurity automated pentests into your CI/CD pipeline, plus the HTTP API reference."/>
+<meta name="description" content="Documentation &amp; tutorials to run a Netsekurity external web security assessment from your CI/CD pipeline on every deploy, plus the HTTP API reference."/>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
 <link rel="apple-touch-icon" href="/favicon-512.png"/>
 __FBPIXEL__
+__ANALYTICS__
 <link rel="stylesheet" href="/css/styles.css?v=__CSS_HASH__"/>
 <style>pre{white-space:pre-wrap;word-break:break-word}code{font-family:ui-monospace,monospace}</style>
 </head>
@@ -27,7 +28,7 @@ __FBPIXEL__
 
 <main class="mx-auto max-w-6xl overflow-x-hidden px-4 py-8 sm:px-6">
   <h1 class="font-mono text-2xl font-bold text-white"><span class="text-cyan-400">$</span> man netsekurity --cicd-integration</h1>
-  <p class="mt-2 font-mono text-sm text-gray-500"># pentest on every deploy — automated API integration for your CI/CD</p>
+  <p class="mt-2 font-mono text-sm text-gray-500"># re-scan your public attack surface on every deploy — API integration for your CI/CD</p>
 
   <div class="mt-6 space-y-6">
     <section class="rounded border border-emerald-500/25 bg-[#04060c] p-5">
@@ -36,36 +37,36 @@ __FBPIXEL__
         <li><b>Add &amp; verify your domain</b> — dashboard → add domain → add the TXT record → verify. The domain must be <span class="text-emerald-300">[verified]</span>.</li>
         <li><b>Generate an API token</b> — dashboard → <span class="text-cyan-300">api tokens (CI/CD)</span> → choose expiry (7/14/30/60/90 days) → generate. Copy it now (shown only once).</li>
         <li><b>Store as a secret</b> in your CI — e.g. GitHub Actions <code class="text-cyan-300">NETSEKURITY_API_TOKEN</code>.</li>
-        <li><b>Call the endpoint</b> on deploy. Done — Netsekurity queues and runs the pentest, then uploads the report.</li>
+        <li><b>Call the endpoint</b> on deploy. Done — Netsekurity queues and runs the assessment, then uploads the report.</li>
       </ol>
       <pre class="mt-3 rounded bg-black/60 p-3 text-[11px] text-emerald-300">curl -s -X POST https://netsekurity.com/api/v1/pentests \
   -H "X-API-Token: $NETSEKURITY_API_TOKEN" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "domain=app.example.com&amp;mode=standard"
-# standard = 1 credit · destructive = 2 credits (exploit/RCE/webshell — use a dev server)</pre>
+# 1 credit per assessment · external, read-only, safe to point at production</pre>
     </section>
 
     <section class="rounded border border-white/10 bg-[#04060c] p-5">
       <h2 class="font-mono text-lg font-bold text-white">02 · HTTP API Reference</h2>
       <div class="mt-3 space-y-4 font-mono text-xs">
         <div>
-          <div class="text-cyan-300">POST /api/v1/pentests — start a pentest from CI/CD</div>
+          <div class="text-cyan-300">POST /api/v1/pentests — start an assessment from CI/CD</div>
           <table class="mt-2 w-full border-collapse text-left">
             <thead><tr class="border-b border-white/15 text-gray-500"><th class="py-1 pr-3">param</th><th class="py-1 pr-3">type</th><th class="py-1">desc</th></tr></thead>
             <tbody class="text-gray-300">
               <tr class="border-b border-white/5"><td class="py-1 pr-3">X-API-Token</td><td class="py-1 pr-3">header</td><td class="py-1">required — your API token</td></tr>
               <tr class="border-b border-white/5"><td class="py-1 pr-3">domain</td><td class="py-1 pr-3">form/JSON</td><td class="py-1">required — verified domain owned by the token user</td></tr>
-              <tr class="border-b border-white/5"><td class="py-1 pr-3">mode</td><td class="py-1 pr-3">form/JSON</td><td class="py-1">standard (default, 1 credit) or destructive (2 credits)</td></tr>
+              <tr class="border-b border-white/5"><td class="py-1 pr-3">mode</td><td class="py-1 pr-3">form/JSON</td><td class="py-1">optional — <code>standard</code> is the only value (1 credit, read-only)</td></tr>
             </tbody>
           </table>
           <pre class="mt-2 rounded bg-black/60 p-3 text-[11px] text-emerald-300"># 200 OK
 {"pentest_id":"pt_1f2e…","domain":"app.example.com","mode":"standard","status":"queued"}
-# 401 missing/invalid/expired token · 400 domain not verified · 402 insufficient credits
+# 401 missing/invalid/expired token · 400 domain not verified · 402 insufficient credits · 429 rate limited
 # 400 already queued/running (in-flight cap: 1 per user)</pre>
         </div>
         <div>
           <div class="text-cyan-300">Report download</div>
-          <p class="mt-1 text-gray-400">When a pentest finishes it sets <code class="text-gray-200">status=completed</code> and the report is
+          <p class="mt-1 text-gray-400">When an assessment finishes it sets <code class="text-gray-200">status=completed</code> and the report is
           available on the dashboard (<code class="text-gray-200">/reports/&lt;name&gt;.pdf</code>, owner/admin only). Poll
           <code class="text-gray-200">/api/pentests/list</code> or check the dashboard.</p>
         </div>
@@ -249,31 +250,21 @@ blocks:
     </section>
 
     <section class="rounded border border-white/10 bg-[#04060c] p-5">
-      <h2 class="font-mono text-lg font-bold text-white">13 · Destructive mode</h2>
-      <p class="mt-2 font-mono text-xs leading-relaxed text-gray-300"><span class="text-red-300 font-bold">DANGER.</span>
-      Set <code class="text-cyan-300">mode=destructive</code> (2 credits) to run active exploitation — RCE, webshell upload,
-      malware/exploit injection, takeover attempts. It may damage the target. Always point at a
-      <span class="text-yellow-300">development / staging server</span>, never production, unless explicitly authorized.</p>
-      <pre class="mt-3 rounded bg-black/60 p-3 text-[11px] text-red-300">curl -s -X POST https://netsekurity.com/api/v1/pentests \
-  -H "X-API-Token: $NETSEKURITY_API_TOKEN" \
-  -d "domain=staging.example.com&mode=destructive"</pre>
-    </section>
-
-    <section class="rounded border border-white/10 bg-[#04060c] p-5">
-      <h2 class="font-mono text-lg font-bold text-white">14 · Configuration &amp; security notes</h2>
+      <h2 class="font-mono text-lg font-bold text-white">13 · Configuration &amp; security notes</h2>
       <ul class="mt-3 list-inside list-disc space-y-1.5 font-mono text-xs text-gray-300">
         <li><b>Tokens expire</b> — set an expiry that matches your deploy cadence; rotate regularly by generating a new token and revoking the old one.</li>
         <li><b>Store tokens as CI secrets</b> — never commit them to source control.</li>
         <li><b>One token per user/pipeline</b> is fine; revoke from the dashboard any time.</li>
-        <li><b>In-flight cap</b> — only 1 queued/running pentest per user at a time; the API returns an error if a scan is already active.</li>
-        <li><b>Credits</b> — standard pentest = 1 credit, destructive = 2 credits. Insufficient balance returns HTTP 402.</li>
+        <li><b>In-flight cap</b> — only 1 queued/running assessment per user at a time; the API returns an error if a scan is already active.</li>
+        <li><b>Credits</b> — one assessment = 1 credit. Insufficient balance returns HTTP 402.</li>
+        <li><b>Scope</b> — external, unauthenticated, read-only. Safe to run against production; see the <a href="/product-scope" class="text-cyan-300 hover:underline">product scope</a> for what is and is not checked.</li>
       </ul>
     </section>
   </div>
 </main>
 
 <footer class="mt-10 border-t border-white/10 py-6 text-center font-mono text-[11px] text-gray-600">
-  netsekurity.com — automated pentest on every deploy · <a href="/" class="text-cyan-400 hover:underline">back home</a>
+  netsekurity.com — external security assessment on every deploy · <a href="/" class="text-cyan-400 hover:underline">back home</a>
 </footer>
 </body>
 </html>`
@@ -299,5 +290,6 @@ func handleDocs(w http.ResponseWriter, r *http.Request) {
 	out := strings.ReplaceAll(docsHTMLRaw, "__DOCS_HEADER__", hdr)
 	out = strings.ReplaceAll(out, "__FBPIXEL__", metaPixelSnippet(true))
 	out = strings.ReplaceAll(out, "__CSS_HASH__", cssHash)
+	out = strings.ReplaceAll(out, "__ANALYTICS__", analyticsSnippet())
 	w.Write([]byte(out))
 }

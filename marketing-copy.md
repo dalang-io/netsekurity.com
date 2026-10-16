@@ -6,7 +6,7 @@ Target: solo founders / indie hackers / non-technical builders using agent (Curs
 ---
 
 ## Taglines (primary)
-- "You vibe code. We pentest." — 1 credit, 1 domain, 1 agent-reviewed report.
+- "You vibe code. We check the outside." — 1 credit, 1 domain, 1 agent-reviewed report.
 - "agent ships fast. We make sure it doesn't sink in production."
 - "Vibe-coded it in a weekend? Secure it before real users find the holes."
 
@@ -14,8 +14,8 @@ Target: solo founders / indie hackers / non-technical builders using agent (Curs
 
 1. **The weekend-project nightmare**
    > Vibe-coded a SaaS in a weekend. Deployed to production on Monday.
-   > Tuesday: leaked API key + broken auth + SQLi.
-   > agent writes fast. It doesn't teach security. netsekurity.com finds the holes before real users do. 1 credit = 1 pentest · 1 domain. From $50.
+   > Tuesday: .env readable, staging host public, no HSTS.
+   > agent writes fast. It doesn't teach security. netsekurity.com finds the holes on your public surface before real users do. 1 credit = 1 external assessment · 1 domain. From $50.
 
 2. **Non-tech founder edition**
    > You're not a security person. That's fine.
@@ -24,7 +24,7 @@ Target: solo founders / indie hackers / non-technical builders using agent (Curs
 
 3. **The "it works on my machine" trap**
    > Your vibe-coded app works. Great.
-   > Does it leak the DB connection string? Let anyone be admin? Accept `' OR 1=1` on login?
+   > Is your .env readable from the internet? Is staging public? Does /admin answer to anyone?
    > Find out before production — not after a breach makes the news. netsekurity.com
 
 4. **1 credit = 1 domain = peace of mind**
@@ -34,7 +34,7 @@ Target: solo founders / indie hackers / non-technical builders using agent (Curs
 
 5. **For the agent-coder's conscience**
    > You built with an agent. agent didn't teach you security.
-   > That's not your fault — it's just not what it's good at. Run a pentest, sleep at night.
+   > That's not your fault — it's just not what it's good at. Run an external check, sleep at night.
    > netsekurity.com
 
 ## Ad headline options
@@ -62,7 +62,10 @@ Pain: yearly/twice-a-year pentest reports go stale the moment you ship; new code
 - "Continuous security for your pipeline."
 
 ## Call-to-action
-`./run pentest` → netsekurity.com/dashboard
+`./run assessment` → netsekurity.com/checkout?package=starter · sample first: netsekurity.com/sample-report
+
+## Honesty rule
+Never claim SQLi/XSS/auth testing for the standard product — the scanner does not send injection payloads. Say "external", "exposed files", "headers", "TLS", "open redirect". See static/PRODUCT_SCOPE.md.
 
 ## Keywords (SEO/GEO)
 vibe coding security · secure agent-generated apps · pentest for non-technical founders · indie hacker security · startup security · OWASP for beginners

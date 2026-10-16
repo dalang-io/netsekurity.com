@@ -2,7 +2,7 @@
 
 > **Positioning (honest):** "You build fast with AI. We check your production attack surface —
 > with agent-reviewed findings." Netsekurity is a **continuous external web security assessment**
-> (automated, blackbox, unauthenticated, read-only) with human/agent review, **not a full
+> (automated, blackbox, unauthenticated, read-only) with agent triage, **not a full
 > penetration test**. Deeper whitebox testing is a separate paid offering.
 
 1 credit = 1 external assessment · 1 domain. Verify ownership with an auto-generated TXT record;
@@ -38,6 +38,7 @@ This README is the **handover/operations reference** for whoever takes over the 
 | Payments | Xendit invoices (auto-credit poller; webhook optional) |
 | Hosting | Linux + systemd + Pingora proxy + Cloudflare (flexible SSL) |
 | Scanning agent | Hermes agent + `nsec_scan.py` (see AGENT_WORKER.md) |
+| Analytics | Meta Pixel (ads) + optional Plausible / GA4 via `PLAUSIBLE_DOMAIN` / `GA_MEASUREMENT_ID` |
 
 ---
 
@@ -50,6 +51,8 @@ assets (`go:embed`). It is stateless except for the SQLite file; sessions are JW
 Browser (HTTPS) → Cloudflare (flexible) → Pingora :80
    Host: netsekurity.com → 127.0.0.1:8094 → netsekurity (Go)
      ├── /                    landing page (HTML, injects client id + CSS hash)
+     ├── /sample-report       public example of what one credit delivers
+     ├── /product-scope       PRODUCT_SCOPE.md rendered in the site shell
      ├── /css/*, /og.png, /robots.txt, /sitemap.xml, /llms*.txt, /security.txt
      ├── /auth/*              Google OAuth + One Tap
      ├── /dashboard, /su      authenticated pages (HTMX)
@@ -76,12 +79,15 @@ netsekurity.com/
 ├── domains.go         # domain add / TXT verify (authoritative NS) / delete
 ├── pentests.go        # pentest start/list + worker claim/report (queue)
 ├── apitokens.go       # CI/CD API tokens (expiry 7/14/30/60/90d)
-├── marketing.go       # landing HTMX fragments (contact, TXT demo, FAQ)
+├── marketing.go       # landing HTMX fragments (contact form → contact_messages, FAQ, scan-count proof)
+├── sample_report.go   # /sample-report — fictional domain, real report structure
+├── analytics.go       # optional Plausible / GA4 tag for public pages
+├── ratelimit.go       # per-IP fixed-window limiter on write endpoints
 ├── stack.go           # "cat stack.conf" section (real SVG logos + CRT glow tiles)
 ├── header.go          # shared reusable header (brand + desktop nav + mobile burger)
 ├── docs.go            # /docs page (CI/CD + API reference)
 ├── *_test.go          # unit tests (JWT, credit idempotency, topup amount, domain, index, auth)
-├── deploy.sh          # test → build → commit+push → deploy (scp + systemd restart)
+├── deploy.sh          # test → build → commit+push → deploy (scp + systemd stop/start, PID check)
 ├── nsec_scan.py       # scanning agent scanner (enterprise-grade, produces PDF)
 ├── nsec_io.sh         # agent claim/upload I/O helpers
 ├── nsec_monitor.sh    # agent token-saver monitor (Hermes cron)
@@ -121,6 +127,7 @@ Created automatically at startup (`db.go`); migrations run idempotently via `sch
 | `pentests` | Scan jobs | `id`, `user_id`, `domain_id`, `status` (`queued`/`running`/`completed`), `report_ref`, `started_at`, `completed_at` |
 | `payments` | Xendit invoices | `user_id`, `external_id`, `xendit_invoice_id`, `package_id`, `amount_usd`, `credits`, `status` (`pending`/`paid`/`expired`), `currency`, `paid_at` |
 | `api_tokens` | CI/CD tokens | `user_id`, `token_hash`, `label`, `expires_at` |
+| `contact_messages` | Landing-page leads | `name`, `email`, `message`, `source`, `ip`, `handled_at` — listed on `/su` |
 
 ### Credit rules
 - `1 credit = 1 external assessment · 1 domain`.
@@ -135,6 +142,11 @@ Created automatically at startup (`db.go`); migrations run idempotently via `sch
   `https://netsekurity.com/auth/google/callback` (must be registered in Google Console;
   `https://netsekurity.com` must be in Authorized JavaScript origins for One Tap).
 - **JWT session** (HS256, `JWT_SECRET`) in an `httpOnly`, `Secure` cookie (`nsk_session`).
+- `/login?next=/checkout?package=starter` returns the visitor to `next` after Google
+  (same-site paths only, carried in the `nsk_next` cookie). The OAuth `state` is verified on
+  the callback.
+- With `ENVIRONMENT=production` the binary refuses to start unless `JWT_SECRET`,
+  `BOT_AUTH_TOKEN` and `XENDIT_CALLBACK_KEY` are set.
 - **Super admin** = `SUPER_ADMIN_EMAIL` (default `hans@dalang.io`) OR `users.role = 'admin'`.
   - `/su` panel: list users, add user, set role, **add credit**, list transactions
     (paid/expired), customer domains + Pentest button, pentests + PDF upload/list.
@@ -175,6 +187,11 @@ User dashboard → /reports/YYYYMMDD-hh:mm-<domain>.pdf  (owner/admin only)
 ```
 
 - Worker endpoints guarded by `X-Bot-Token` (`BOT_AUTH_TOKEN`).
+- **Standard mode only.** A 2-credit "destructive" mode used to be accepted by the dashboard,
+  `/su` and the API; the worker never passed it to the scanner, so it was the same scan at
+  double the price. Removed 2026-09-10. Old rows keep `mode='destructive'` for history.
+- **What the scan actually does** (38 checks, no `--deep-scan`, no injection payloads) is
+  spelled out in `AGENT_WORKER.md`; every public claim must match it.
 - API tokens for CI/CD auto-scan: `apitokens.go` (7/14/30/60/90-day expiry).
 
 ---
@@ -203,6 +220,7 @@ Full template: [`env.example`](env.example). Key vars:
 | `XENDIT_CURRENCY` | `IDR` (default) or `USD` (if enabled) |
 | `XENDIT_USD_RATE` | IDR-per-USD for IDR charges |
 | `BOT_AUTH_TOKEN` | agent↔platform secret (`openssl rand -hex 32`) |
+| `PLAUSIBLE_DOMAIN` / `GA_MEASUREMENT_ID` | optional analytics tag on public pages (set one) |
 
 ---
 
@@ -221,7 +239,8 @@ go test ./...            # unit tests
 ## Deployment (prod)
 
 Everything is automated in **`deploy.sh`**: `go test` → `npm run build:css` → build linux binary →
-commit+push (`main`) → `scp` → `mv` → `systemctl restart netsekurity.service` → health check.
+commit+push (`main`) → `scp` → keep `netsekurity.prev` → `mv` → `systemctl stop` + `start` →
+verify `MainPID` changed → health check. (Not `restart`: it races `Restart=always`.)
 
 ```bash
 ./deploy.sh                    # auto commit message
@@ -273,7 +292,11 @@ systemctl status proxy.service              # Pingora
 **Known limitations (be honest with users/AI)**
 - External, unauthenticated, read-only assessment — **not** authenticated authorization,
   business-logic, or exploit-chain testing. Whitebox tier ($10k) covers deeper testing.
-- Xendit charges in **IDR** (USD not yet enabled on this account).
+- Xendit bills in `XENDIT_CURRENCY` (default USD). If the account is not enabled for USD,
+  invoice creation fails with `UNSUPPORTED_CURRENCY`; the customer now sees a clear message and
+  the journal gets a `xendit: create invoice failed` line. Verify with one real top-up after
+  any currency change.
+- The standard scan sends **no injection payloads** (SQLi/XSS/LFI). Do not claim it does.
 - Google One Tap requires `https://netsekurity.com` in Authorized JavaScript origins.
 
 ---

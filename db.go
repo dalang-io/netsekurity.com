@@ -107,6 +107,16 @@ func initDB() error {
 			findings_low INTEGER NOT NULL DEFAULT 0,
 			findings_info INTEGER NOT NULL DEFAULT 0
 		)`,
+		`CREATE TABLE IF NOT EXISTS contact_messages (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			name TEXT,
+			email TEXT NOT NULL,
+			message TEXT NOT NULL,
+			source TEXT,
+			ip TEXT,
+			created_at TEXT NOT NULL DEFAULT (datetime('now')),
+			handled_at TEXT
+		)`,
 		`CREATE TABLE IF NOT EXISTS api_tokens (
 			id TEXT PRIMARY KEY,
 			user_id TEXT NOT NULL,

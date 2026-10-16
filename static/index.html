@@ -2,16 +2,17 @@
 <html lang="en" class="scroll-smooth">
 <head>
   __FBPIXEL__
-    <meta charset="UTF-8" />
+  __ANALYTICS__
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   <link rel="icon" type="image/png" sizes="32x32" href="/favicon-64.png" />
   <link rel="apple-touch-icon" href="/favicon-512.png" />
-  <title>netsekurity.com — Pentest as a Service (PTaaS) | On-Demand Web Security</title>
+  <title>netsekurity.com — External Web Security Assessment | Find the holes before attackers do</title>
 
   <!-- Primary SEO -->
   <meta name="description" content="Vibe-coded an app with an agent? Netsekurity is your safety net. One credit = one external, read-only web security assessment per domain, verified with an auto-generated TXT record. Agent-reviewed, plain-language report in under 24h. From $50. Secure your agent-generated app before production — not after the breach." />
-  <meta name="keywords" content="vibe coding security, secure agent-generated apps, pentest as a service, PTaaS, penetration testing, web security, vulnerability scan, OWASP Top 10, secure vibe code, non-technical security, startup security, indie hacker security, domain verification, ethical hacking" />
+  <meta name="keywords" content="vibe coding security, secure agent-generated apps, external security assessment, attack surface scan, web security, vulnerability scan, OWASP Top 10, secure vibe code, non-technical security, startup security, indie hacker security, domain verification, security headers, exposed .env" />
   <meta name="robots" content="index, follow" />
   <meta name="theme-color" content="#05070f" />
   <meta name="facebook-domain-verification" content="a8ols447zx1ngw2l4xdthddr5t0pm1" />
@@ -23,8 +24,8 @@
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="netsekurity.com" />
   <meta property="og:url" content="https://netsekurity.com/" />
-  <meta property="og:title" content="netsekurity.com — Pentest as a Service (PTaaS)" />
-  <meta property="og:description" content="1 credit = 1 pentest · 1 domain. Auto TXT domain verification. From $50. Agent-reviewed vulnerability reports." />
+  <meta property="og:title" content="netsekurity.com — External Web Security Assessment" />
+  <meta property="og:description" content="1 credit = 1 external assessment · 1 domain. Auto TXT domain verification. From $50. Agent-reviewed, plain-language report." />
   <meta property="og:image" content="https://netsekurity.com/og.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
@@ -32,8 +33,8 @@
 
   <!-- Twitter card -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="netsekurity.com — Pentest as a Service (PTaaS)" />
-  <meta name="twitter:description" content="1 credit = 1 pentest · 1 domain. Auto TXT verification. From $50. Agent-reviewed reports." />
+  <meta name="twitter:title" content="netsekurity.com — External Web Security Assessment" />
+  <meta name="twitter:description" content="1 credit = 1 external assessment · 1 domain. Auto TXT verification. From $50. Agent-reviewed reports." />
   <meta name="twitter:image" content="https://netsekurity.com/og.png" />
 
   <!-- Structured data (SEO + GEO / LLM discoverability) -->
@@ -58,10 +59,10 @@
       {
         "@type": "Service",
         "@id": "https://netsekurity.com/#service",
-        "name": "Pentest as a Service (PTaaS)",
-        "serviceType": "Pentest as a Service",
+        "name": "External Web Security Assessment",
+        "serviceType": "External web security assessment",
         "provider": { "@id": "https://netsekurity.com/#org" },
-        "description": "On-demand penetration testing per domain, per credit. Verify domain ownership with an auto-generated TXT record, then receive an agent-reviewed vulnerability report.",
+        "description": "Automated, external, read-only web security assessment per domain, per credit — not a full penetration test. Verify domain ownership with an auto-generated TXT record, then receive an agent-reviewed, plain-language report.",
         "areaServed": "Worldwide",
         "offers": [
           { "@type": "Offer", "name": "Starter", "price": "50", "priceCurrency": "USD", "description": "1 credit = 1 external web security assessment · 1 domain" },
@@ -75,9 +76,9 @@
         "@id": "https://netsekurity.com/#faq",
         "mainEntity": [
           { "@type": "Question", "name": "How does pricing work?",
-            "acceptedAnswer": { "@type": "Answer", "text": "1 credit = 1 pentest on 1 domain. Buy a package, add a domain, verify ownership with the auto-generated TXT record, and a pentest is scheduled." } },
-          { "@type": "Question", "name": "What is covered in one pentest?",
-            "acceptedAnswer": { "@type": "Answer", "text": "An automated vulnerability assessment mapped to OWASP Top 10: injection, auth flaws, misconfiguration, exposed secrets, and more, with a prioritized report." } },
+            "acceptedAnswer": { "@type": "Answer", "text": "1 credit = 1 external assessment on 1 domain. Buy a package, add a domain, verify ownership with the auto-generated TXT record, and the assessment is scheduled." } },
+          { "@type": "Question", "name": "What is covered in one assessment?",
+            "acceptedAnswer": { "@type": "Answer", "text": "An automated external assessment of the public surface: DNS and subdomain discovery, server and WAF fingerprint, security headers, TLS certificate checks, exposed files and admin paths (.git, .env, backups, phpinfo), and open-redirect probing. Findings are OWASP-mapped and CVSS-scored in a prioritized report." } },
           { "@type": "Question", "name": "How do I verify my domain?",
             "acceptedAnswer": { "@type": "Answer", "text": "We auto-generate a unique TXT record per domain. Add it in your DNS provider, hit verify, and ownership is confirmed in seconds. No manual approval." } },
           { "@type": "Question", "name": "Is it really automated?",
@@ -121,6 +122,7 @@
       google.accounts.id.prompt();
     });
   </script>
+  <script defer src="https://umami.dalang.io/script.js" data-website-id="a64a56c2-0b87-41a8-a254-bca52c48e2c1"></script>
 </head>
 
 <body class="scanlines bg-ink text-gray-300 antialiased">
@@ -146,7 +148,7 @@
         <div class="grid items-center gap-10 lg:grid-cols-2">
           <div class="space-y-5">
             <span class="inline-block rounded border border-emerald-500/40 bg-emerald-500/10 px-2 py-0.5 font-mono text-xs text-emerald-300">
-              [ Pentest as a Service ]
+              [ External security assessment ]
             </span>
             <h1 class="font-mono text-3xl font-bold leading-tight text-white sm:text-5xl">
               Find the holes<span class="text-emerald-400">.</span>
@@ -170,7 +172,9 @@
             <p class="font-mono text-xs text-gray-500">
               <span class="text-emerald-400">1 credit</span> = 1 external assessment · 1 domain
               <span class="text-gray-600">· external · read-only · agent-reviewed</span>
+              · <a href="/sample-report" class="text-cyan-400 hover:underline">see a sample report →</a>
             </p>
+            __SCANS_PROOF__
           </div>
 
           <!-- Terminal window -->
@@ -200,7 +204,7 @@
     <section class="border-y border-emerald-500/20 bg-[#04060c]">
       <div class="mx-auto grid max-w-6xl grid-cols-2 gap-4 px-4 py-8 sm:px-6 md:grid-cols-4">
         <div class="text-center">
-          <div class="font-mono text-2xl font-bold text-emerald-300 glow">60+</div>
+          <div class="font-mono text-2xl font-bold text-emerald-300 glow">35+</div>
           <div class="mt-1 font-mono text-xs uppercase tracking-wide text-gray-400">checks / scan</div>
         </div>
         <div class="text-center">
@@ -236,7 +240,7 @@
         <div class="rounded border border-white/10 bg-[#04060c] p-5">
           <div class="font-mono text-xs text-emerald-400">03 · pentest</div>
           <h3 class="mt-3 font-mono font-bold text-white">./run --scan</h3>
-          <p class="copy mt-2 text-gray-400">Engine scans injection, auth, config, secrets &amp; more.</p>
+          <p class="copy mt-2 text-gray-400">Engine checks headers, TLS, exposed files, secrets, redirects &amp; more.</p>
         </div>
         <div class="rounded border border-white/10 bg-[#04060c] p-5">
           <div class="font-mono text-xs text-cyan-400">04 · report</div>
@@ -264,10 +268,10 @@
               <p class="term-line"><span class="text-emerald-400">$</span> vibe --build my-saas <span class="text-gray-500">(in a weekend)</span></p>
               <p class="term-line text-gray-500">[+] agent wrote auth, db, api ......... fast</p>
               <p class="term-line text-gray-500">[+] deploy to production ........... live</p>
-              <p class="term-line text-red-400">[!] leaked API key in client bundle</p>
-              <p class="term-line text-red-400">[!] broken access control (anyone = admin)</p>
-              <p class="term-line text-red-400">[!] SQL injection on search</p>
-              <p class="term-line"><span class="text-emerald-400">$</span> netsekurity --verify --pentest</p>
+              <p class="term-line text-red-400">[!] .env readable at /.env (db password inside)</p>
+              <p class="term-line text-red-400">[!] staging.myapp.com public, no auth</p>
+              <p class="term-line text-red-400">[!] no HSTS / CSP — clickjackable</p>
+              <p class="term-line"><span class="text-emerald-400">$</span> netsekurity --verify --assess</p>
               <p class="term-line text-emerald-300">[✓] report: fix these 3 things → ship safely</p>
             </div>
           </div>
@@ -291,11 +295,11 @@
             <div class="rounded border border-white/10 bg-ink p-5">
               <div class="font-mono text-emerald-400">[+] catch it before production, not after the breach</div>
               <p class="copy mt-2 text-gray-400">
-                From <span class="text-white">$50</span> · 1 credit = 1 pentest · 1 domain · report in under 24h.
+                From <span class="text-white">$50</span> · 1 credit = 1 external assessment · 1 domain · report in under 24h.
               </p>
             </div>
-            <a href="/dashboard" class="inline-block rounded border-2 border-cyan-400 bg-cyan-500/10 px-5 py-2.5 font-mono text-sm font-bold text-cyan-300 hover:bg-cyan-500/20 glow-cyan">
-              $ ./run pentest
+            <a href="/checkout?package=starter" class="inline-block rounded border-2 border-cyan-400 bg-cyan-500/10 px-5 py-2.5 font-mono text-sm font-bold text-cyan-300 hover:bg-cyan-500/20 glow-cyan">
+              $ ./run assessment — $50
             </a>
           </div>
         </div>
@@ -363,7 +367,7 @@
         <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <div class="rounded border border-white/10 bg-ink p-5">
             <div class="font-mono text-emerald-400">[+] OWASP Top 10</div>
-            <p class="copy mt-2 text-gray-400">Injection, XSS, broken auth, exposure &amp; more — mapped &amp; explained.</p>
+            <p class="copy mt-2 text-gray-400">Every finding mapped to an OWASP Top 10 category and explained in plain language.</p>
           </div>
           <div class="rounded border border-white/10 bg-ink p-5">
             <div class="font-mono text-emerald-400">[+] risk_score</div>
@@ -450,19 +454,27 @@
           <tbody class="text-gray-300">
             <tr class="border-b border-white/10 hover:bg-emerald-500/5">
               <td class="px-5 py-3 text-white">starter</td><td class="px-5 py-3">$50</td><td class="px-5 py-3">1</td>
-              <td class="px-5 py-3"><a href="/dashboard" class="text-emerald-300 hover:underline">buy →</a></td>
+              <td class="px-5 py-3"><a href="/checkout?package=starter" class="text-emerald-300 hover:underline">buy →</a></td>
             </tr>
             <tr class="border-b border-white/10 hover:bg-emerald-500/5">
               <td class="px-5 py-3 text-white">standard</td><td class="px-5 py-3">$100</td><td class="px-5 py-3">3</td>
-              <td class="px-5 py-3"><a href="/dashboard" class="text-emerald-300 hover:underline">buy →</a></td>
+              <td class="px-5 py-3"><a href="/checkout?package=standard" class="text-emerald-300 hover:underline">buy →</a></td>
             </tr>
             <tr class="border-b border-emerald-500/40 bg-emerald-500/10">
               <td class="px-5 py-3 text-white">professional <span class="text-[10px] text-emerald-400">[popular]</span></td><td class="px-5 py-3">$500</td><td class="px-5 py-3">20</td>
-              <td class="px-5 py-3"><a href="/dashboard" class="text-emerald-300 glow hover:underline">buy →</a></td>
+              <td class="px-5 py-3"><a href="/checkout?package=professional" class="text-emerald-300 glow hover:underline">buy →</a></td>
             </tr>
             <tr class="hover:bg-emerald-500/5">
               <td class="px-5 py-3 text-white">enterprise</td><td class="px-5 py-3">$1000</td><td class="px-5 py-3">50</td>
-              <td class="px-5 py-3"><a href="/dashboard" class="text-emerald-300 hover:underline">buy →</a></td>
+              <td class="px-5 py-3"><a href="/checkout?package=enterprise" class="text-emerald-300 hover:underline">buy →</a></td>
+            </tr>
+            <tr class="border-t-2 border-white/15 hover:bg-white/5">
+              <td class="px-5 py-3 text-white">expert review <span class="text-[10px] text-gray-400">[add-on]</span></td>
+              <td class="px-5 py-3 text-gray-400">on request</td><td class="px-5 py-3">per report</td>
+              <td class="px-5 py-3"><a href="mailto:sales@dalang.io?subject=%5Bnetsekurity%5D%20expert%20review%20add-on" class="text-gray-300 hover:text-white hover:underline">contact →</a></td>
+            </tr>
+            <tr>
+              <td colspan="4" class="px-5 py-2 text-[11px] text-gray-500"># expert review = a security engineer re-tests every finding in one report, removes false positives, and adds a written fix plan for your stack. Needs a completed assessment.</td>
             </tr>
             <tr class="border-t-2 border-cyan-500/40 bg-cyan-500/5">
               <td class="px-5 py-3 text-white">whitebox <span class="text-[10px] text-cyan-300">[agent + expert]</span></td>
@@ -475,7 +487,7 @@
           </tbody>
         </table>
       </div>
-      <p class="mt-4 font-mono text-xs text-gray-500">All prices in USD.</p>
+      <p class="mt-4 font-mono text-xs text-gray-500">All prices in USD. Not sure what you get? <a href="/sample-report" class="text-cyan-400 hover:underline">Read a sample report first.</a></p>
       <p class="mt-6 font-mono text-xs text-gray-500">
         custom scope / API / wildcard? <a href="mailto:sales@dalang.io?subject=%5Bnetsekurity%5D%20security%20engagement" class="text-emerald-300 underline">$ mail sales@dalang.io</a>
       </p>
@@ -510,15 +522,36 @@
       </div>
     </section>
 
-    <!-- Contact via email (no form) -->
-    <section class="border-t border-emerald-500/20 bg-[#04060c]">
-      <div class="mx-auto max-w-2xl px-4 py-16 sm:px-6 text-center">
+    <!-- Who is behind this -->
+    <section id="whoami" class="border-t border-emerald-500/20">
+      <div class="mx-auto max-w-3xl px-4 py-16 sm:px-6">
+        <h2 class="font-mono text-2xl font-bold text-white"><span class="text-emerald-400">$</span> whoami</h2>
+        <div class="mt-6 rounded border border-white/10 bg-[#04060c] p-5 font-mono text-sm leading-relaxed text-gray-300">
+          <p class="copy">Netsekurity is built and run by <span class="text-white">Dalang Pte Ltd</span>, the company behind <a href="https://dalang.io" class="text-cyan-400 hover:underline" rel="noopener">dalang.io</a>, a cloud hosting platform. We run public web infrastructure for customers every day, and this scanner started as the checks we run on our own domains.</p>
+          <p class="copy mt-3 text-gray-400">Questions go to a person, not a ticket queue: <a href="mailto:sales@dalang.io" class="text-emerald-300 hover:underline">sales@dalang.io</a>. Security reports for our own systems: <a href="/.well-known/security.txt" class="text-cyan-400 hover:underline">security.txt</a>.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Contact form (persisted, shown in /su) -->
+    <section id="contact" class="border-t border-emerald-500/20 bg-[#04060c]">
+      <div class="mx-auto max-w-2xl px-4 py-16 sm:px-6">
         <h2 class="font-mono text-2xl font-bold text-white"><span class="text-emerald-400">$</span> contact</h2>
-        <p class="mt-3 font-mono text-sm text-gray-400">Questions about scope, pricing, or compliance?</p>
-        <a href="mailto:sales@dalang.io?subject=%5Bnetsekurity%5D%20security%20engagement" class="mt-6 inline-block rounded border-2 border-emerald-400 bg-emerald-500/10 px-6 py-3 font-mono text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 glow">
-          $ mail sales@dalang.io
-        </a>
-        <p class="mt-3 font-mono text-xs text-gray-500">we reply within 1 business day</p>
+        <p class="mt-3 font-mono text-sm text-gray-400">Questions about scope, pricing, a wildcard, or the whitebox tier? Leave a note or email <a href="mailto:sales@dalang.io?subject=%5Bnetsekurity%5D%20security%20engagement" class="text-emerald-300 hover:underline">sales@dalang.io</a>.</p>
+        <form hx-post="/contact" hx-target="#contact-result" hx-swap="innerHTML" hx-disabled-elt="find button" class="mt-6 space-y-3">
+          <input type="hidden" name="source" value="landing"/>
+          <input type="text" name="website" tabindex="-1" autocomplete="off" class="hidden" aria-hidden="true"/>
+          <div class="grid gap-3 sm:grid-cols-2">
+            <input name="name" placeholder="name (optional)" aria-label="Name" maxlength="200" class="w-full rounded border border-white/15 bg-ink px-3 py-2 font-mono text-sm text-white placeholder-gray-600 focus:border-emerald-400 focus:outline-none"/>
+            <input name="email" type="email" required placeholder="you@company.com" aria-label="Email" maxlength="200" class="w-full rounded border border-white/15 bg-ink px-3 py-2 font-mono text-sm text-white placeholder-gray-600 focus:border-emerald-400 focus:outline-none"/>
+          </div>
+          <textarea name="message" required rows="4" maxlength="4000" placeholder="what are you building, and what do you want checked?" aria-label="Message" class="w-full rounded border border-white/15 bg-ink px-3 py-2 font-mono text-sm text-white placeholder-gray-600 focus:border-emerald-400 focus:outline-none"></textarea>
+          <div class="flex flex-wrap items-center gap-3">
+            <button class="rounded border-2 border-emerald-400 bg-emerald-500/10 px-6 py-2.5 font-mono text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 glow disabled:opacity-50">$ send</button>
+            <span class="font-mono text-xs text-gray-500">we reply within 1 business day</span>
+          </div>
+          <div id="contact-result"></div>
+        </form>
       </div>
     </section>
   </main>
@@ -526,10 +559,11 @@
   <footer class="border-t border-emerald-500/20">
     <div class="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-8 sm:flex-row sm:px-6">
       <a href="#top" class="font-mono font-bold text-white"><span class="text-emerald-400">net</span>sekurity<span class="text-emerald-500">.com</span></a>
-      <p class="font-mono text-[11px] text-gray-500">&copy; 2026 Dalang Pte Ltd · Pentest as a Service</p>
+      <p class="font-mono text-[11px] text-gray-500">&copy; 2026 Dalang Pte Ltd · External web security assessment</p>
       <div class="flex gap-4 font-mono text-[11px] text-gray-500">
         __FOOTER_AUTH_NAV__
-        <a href="#verify" class="hover:text-emerald-300">verify</a>
+        <a href="/sample-report" class="hover:text-emerald-300">sample report</a>
+        <a href="/product-scope" class="hover:text-emerald-300">scope</a>
         <a href="#faq" class="hover:text-emerald-300">faq</a>
       </div>
     </div>

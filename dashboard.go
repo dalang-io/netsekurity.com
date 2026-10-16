@@ -182,7 +182,7 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
             <span class="font-mono text-xs text-gray-400">credits</span>
             <span id="credit-balance" class="font-mono text-3xl font-bold text-emerald-300 glow">{{printf "%.1f" .Balance}}</span>
           </div>
-          <p class="mt-1 font-mono text-[11px] text-gray-600"># 1 credit = 1 pentest · 1 domain</p>
+          <p class="mt-1 font-mono text-[11px] text-gray-600"># 1 credit = 1 external assessment · 1 domain</p>
           {{if le .Balance 0.0}}
           <p class="mt-2 rounded border border-yellow-500/30 bg-yellow-500/10 px-2 py-1.5 font-mono text-[11px] text-yellow-300">
             No credits yet — buy a package below to run your first scan.
@@ -364,78 +364,6 @@ const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
   </div>
 </main>
 
-<!-- Destructive mode confirm modal -->
-<div id="destructive-modal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/70 p-4">
-  <div class="w-full max-w-lg rounded-lg border border-red-500/40 bg-[#0a0d16] p-5 shadow-[0_0_40px_rgba(239,68,68,0.25)]">
-    <div class="mb-2 font-mono text-sm font-bold text-red-300 glow">⚠ DESTRUCTIVE PENTEST — EXTREME CAUTION</div>
-    <div class="space-y-2 font-mono text-xs leading-relaxed text-gray-300">
-      <p><span class="text-red-400">You are about to run a DESTRUCTIVE-mode scan.</span> This performs
-      active exploitation including <b>RCE, webshell upload, malware/exploit injection, and takeover attempts</b>.</p>
-      <p class="text-yellow-300">⚠ It can modify, corrupt, or take down the target. It costs <b>2 credits</b>
-      (standard is 1).</p>
-      <p class="text-yellow-300">Strongly recommended: run against a <b>development / staging server</b>,
-      never production, unless explicitly authorized.</p>
-      <p class="text-gray-400">You are responsible for authorization and any damage caused.</p>
-      <label class="mt-3 block">
-        <span class="text-gray-400">Type <b class="text-red-300">AGREE AND PROCEED</b> to confirm:</span>
-        <input id="destructive-agree" type="text" autocomplete="off"
-          class="mt-1 w-full rounded border border-red-500/40 bg-black px-3 py-2 font-mono text-sm text-white focus:border-red-400 focus:outline-none"
-          placeholder="AGREE AND PROCEED"/>
-      </label>
-      <p id="destructive-domain-tag" class="mt-2 font-mono text-[10px] text-gray-500"></p>
-    </div>
-    <div class="mt-4 flex items-center justify-end gap-2">
-      <button onclick="closeDestructiveModal()" class="rounded border border-white/20 px-3 py-1.5 font-mono text-xs text-gray-400 hover:bg-white/5">cancel</button>
-      <button id="destructive-confirm-btn" onclick="startDestructive()"
-        class="rounded border border-red-500 bg-red-600/20 px-3 py-1.5 font-mono text-xs font-bold text-red-200 hover:bg-red-600/30 disabled:cursor-not-allowed disabled:opacity-40"
-        disabled>run destructive →</button>
-    </div>
-  </div>
-</div>
-
-<script>
-let destructiveDomain = null;
-function openDestructiveModal(domain) {
-  destructiveDomain = domain;
-  document.getElementById('destructive-domain-tag').textContent = 'target: ' + domain + ' · cost: 2 credits';
-  document.getElementById('destructive-agree').value = '';
-  document.getElementById('destructive-confirm-btn').disabled = true;
-  var m = document.getElementById('destructive-modal');
-  m.classList.remove('hidden'); m.classList.add('flex');
-}
-function closeDestructiveModal() {
-  var m = document.getElementById('destructive-modal');
-  m.classList.add('hidden'); m.classList.remove('flex');
-  destructiveDomain = null;
-}
-document.getElementById('destructive-agree').addEventListener('input', function () {
-  document.getElementById('destructive-confirm-btn').disabled =
-    (this.value.trim() !== 'AGREE AND PROCEED');
-});
-function startDestructive() {
-  if (!destructiveDomain) return;
-  var btn = document.getElementById('destructive-confirm-btn');
-  btn.disabled = true;
-  btn.textContent = 'running…';
-  var xhr = new XMLHttpRequest();
-  var body = 'domain=' + encodeURIComponent(destructiveDomain) + '&mode=destructive';
-  xhr.open('POST', '/api/pentests/start');
-  xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-  xhr.setRequestHeader('HX-Request', 'true');
-  xhr.onload = function () {
-    // htmx.swap processes the out-of-band balance and domain-list fragments the
-    // handler returns alongside the message, so nothing needs a page reload.
-    if (window.htmx) {
-      htmx.swap('#pentest-result', xhr.responseText, { swapStyle: 'innerHTML' });
-      htmx.trigger('#pentest-list', 'refresh');
-    } else {
-      document.getElementById('pentest-result').innerHTML = xhr.responseText;
-    }
-    closeDestructiveModal();
-  };
-  xhr.send(body);
-}
-</script>
 </body>
 </html>{{end}}
 
@@ -463,7 +391,7 @@ function startDestructive() {
         {{else}}
         <button hx-post="/api/pentests/start" hx-vals='{"domain":"{{.Domain}}","mode":"standard"}'
           hx-target="#pentest-result" hx-swap="innerHTML"
-          title="Standard scan — 1 credit (read-only, non-destructive)"
+          title="External assessment — 1 credit (read-only, non-destructive)"
           class="rounded border border-cyan-400/60 px-2 py-0.5 text-[11px] font-bold text-cyan-300 hover:bg-cyan-500/15">scan</button>
         {{end}}
         {{end}}
@@ -476,15 +404,6 @@ function startDestructive() {
       <button type="button" class="shrink-0 text-cyan-400 hover:underline"
         onclick="navigator.clipboard.writeText('{{.TXT}}');this.textContent='copied';setTimeout(()=>this.textContent='copy',1200)">copy</button>
     </div>
-    {{if eq .Status "verified"}}
-    <div class="mt-1 border-t border-white/5 pt-1">
-      <button type="button" onclick="openDestructiveModal('{{.Domain}}')"
-        {{if le $.Balance 2.0}}disabled title="Destructive mode costs 2 credits."{{end}}
-        class="font-mono text-[10px] text-red-400/70 underline decoration-dotted hover:text-red-300 disabled:cursor-not-allowed disabled:text-gray-700 disabled:no-underline">
-        advanced: destructive scan (2 credits)
-      </button>
-    </div>
-    {{end}}
   </li>
   {{end}}
 </ul>

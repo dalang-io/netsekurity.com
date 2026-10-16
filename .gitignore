@@ -4,3 +4,5 @@ netsekurity-linux
 *.db
 .env
 data/
+netsekurity.com
+netsekurity.prev

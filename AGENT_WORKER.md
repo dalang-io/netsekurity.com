@@ -44,11 +44,20 @@ User dashboard ────────────────────> /re
   3. HTTP fingerprint + full OWASP security-header check + clickjacking + server
      version disclosure + WAF detect,
   4. TLS/PKI checks (expiry, issuer, SAN),
-  5. exposed-asset checks (`.git`, `.env`, backups, admin/login, server-status,
-     phpinfo),
-  6. open-redirect discovery, and with `--deep-scan` runs **nikto**,
+  5. exposed-asset checks (13 paths: `.git`, `.env`, backups, admin/login,
+     server-status, phpinfo, SVN, robots.txt),
+  6. open-redirect discovery (9 parameters), and with `--deep-scan` runs **nikto**,
   7. stores findings into `assessment.db`, then renders the PDF report.
 - Findings are CVSS-scored and CWE-mapped (OWASP-family).
+
+  The cron worker runs it **without** `--deep-scan`, so nmap, whatweb and nikto
+  never run for customers. The public copy (landing, FAQ, `llms.txt`,
+  `PRODUCT_SCOPE.md`) describes exactly the non-deep set — 38 checks — and says
+  plainly that no injection payloads (SQLi/XSS/LFI) are sent. Do not widen the
+  copy without widening the worker. A `--mode destructive` flag used to exist;
+  it changed nothing in the scan and was removed together with the 2-credit
+  "destructive" option in the platform.
+
 
 ### Severity breakdown (`findings`)
 

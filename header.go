@@ -53,7 +53,7 @@ func renderHeader(nav []hdrLink, authNav template.HTML, brandURL string) templat
   <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3 sm:px-6">
     <a href="` + template.HTMLEscapeString(brandURL) + `" class="whitespace-nowrap font-mono text-base font-bold text-white">
       <span class="glow text-emerald-400">net</span>sekurity<span class="text-emerald-500">.com</span>
-      <span class="ml-2 hidden text-[11px] text-gray-500 lg:inline"># ptaas</span>
+      <span class="ml-2 hidden text-[11px] text-gray-500 lg:inline"># external security assessment</span>
     </a>
     <nav aria-label="Main navigation" class="hidden items-center gap-3 text-xs text-gray-400 lg:flex">` + desktop.String() + `
     </nav>

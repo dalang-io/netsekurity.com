@@ -1,5 +1,6 @@
-Contact: mailto:sales@dalang.io
 Contact: mailto:security@dalang.io
+Contact: mailto:sales@dalang.io
 Preferred-Languages: en, id
-Policy: https://netsekurity.com/docs
+Policy: https://netsekurity.com/product-scope
+Canonical: https://netsekurity.com/.well-known/security.txt
 Expires: 2027-08-19T00:00:00.000Z

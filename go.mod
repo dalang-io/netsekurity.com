@@ -2,6 +2,8 @@ module netsekurity.com
 
 go 1.25.0
 
+toolchain go1.25.14
+
 require modernc.org/sqlite v1.56.0
 
 require (

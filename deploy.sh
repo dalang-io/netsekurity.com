@@ -41,10 +41,17 @@ git push origin main
 # 4. Deploy
 log "deploy to prod"
 scp -o BatchMode=yes netsekurity-linux "$SERVER:/tmp/netsekurity.new"
-ssh -o BatchMode=yes "$SERVER" "mv /tmp/netsekurity.new $APP_DIR/netsekurity && \
+# stop + start, not restart: the stop phase is slow and `restart` races the
+# unit's Restart=always. is-active alone lies, so the PID must actually change.
+ssh -o BatchMode=yes "$SERVER" "set -e; \
+  cp -f $APP_DIR/netsekurity $APP_DIR/netsekurity.prev 2>/dev/null || true; \
+  OLD=\$(systemctl show -p MainPID --value netsekurity.service); \
+  mv /tmp/netsekurity.new $APP_DIR/netsekurity && \
   chown dalang:dalang $APP_DIR/netsekurity && chmod 755 $APP_DIR/netsekurity && \
-  systemctl restart netsekurity.service && sleep 3 && \
-  echo -n 'service: ' && systemctl is-active netsekurity.service && \
-  curl -s -o /dev/null -w 'landing HTTP %{http_code}\n' http://127.0.0.1:8094/"
+  systemctl stop netsekurity.service && systemctl start netsekurity.service && sleep 3 && \
+  NEW=\$(systemctl show -p MainPID --value netsekurity.service); \
+  echo \"service: \$(systemctl is-active netsekurity.service) pid \$OLD -> \$NEW\"; \
+  [ \"\$NEW\" != \"\$OLD\" ] && [ \"\$NEW\" != 0 ] || { echo 'PID did not change — deploy failed'; exit 1; }; \
+  curl -sf -o /dev/null -w 'landing HTTP %{http_code}\n' http://127.0.0.1:8094/"
 
 log "deployed OK — https://netsekurity.com"

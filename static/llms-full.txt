@@ -2,7 +2,7 @@
 
 ## About
 
-Netsekurity (by **Dalang Pte Ltd**) is a **continuous external web security assessment** service. For one credit per domain, it runs an automated, read-only scan of your **public attack surface**, then a security engineer reviews, validates, and curates the findings into a plain-language PDF report.
+Netsekurity (by **Dalang Pte Ltd**) is a **continuous external web security assessment** service. For one credit per domain, it runs an automated, read-only scan of your **public attack surface**, then an analysis agent deduplicates, ranks and writes the findings up into a plain-language PDF report.
 
 **Positioning:** "You build fast with an agent. We check your production attack surface — with agent-reviewed findings." It is designed for vibe-coders and non-technical founders whose alternative is doing no security testing at all, and it integrates with CI/CD so the public surface is re-scanned on every deploy.
 
@@ -23,9 +23,9 @@ Netsekurity (by **Dalang Pte Ltd**) is a **continuous external web security asse
 2. **Web fingerprint** — HTTP/S response analysis, server & WAF detection, CMS/stack identification.
 3. **Security headers** — full OWASP set (HSTS, X-Content-Type-Options, X-Frame-Options, CSP, Referrer-Policy, Permissions-Policy), clickjacking check.
 4. **TLS / PKI** — certificate validity, expiry, issuer, SAN coverage.
-5. **Information disclosure** — exposed `.git`, `.env`, backups, `server-status`, `phpinfo`, `robots.txt`, SVN metadata, source maps, debug endpoints, secrets.
-6. **Common web vulnerability probing** — SQL injection, LFI/RFI, XSS, open redirect, path traversal, server misconfiguration.
-7. **Agent validation & curation** — a security engineer reviews every finding: deduplicates, checks evidence, re-tests critical items where feasible, and curates the final report.
+5. **Information disclosure** — 13 probes for exposed `.git`, `.env`, SQL/zip backups, `wp-config` backup, `server-status`, `phpinfo`, SVN metadata, admin/login paths, `robots.txt`.
+6. **Open redirect** — 9 common redirect parameters tested for an external 302.
+7. **Agent triage** — an analysis agent deduplicates, ranks by severity and business impact, and writes the report.
 
 Findings are **mapped to OWASP Top 10 categories** and scored with **CVSS v3.1**, each with reproduction steps and remediation guidance.
 
@@ -35,14 +35,15 @@ Findings are **mapped to OWASP Top 10 categories** and scored with **CVSS v3.1**
 - External recon & passive subdomain discovery
 - Technology / WAF / stack fingerprinting
 - Security headers, TLS/PKI validation
-- Exposed files & secrets (`.env`, `.git`, backups, config, debug endpoints, source maps)
-- SQLi, LFI/RFI, XSS, open redirect, path traversal, server misconfiguration
+- Exposed files & secrets (`.env`, `.git`, backups, config, admin paths, phpinfo, server-status)
+- Open-redirect probing, server misconfiguration
 - Agent-reviewed, OWASP-mapped, CVSS-scored report with remediation roadmap
 
 **Not included in the standard product:**
 - Authenticated testing (anything behind a login/session)
 - Authorization / IDOR / privilege-escalation testing
 - Business-logic, workflow, payment, or race-condition testing
+- Injection payload testing (SQLi, XSS, LFI/RFI, path traversal) — the standard scan finds exposure and misconfiguration, not exploitable input bugs
 - Deep multi-stage exploit chains
 - SSRF, GraphQL, WebSocket, request-smuggling, web-cache-poisoning (not claimed)
 - Source-code analysis (this is blackbox)
@@ -55,21 +56,21 @@ Findings are **mapped to OWASP Top 10 categories** and scored with **CVSS v3.1**
 
 Integrate with GitHub Actions, GitLab CI, Jenkins, or any CI tool via an **API token** (7/14/30/60/90-day expiry). Add a one-line step after deploy; Netsekurity **re-scans your public attack surface on every deploy**.
 
-This catches, on the day they ship: newly exposed endpoints/subdomains, changed headers, TLS mistakes, exposed files/secrets, and common injection regressions. It solves the "periodic assessment goes stale" problem **for the public surface**.
+This catches, on the day they ship: newly exposed endpoints/subdomains, changed headers, TLS mistakes, exposed files/secrets, and open redirects. It solves the "periodic assessment goes stale" problem **for the public surface**.
 
 **Caveat:** a fresh scan does not mean the authenticated application logic is re-tested. If your highest risk is in authenticated authorization/business logic, that coverage requires the whitebox tier or a manual pentest. Pairing the two is the recommended model for production transactional apps.
 
 ## Use cases
 
 ### 1. Vibe Coders / non-technical founders
-agent writes fast code but doesn't teach security. A production launch can leak API keys, have broken access control, or be vulnerable to SQL injection. Netsekurity finds common issues on the public surface before real users do, with a report in plain language. Against "doing nothing," this is a significant improvement.
+agent writes fast code but doesn't teach security. A production launch can leave `.env` readable, ship without HSTS/CSP, or expose a staging host nobody meant to publish. Netsekurity finds these public-surface issues before real users do, with a report in plain language. Against "doing nothing," this is a significant improvement.
 
 ### 2. CI/CD continuous coverage
 Instead of an annual report that goes stale, re-scan the public surface on every deploy for faster mitigation of external/common issues.
 
 ## Review — what we mean
 
-Every automated finding is reviewed by a security engineer before delivery: false positives are removed, duplicates merged, evidence checked, severity adjusted, and (where feasible) critical findings re-tested. The report is then curated with remediation steps. For deeper manual validation, authenticated exploration, and exploit-path analysis, choose the **whitebox** tier.
+Every automated finding passes through an analysis agent before delivery: duplicates are merged, severity is ranked by CVSS and business impact, and each item gets plain-language remediation steps. No human reads the standard report before it is delivered. For a security engineer's manual re-test of one report, the **expert review add-on** is priced on request. For authenticated exploration and exploit-path analysis, choose the **whitebox** tier.
 
 ## FAQ
 
@@ -77,7 +78,7 @@ Every automated finding is reviewed by a security engineer before delivery: fals
 2. **Is this a full penetration test?** No — it's an automated external web security assessment with an agent review. Authenticated/business-logic coverage is the separate whitebox tier.
 3. **What is covered in one assessment?** See Coverage & limitations. Public, unauthenticated, read-only OWASP-mapped scanning with agent-reviewed findings.
 4. **How do I verify my domain?** We auto-generate a unique TXT record; add it in DNS and hit verify.
-5. **Is it really automated?** The scan is automated end-to-end; a security engineer reviews before the report is delivered.
+5. **Is it really automated?** Yes, end-to-end; an analysis agent ranks and writes up the findings. A security engineer's review is the expert review add-on (priced on request) or the whitebox tier.
 6. **What if we have many subdomains?** Each domain costs 1 credit. Wildcard/API surfaces can be scoped — contact us.
 7. **Blackbox vs Whitebox?** Standard is blackbox/external. Whitebox is $10,000 USD per app/domain.
 8. **I'm not technical / built this with an agent — is this for me?** Yes. Plain-language report, no security background required.
@@ -86,7 +87,8 @@ Every automated finding is reviewed by a security engineer before delivery: fals
 
 - Home: https://netsekurity.com/
 - Docs (CI/CD + API): https://netsekurity.com/docs
-- Product scope & methodology: https://netsekurity.com/PRODUCT_SCOPE.md
+- Sample report: https://netsekurity.com/sample-report
+- Product scope & methodology: https://netsekurity.com/product-scope
 
 ## Contact
 

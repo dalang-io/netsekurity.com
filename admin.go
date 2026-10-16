@@ -45,7 +45,15 @@ type suStats struct {
 	CreditsOut      float64
 	DomainsPending  int
 	ScansActive     int
+	ContactsOpen    int
 	UsersShown      int
+}
+
+// suContact is one inbound message from the landing-page form.
+type suContact struct {
+	ID                                      int64
+	Name, Email, Message, Source, CreatedAt string
+	Handled                                 bool
 }
 
 type suData struct {
@@ -58,6 +66,7 @@ type suData struct {
 	Domains   []suDomain
 	Pentests  []suPentest
 	Credits   []suCredit
+	Contacts  []suContact
 	Stats     suStats
 	CurrentID string
 }
@@ -112,6 +121,16 @@ func handleAdmin(w http.ResponseWriter, r *http.Request) {
 		data.Credits = append(data.Credits, c)
 	}
 	crows.Close()
+
+	corows, _ := db.Query(`SELECT id, COALESCE(name,''), email, message, COALESCE(source,''), created_at, handled_at IS NOT NULL
+		FROM contact_messages ORDER BY id DESC LIMIT 100`)
+	for corows.Next() {
+		var c suContact
+		corows.Scan(&c.ID, &c.Name, &c.Email, &c.Message, &c.Source, &c.CreatedAt, &c.Handled)
+		data.Contacts = append(data.Contacts, c)
+	}
+	corows.Close()
+	db.QueryRow(`SELECT COUNT(*) FROM contact_messages WHERE handled_at IS NULL`).Scan(&st.ContactsOpen)
 
 	// Bounded: this query used to load every user row on every page view.
 	rows, _ := db.Query(`SELECT u.id, u.email, COALESCE(u.name,''), COALESCE(u.role,'user'), COALESCE(cb.balance,0)
@@ -206,24 +225,17 @@ func handleAdminSetRole(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/su", http.StatusSeeOther)
 }
 
-// handleAdminPentest triggers a pentest for a verified domain. Supports
-// mode=standard (1 credit) and mode=destructive (2 credits).
+// handleAdminPentest triggers an assessment for a verified domain on the
+// customer's credits (1 credit, standard mode only).
 func handleAdminPentest(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	mode := strings.ToLower(strings.TrimSpace(r.FormValue("mode")))
+	mode, cost := scanMode(r.FormValue("mode"))
 	if mode == "" {
-		mode = "standard"
-	}
-	if mode != "standard" && mode != "destructive" {
-		http.Error(w, "invalid mode (standard|destructive)", http.StatusBadRequest)
+		http.Error(w, "invalid mode (standard only)", http.StatusBadRequest)
 		return
-	}
-	cost := 1.0
-	if mode == "destructive" {
-		cost = 2.0
 	}
 	var domainID int64
 	var userID, status string
@@ -252,18 +264,21 @@ func handleAdminPentest(w http.ResponseWriter, r *http.Request) {
 		suErr(w, fmt.Sprintf("Insufficient credits — this scan costs %.0f.", cost))
 		return
 	}
-	desc := "Pentest scheduled"
-	if mode == "destructive" {
-		desc = "Destructive pentest scheduled"
-	}
+	desc := "Assessment scheduled (admin)"
 	db.Exec(`INSERT INTO credit_transactions (user_id, type, amount, description, reference_id) VALUES (?,'spend',?,?,?)`, userID, cost, desc, fmt.Sprintf("pentest-%d", domainID))
 	pid := "pt_" + randomHex(8)
 	db.Exec(`INSERT INTO pentests (id, user_id, domain_id, mode, status) VALUES (?,?,?,?,'queued')`, pid, userID, domainID, mode)
-	if mode == "destructive" {
-		fmt.Fprintf(w, `<div class="rounded bg-red-500/15 px-3 py-2 text-xs text-red-300">Destructive pentest scheduled (%s) — 2 credits used.</div>`, pid)
-	} else {
-		fmt.Fprintf(w, `<div class="rounded bg-emerald-500/15 px-3 py-2 text-xs text-emerald-300">Pentest scheduled (%s) — 1 credit used.</div>`, pid)
+	fmt.Fprintf(w, `<div class="rounded bg-emerald-500/15 px-3 py-2 text-xs text-emerald-300">Assessment scheduled (%s) — 1 credit used.</div>`, pid)
+}
+
+// handleAdminContactHandled marks a lead as dealt with.
+func handleAdminContactHandled(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
 	}
+	db.Exec(`UPDATE contact_messages SET handled_at=? WHERE id=? AND handled_at IS NULL`, now(), r.FormValue("id"))
+	http.Redirect(w, r, "/su#su-contacts", http.StatusSeeOther)
 }
 
 // suErr writes an error as a styled fragment. These handlers target a table cell,
@@ -438,6 +453,38 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
       <div class="font-mono text-[10px] uppercase tracking-wide text-gray-500">scans active</div>
       <div class="font-mono text-xl font-bold text-cyan-300">{{.Stats.ScansActive}}</div>
     </div>
+    <div class="rounded border {{if .Stats.ContactsOpen}}border-yellow-500/40{{else}}border-white/10{{end}} bg-[#04060c] px-3 py-2">
+      <div class="font-mono text-[10px] uppercase tracking-wide text-gray-500">leads open</div>
+      <div class="font-mono text-xl font-bold {{if .Stats.ContactsOpen}}text-yellow-300{{else}}text-white{{end}}">{{.Stats.ContactsOpen}}</div>
+    </div>
+  </section>
+
+  <!-- Inbound leads: the landing-page form used to say "Message received!" and drop the message on the floor. -->
+  <section id="su-contacts" class="rounded border border-yellow-500/30 bg-[#04060c]">
+    <div class="flex items-center gap-1.5 border-b border-yellow-500/20 px-3 py-2">
+      <span class="h-2.5 w-2.5 rounded-full bg-yellow-500/70"></span>
+      <span class="font-mono text-[11px] text-gray-500">$ contact messages (leads)</span>
+    </div>
+    <div class="overflow-x-auto p-3">
+      {{if .Contacts}}
+      <table class="w-full font-mono text-xs">
+        <thead class="sticky top-0 z-10 bg-[#04060c]"><tr class="text-left text-gray-500"><th class="py-1">when</th><th>from</th><th>message</th><th>source</th><th></th></tr></thead>
+        <tbody>
+        {{range .Contacts}}
+        <tr class="border-t border-white/10 {{if .Handled}}text-gray-600{{end}}">
+          <td class="py-1 whitespace-nowrap">{{.CreatedAt}}</td>
+          <td class="whitespace-nowrap"><a href="mailto:{{.Email}}" class="text-cyan-300 hover:underline">{{.Email}}</a>{{if .Name}}<div class="text-gray-500">{{.Name}}</div>{{end}}</td>
+          <td class="max-w-md whitespace-pre-wrap break-words text-gray-300">{{.Message}}</td>
+          <td>{{.Source}}</td>
+          <td>{{if .Handled}}<span class="text-emerald-400">done</span>{{else}}
+            <form method="post" action="/su/contacts/handled"><input type="hidden" name="id" value="{{.ID}}"/>
+            <button class="rounded border border-emerald-400/60 px-2 py-0.5 text-[11px] text-emerald-300 hover:bg-emerald-500/15">mark handled</button></form>{{end}}</td>
+        </tr>
+        {{end}}
+        </tbody>
+      </table>
+      {{else}}<p class="font-mono text-xs text-gray-600"># no messages yet</p>{{end}}
+    </div>
   </section>
 
   <div class="flex items-center gap-2">
@@ -548,14 +595,9 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
           <td>{{if eq .Status "verified"}}<span class="text-emerald-300">[verified]</span>{{else}}<span class="text-yellow-300">[{{.Status}}]</span>{{end}}</td>
           <td data-pentest-cell="{{.ID}}">
             {{if eq .Status "verified"}}
-            <div class="flex gap-1">
             <button hx-post="/su/domains/pentest" hx-vals='{"domain_id":"{{.ID}}","mode":"standard"}' hx-target="closest td" hx-swap="innerHTML"
-              title="Standard scan — 1 credit (read-only)"
+              title="Standard assessment — 1 of this customer's credits (read-only)"
               class="rounded border border-emerald-400 bg-emerald-500/10 px-2 py-0.5 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/20">run</button>
-            <button type="button" onclick="suOpenDestructive('{{.ID}}','{{.Domain}}','{{.UserEmail}}')"
-              title="Destructive scan — 2 of this customer's credits (exploit/RCE/webshell/takeover)."
-              class="rounded border border-red-400/70 bg-red-500/10 px-2 py-0.5 text-[11px] font-bold text-red-300 hover:bg-red-500/20">run -x</button>
-            </div>
             {{else}}<span class="text-gray-600">—</span>{{end}}
           </td>
         </tr>
@@ -631,28 +673,6 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
   {{end}}
 </main>
 
-<!-- Destructive scan confirm — same typed phrase as the customer dashboard -->
-<div id="su-destructive" class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/70 p-4">
-  <div class="w-full max-w-lg rounded-lg border border-red-500/40 bg-[#0a0d16] p-5">
-    <div class="mb-2 font-mono text-sm font-bold text-red-300">⚠ DESTRUCTIVE PENTEST — CUSTOMER DOMAIN</div>
-    <div class="space-y-2 font-mono text-xs leading-relaxed text-gray-300">
-      <p>Active exploitation (<b>RCE, webshell upload, takeover attempts</b>) against a domain you do not own. It can modify, corrupt or take down the target.</p>
-      <p id="su-destructive-target" class="text-yellow-300"></p>
-      <label class="mt-2 block">
-        <span class="text-gray-400">Type <b class="text-red-300">AGREE AND PROCEED</b> to confirm:</span>
-        <input id="su-destructive-agree" type="text" autocomplete="off"
-          class="mt-1 w-full rounded border border-red-500/40 bg-black px-3 py-2 font-mono text-sm text-white focus:border-red-400 focus:outline-none"
-          placeholder="AGREE AND PROCEED"/>
-      </label>
-    </div>
-    <div class="mt-4 flex items-center justify-end gap-2">
-      <button type="button" onclick="suCloseDestructive()" class="rounded border border-white/20 px-3 py-1.5 font-mono text-xs text-gray-400 hover:bg-white/5">cancel</button>
-      <button type="button" id="su-destructive-go" onclick="suRunDestructive()" disabled
-        class="rounded border border-red-500 bg-red-600/20 px-3 py-1.5 font-mono text-xs font-bold text-red-200 hover:bg-red-600/30 disabled:cursor-not-allowed disabled:opacity-40">run destructive →</button>
-    </div>
-  </div>
-</div>
-
 <script>
 // Client-side filter across every table on the page.
 function suFilter(q) {
@@ -667,39 +687,6 @@ function suFilter(q) {
   document.getElementById('su-search-count').textContent = q ? (shown + ' / ' + total + ' rows') : '';
 }
 
-var suTargetID = null;
-function suOpenDestructive(id, domain, email) {
-  suTargetID = id;
-  document.getElementById('su-destructive-target').textContent =
-    'target: ' + domain + ' · owner: ' + email + ' · spends 2 of their credits';
-  document.getElementById('su-destructive-agree').value = '';
-  document.getElementById('su-destructive-go').disabled = true;
-  var m = document.getElementById('su-destructive');
-  m.classList.remove('hidden'); m.classList.add('flex');
-}
-function suCloseDestructive() {
-  var m = document.getElementById('su-destructive');
-  m.classList.add('hidden'); m.classList.remove('flex');
-  suTargetID = null;
-}
-document.getElementById('su-destructive-agree').addEventListener('input', function () {
-  document.getElementById('su-destructive-go').disabled = (this.value.trim() !== 'AGREE AND PROCEED');
-});
-function suRunDestructive() {
-  if (!suTargetID) return;
-  var btn = document.getElementById('su-destructive-go');
-  btn.disabled = true; btn.textContent = 'running…';
-  var xhr = new XMLHttpRequest();
-  xhr.open('POST', '/su/domains/pentest');
-  xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-  xhr.onload = function () {
-    var cell = document.querySelector('[data-pentest-cell="' + suTargetID + '"]');
-    if (cell) cell.innerHTML = xhr.responseText;
-    suCloseDestructive();
-    btn.textContent = 'run destructive →';
-  };
-  xhr.send('domain_id=' + encodeURIComponent(suTargetID) + '&mode=destructive');
-}
 </script>
 </body>
 </html>{{end}}`

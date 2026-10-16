@@ -72,11 +72,21 @@ func handleTopUp(w http.ResponseWriter, r *http.Request) {
 	var xr struct {
 		ID         string `json:"id"`
 		InvoiceURL string `json:"invoice_url"`
+		ErrorCode  string `json:"error_code"`
 		ErrorMsg   string `json:"message"`
 	}
 	json.NewDecoder(resp.Body).Decode(&xr)
 	if resp.StatusCode != 200 && resp.StatusCode != 201 {
-		http.Error(w, "failed to create invoice: "+xr.ErrorMsg, http.StatusBadGateway)
+		// Loud, because this is the one failure that silently ends every sale:
+		// the Xendit account may not be enabled for the configured currency.
+		log.Printf("xendit: create invoice failed (HTTP %d, currency %s, code %s): %s", resp.StatusCode, currency, xr.ErrorCode, xr.ErrorMsg)
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.WriteHeader(http.StatusBadGateway)
+		msg := "Our payment provider could not create the invoice. Nothing was charged. Please try again in a minute or email sales@dalang.io."
+		if xr.ErrorCode == "UNSUPPORTED_CURRENCY" {
+			msg = "Our payment provider cannot bill in " + currency + " right now. Nothing was charged. Email sales@dalang.io and we will invoice you directly."
+		}
+		fmt.Fprintf(w, `<div class="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">%s</div>`, msg)
 		return
 	}
 	// Capture the Meta Pixel cookies / IP / UA now: the settlement webhook is a
@@ -181,7 +191,7 @@ func handleXenditWebhook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Callback token gate.
-	if r.Header.Get("x-callback-token") != getenv("XENDIT_CALLBACK_KEY", "") {
+	if key := getenv("XENDIT_CALLBACK_KEY", ""); key == "" || !secureCompare(r.Header.Get("x-callback-token"), key) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}

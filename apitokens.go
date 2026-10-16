@@ -37,10 +37,9 @@ func validAPIExpiry(expiryDays int) bool {
 // requireAPIToken resolves an API token (via "X-API-Token") to a user id, or writes
 // 401 and returns false. Also touches last_used_at and flags the plaintext log out.
 func requireAPIToken(w http.ResponseWriter, r *http.Request) (string, bool) {
+	// Header only. A query-string fallback used to exist; tokens in URLs end up
+	// in access logs, browser history and Referer headers.
 	tok := strings.TrimSpace(r.Header.Get("X-API-Token"))
-	if tok == "" {
-		tok = strings.TrimSpace(r.URL.Query().Get("api_token"))
-	}
 	if tok == "" || !strings.HasPrefix(tok, "nsk_") {
 		http.Error(w, `{"error":"missing or invalid API token"}`, http.StatusUnauthorized)
 		return "", false
@@ -175,7 +174,7 @@ func handleTokensDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleAPICreatePentest is the CI/CD entrypoint. Authenticated by X-API-Token.
-// POST /api/v1/pentests  JSON/Form: domain, mode (standard|destructive, optional)
+// POST /api/v1/pentests  JSON/Form: domain, mode (optional, "standard" is the only value)
 // Returns JSON {pentest_id, domain, mode, status}.
 func handleAPICreatePentest(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -208,8 +207,9 @@ func handleAPICreatePentest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"domain required"}`, http.StatusBadRequest)
 		return
 	}
-	if mode != "standard" && mode != "destructive" {
-		http.Error(w, `{"error":"invalid mode"}`, http.StatusBadRequest)
+	var cost float64
+	if mode, cost = scanMode(mode); mode == "" {
+		http.Error(w, `{"error":"invalid mode (standard only)"}`, http.StatusBadRequest)
 		return
 	}
 	// find a verified domain owned by this user
@@ -228,15 +228,7 @@ func handleAPICreatePentest(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprint(w, `{"error":"a pentest is already queued or running; wait for it to finish"}`)
 		return
 	}
-	cost := 1.0
-	if mode == "destructive" {
-		cost = 2.0
-	}
-	desc := "Pentest scheduled (CI/CD)"
-	if mode == "destructive" {
-		desc = "Destructive pentest scheduled (CI/CD)"
-	}
-	if !consumeCredit(userID, desc, fmt.Sprintf("pentest-api-%d", domainID), cost) {
+	if !consumeCredit(userID, "Assessment scheduled (CI/CD)", fmt.Sprintf("pentest-api-%d", domainID), cost) {
 		http.Error(w, `{"error":"insufficient credits"}`, http.StatusPaymentRequired)
 		return
 	}

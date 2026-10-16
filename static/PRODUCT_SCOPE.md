@@ -18,13 +18,13 @@ verified domain / credit. 1 credit = 1 external assessment · 1 domain.
 3. **Security headers** — full OWASP set: HSTS, X-Content-Type-Options, X-Frame-Options,
    Content-Security-Policy, Referrer-Policy, Permissions-Policy; clickjacking check.
 4. **TLS / PKI** — certificate validity, expiry window, issuer, SAN coverage.
-5. **Information disclosure** — exposed `.git`, `.env`, backups, `server-status`, `phpinfo`,
-   `robots.txt`, SVN metadata, source maps, debug endpoints, secrets.
-6. **Common web vulnerability probing** — SQLi, LFI/RFI, XSS, open redirect, path traversal,
-   server misconfiguration.
-7. **Agent validation & curation** — a security engineer reviews every finding before
-   delivery: removes false positives, merges duplicates, checks evidence, adjusts severity,
-   re-tests critical items where feasible, and curates the final report.
+5. **Information disclosure** — 13 probes: exposed `.git`, `.env`, SQL/zip backups,
+   `wp-config` backup, `server-status`, `phpinfo`, SVN metadata, admin/login paths, `robots.txt`.
+6. **Open redirect** — 9 common redirect parameters (`redirect`, `next`, `url`, `return`, …)
+   tested for an external 302.
+7. **Agent triage** — an analysis agent deduplicates the findings, ranks them by severity and
+   business impact, and writes the report. No human reads the standard report before delivery;
+   a security engineer's re-test is the separate **expert review add-on** (below).
 
 Findings are **mapped to OWASP Top 10 categories** and scored with **CVSS v3.1**, each with
 CWE mapping, reproduction steps, and remediation guidance.
@@ -39,8 +39,8 @@ CWE mapping, reproduction steps, and remediation guidance.
 | **Web application fingerprint** | HTTP/S response, server & WAF, CMS/stack identification |
 | **Security headers** | HSTS, X-Content-Type-Options, X-Frame-Options, CSP, Referrer-Policy, Permissions-Policy; clickjacking |
 | **TLS / PKI** | Certificate validity, expiry, issuer, SAN coverage |
-| **Information disclosure** | `.git`, `.env`, backups, server-status, phpinfo, robots.txt, SVN metadata, source maps, debug endpoints, secrets |
-| **Common web vulnerabilities** | Unauthenticated probing for SQLi, LFI/RFI, XSS, open redirect, path traversal, server misconfiguration |
+| **Information disclosure** | `.git`, `.env`, backups, server-status, phpinfo, robots.txt, SVN metadata, admin/login paths |
+| **Open redirect** | 9 common redirect parameters tested for an external 302 |
 
 ## Coverage note (be precise)
 
@@ -49,13 +49,15 @@ CWE mapping, reproduction steps, and remediation guidance.
   require authentication and multiple identities that an external scan cannot reach.
 - **Not claimed:** SSRF, GraphQL, WebSocket, request-smuggling, web-cache-poisoning, and other
   classes not listed above. Their absence from a report means "not scanned for," not "verified safe."
-- **"Read-only"** is safe for production: we may indicate a parameter appears injectable but
-  do not extract live database records as destructive proof.
+- **"Read-only"** is safe for production: every request is a plain GET; nothing is written,
+  uploaded or exploited.
 
 ## Out of Scope (not included — clearly stated)
 
 1. **Authenticated testing.** Scans are unauthenticated; logic behind a login/session is not exercised.
 2. **Authorization / IDOR / privilege escalation.** Requires multiple identities; not tested.
+2a. **Injection payload testing.** The standard scan sends no SQLi, XSS, LFI/RFI or path-traversal
+   payloads. It finds exposure and misconfiguration, not exploitable input bugs.
 3. **Business-logic, workflow, payment, or race-condition testing.** Not included.
 4. **Deep / manual exploit chains.** We detect vulnerabilities; we do not build multi-stage exploit chains.
 5. **Source-code analysis.** Blackbox only.
@@ -78,6 +80,7 @@ For authenticated testing, authorization/business-logic analysis, and exploit-pa
 | Tier | What's included | Price |
 |------|-----------------|-------|
 | **Blackbox (automated)** | External, unauthenticated assessment — this product | **Included in credits** ($50/credit) |
+| **Expert review (add-on)** | A security engineer re-tests every finding in one completed report, removes false positives, and writes a fix plan for your stack | **Priced on request** |
 | **Whitebox (agent + expert)** | Source review, authenticated testing, business-logic & exploit-chain analysis, agent-written report | **$10,000 USD per app / per domain** |
 
 > Whitebox engagements are scoped per app/domain and include a dedicated security
@@ -98,4 +101,13 @@ authenticated business-logic and deeper exploit-path verification.
 
 ---
 
-*Scope per domain. 1 credit = 1 external assessment · 1 domain. Full technical detail in `AGENT_WORKER.md`.*
+## Vulnerability disclosure (our own systems)
+
+Found something in netsekurity.com or dalang.io itself? Email **security@dalang.io**. We
+acknowledge within 2 business days, do not pursue good-faith researchers, and credit fixes on
+request. Please do not test against other customers' domains.
+
+---
+
+*Scope per domain. 1 credit = 1 external assessment · 1 domain. A worked example is at
+https://netsekurity.com/sample-report. Full technical detail in `AGENT_WORKER.md`.*

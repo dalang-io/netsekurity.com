@@ -91,6 +91,12 @@ func handleGoogleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 	state := randomHex(16)
 	http.SetCookie(w, &http.Cookie{Name: "nsk_oauth_state", Value: state, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: 600})
+	// Remember where the visitor was going. A pricing "buy" click used to end on
+	// the dashboard after login, with the chosen package forgotten — the customer
+	// had to find and pick it a second time.
+	if next := safeNext(r.URL.Query().Get("next")); next != "" {
+		http.SetCookie(w, &http.Cookie{Name: nextCookie, Value: next, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: 600})
+	}
 	u := url.URL{
 		Scheme: "https", Host: "accounts.google.com", Path: "/o/oauth2/v2/auth",
 		RawQuery: url.Values{
@@ -119,6 +125,14 @@ func handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "missing code", http.StatusBadRequest)
 		return
 	}
+	// The state cookie was set at /login but never checked here, which left the
+	// callback open to login CSRF (an attacker completing their own Google flow
+	// in the victim's browser).
+	if sc, err := r.Cookie("nsk_oauth_state"); err != nil || sc.Value == "" || !secureCompare(sc.Value, r.URL.Query().Get("state")) {
+		http.Error(w, "invalid oauth state — start again from /login", http.StatusBadRequest)
+		return
+	}
+	http.SetCookie(w, &http.Cookie{Name: "nsk_oauth_state", Value: "", Path: "/", HttpOnly: true, Secure: true, MaxAge: -1})
 	clientID := getenv("GOOGLE_CLIENT_ID", "")
 	clientSecret := getenv("GOOGLE_CLIENT_SECRET", "")
 	redirect := getenv("GOOGLE_REDIRECT_URL", "")
@@ -171,7 +185,41 @@ func handleGoogleCallback(w http.ResponseWriter, r *http.Request) {
 		trackSignupLead(r, userID, gu.Email)
 	}
 	http.SetCookie(w, &http.Cookie{Name: authCookie, Value: token, Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteLaxMode, MaxAge: int((24 * time.Hour).Seconds())})
-	http.Redirect(w, r, "/dashboard", http.StatusFound)
+	http.Redirect(w, r, consumeNext(w, r), http.StatusFound)
+}
+
+// nextCookie carries the post-login destination across the Google round trip.
+const nextCookie = "nsk_next"
+
+// safeNext accepts only a same-site path: it must start with a single "/", so
+// "//evil.example" and absolute URLs are rejected, and it must not point back
+// at an auth route (which would loop).
+func safeNext(raw string) string {
+	raw = strings.TrimSpace(raw)
+	if raw == "" || !strings.HasPrefix(raw, "/") || strings.HasPrefix(raw, "//") || strings.HasPrefix(raw, "/\\") {
+		return ""
+	}
+	if strings.ContainsAny(raw, "\r\n") {
+		return ""
+	}
+	for _, p := range []string{"/login", "/logout", "/auth/"} {
+		if strings.HasPrefix(raw, p) {
+			return ""
+		}
+	}
+	return raw
+}
+
+// consumeNext reads and clears the destination cookie, defaulting to the dashboard.
+func consumeNext(w http.ResponseWriter, r *http.Request) string {
+	dest := "/dashboard"
+	if c, err := r.Cookie(nextCookie); err == nil {
+		if n := safeNext(c.Value); n != "" {
+			dest = n
+		}
+		http.SetCookie(w, &http.Cookie{Name: nextCookie, Value: "", Path: "/", HttpOnly: true, Secure: true, MaxAge: -1})
+	}
+	return dest
 }
 
 func handleLogout(w http.ResponseWriter, r *http.Request) {
@@ -244,9 +292,13 @@ func currentUser(r *http.Request) (*Claims, error) {
 func requireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if _, err := currentUser(r); err != nil {
+			target := "/login"
+			if n := safeNext(r.URL.RequestURI()); n != "" && r.Method == http.MethodGet {
+				target += "?next=" + url.QueryEscape(n)
+			}
 			// HTMX requests get a redirect header so the client can navigate.
-			w.Header().Set("HX-Redirect", "/login")
-			http.Redirect(w, r, "/login", http.StatusFound)
+			w.Header().Set("HX-Redirect", target)
+			http.Redirect(w, r, target, http.StatusFound)
 			return
 		}
 		next(w, r)

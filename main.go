@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 )
 
 //go:embed static
@@ -32,6 +33,7 @@ func init() { _ = cssHash }
 
 func main() {
 	loadEnv(".env")
+	checkSecrets()
 
 	if err := initDB(); err != nil {
 		log.Fatalf("db init: %v", err)
@@ -64,11 +66,18 @@ func main() {
 	// RFC 9116 security.txt (Go's FileServer hides dotfiles, so serve explicitly).
 	mux.HandleFunc("/.well-known/security.txt", handleSecurityTxt)
 
+	// Per-IP ceilings on everything that creates rows or calls a third party.
+	// Generous for a person, tight for a loop.
+	writeLimit := newRateLimiter(30, time.Minute)  // domains, scans, tokens
+	payLimit := newRateLimiter(10, 10*time.Minute) // Xendit invoices
+	leadLimit := newRateLimiter(5, 10*time.Minute) // contact form
+	authLimit := newRateLimiter(20, time.Minute)   // One Tap token verification
+
 	// Auth
 	mux.HandleFunc("/login", handleGoogleLogin)
 	mux.HandleFunc("/auth/google", handleGoogleLogin)
 	mux.HandleFunc("/auth/google/callback", handleGoogleCallback)
-	mux.HandleFunc("/auth/google/onetap", handleOneTap)
+	mux.HandleFunc("/auth/google/onetap", rateLimit(authLimit, handleOneTap))
 	mux.HandleFunc("/logout", handleLogout)
 
 	// Dashboard (protected)
@@ -82,41 +91,64 @@ func main() {
 	mux.HandleFunc("/su/users/credit", requireAdmin(handleAdminAddCredit))
 	mux.HandleFunc("/su/domains/pentest", requireAdmin(handleAdminPentest))
 	mux.HandleFunc("/su/reports/upload", requireAdmin(handleAdminUploadReport))
+	mux.HandleFunc("/su/contacts/handled", requireAdmin(handleAdminContactHandled))
 	mux.HandleFunc("/reports/", requireAuth(handleReport))
 
 	// Pentests (user scan + worker intake)
-	mux.HandleFunc("/api/pentests/start", requireAuth(handleStartPentest))
+	mux.HandleFunc("/api/pentests/start", rateLimit(writeLimit, requireAuth(handleStartPentest)))
 	mux.HandleFunc("/api/pentests/list", requireAuth(handlePentestList))
 	mux.HandleFunc("/api/pentests/worker/claim", handleWorkerClaim)
 	mux.HandleFunc("/api/pentests/worker/report", handleWorkerReport)
 
 	// API tokens (user-managed for CI/CD)
-	mux.HandleFunc("/api/tokens", requireAuth(handleTokensList))          // GET list
-	mux.HandleFunc("/api/tokens/create", requireAuth(handleTokensCreate)) // POST create
-	mux.HandleFunc("/api/tokens/", requireAuth(handleTokensDelete))       // DELETE /api/tokens/{id}
+	mux.HandleFunc("/api/tokens", requireAuth(handleTokensList))                                 // GET list
+	mux.HandleFunc("/api/tokens/create", rateLimit(writeLimit, requireAuth(handleTokensCreate))) // POST create
+	mux.HandleFunc("/api/tokens/", requireAuth(handleTokensDelete))                              // DELETE /api/tokens/{id}
 
 	// Payments
-	mux.HandleFunc("/api/topup", handleTopUp)
+	mux.HandleFunc("/api/topup", rateLimit(payLimit, handleTopUp))
 	mux.HandleFunc("/webhook/xendit", handleXenditWebhook)
 
 	// Domains
-	mux.HandleFunc("/api/domains", handleAddDomain)
-	mux.HandleFunc("/api/domains/verify", handleVerifyDomain)
-	mux.HandleFunc("/api/domains/delete", handleDeleteDomain)
+	mux.HandleFunc("/api/domains", rateLimit(writeLimit, handleAddDomain))
+	mux.HandleFunc("/api/domains/verify", rateLimit(writeLimit, handleVerifyDomain))
+	mux.HandleFunc("/api/domains/delete", rateLimit(writeLimit, handleDeleteDomain))
 
-	// Marketing / HTMX fragments
-	mux.HandleFunc("/contact", handleContact)
+	// Marketing pages / HTMX fragments
+	mux.HandleFunc("/contact", rateLimit(leadLimit, handleContact))
 	mux.HandleFunc("/docs", handleDocs)
 	mux.HandleFunc("/product-scope", handleProductScope)
+	mux.HandleFunc("/sample-report", handleSampleReport)
 
 	// CI/CD integration (authenticated by X-API-Token)
-	mux.HandleFunc("/api/v1/pentests", handleAPICreatePentest)
+	mux.HandleFunc("/api/v1/pentests", rateLimit(writeLimit, handleAPICreatePentest))
 
 	addr := ":" + port
 	log.Printf("netsekurity.com listening on %s", addr)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
 	}
+}
+
+// checkSecrets refuses to start in production without the secrets that make
+// auth and the worker channel meaningful. jwt.go falls back to a well-known
+// dev secret when JWT_SECRET is empty; in production that lets anyone mint an
+// admin session.
+func checkSecrets() {
+	prod := getenv("ENVIRONMENT", "development") == "production"
+	missing := []string{}
+	for _, k := range []string{"JWT_SECRET", "BOT_AUTH_TOKEN", "XENDIT_CALLBACK_KEY"} {
+		if getenv(k, "") == "" {
+			missing = append(missing, k)
+		}
+	}
+	if len(missing) == 0 {
+		return
+	}
+	if prod {
+		log.Fatalf("refusing to start: ENVIRONMENT=production but %s not set", strings.Join(missing, ", "))
+	}
+	log.Printf("WARNING: %s not set — using insecure defaults (fine for development only)", strings.Join(missing, ", "))
 }
 
 // handleSecurityTxt serves the RFC 9116 security.txt file.
@@ -150,6 +182,8 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	s := strings.ReplaceAll(string(b), "__GOOGLE_CLIENT_ID__", getenv("GOOGLE_CLIENT_ID", ""))
 	s = strings.ReplaceAll(s, "__CSS_HASH__", cssHash)
 	s = strings.ReplaceAll(s, "__FAQ_BLOCK__", renderFAQ())
+	s = strings.ReplaceAll(s, "__ANALYTICS__", analyticsSnippet())
+	s = strings.ReplaceAll(s, "__SCANS_PROOF__", renderScansProof())
 
 	// Meta Pixel: base snippet (PageView) in head + ViewContent on pricing section.
 	s = strings.ReplaceAll(s, "__FBPIXEL__", metaPixelSnippet(true))
