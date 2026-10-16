@@ -128,3 +128,27 @@ Full steps, verification and troubleshooting: **[HERMES_UPDATE.md](HERMES_UPDATE
 - `nsec_worker.sh` — standalone one-shot worker (alternate to the cron).
 - `nsec_monitor.sh` — token-saver monitor (suppresses idle LLM runs).
 - `assets/netsekurity_logo.png` — report branding logo.
+
+---
+
+## Closing a scan the worker cannot finish: `POST /api/pentests/worker/fail`
+
+A claimed pentest that cannot be completed (target unreachable, report refused by the
+generator's freshness gate, scan error) must be closed explicitly. Leaving it in
+`running` only lets the 45-minute stale recovery push it back to `queued`, which turns
+into an endless claim/fail loop with no outcome for the customer and no refund for the
+credit already spent.
+
+```
+POST /api/pentests/worker/fail        (header: X-Bot-Token)
+  pentest_id = pt_xxxxxxxx
+  reason     = short human-readable cause
+-> {"ok":true,"pentest_id":"pt_xxx","status":"failed","refunded":1}
+```
+
+- Only a pentest in `running` may fail; anything else returns `409`.
+- The credit is refunded automatically: 1 for a standard scan, 2 for a destructive one,
+  recorded as an `admin_credit` transaction (the type the dashboard lists) with the
+  pentest id as reference.
+- The dashboard shows a red `failed` badge plus *"scan failed — credit refunded"*, and
+  never offers a report download for a failed scan.

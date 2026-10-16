@@ -99,6 +99,7 @@ func main() {
 	mux.HandleFunc("/api/pentests/list", requireAuth(handlePentestList))
 	mux.HandleFunc("/api/pentests/worker/claim", handleWorkerClaim)
 	mux.HandleFunc("/api/pentests/worker/report", handleWorkerReport)
+	mux.HandleFunc("/api/pentests/worker/fail", handleWorkerFail)
 
 	// API tokens (user-managed for CI/CD)
 	mux.HandleFunc("/api/tokens", requireAuth(handleTokensList))                                 // GET list
