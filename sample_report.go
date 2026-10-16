@@ -28,7 +28,7 @@ func handleSampleReport(w http.ResponseWriter, r *http.Request) {
 	}
 	out := strings.ReplaceAll(sampleReportHTML, "__HEADER__", string(renderHeader(nav, template.HTML(authNav), "/"))+headerMobileJS)
 	out = strings.ReplaceAll(out, "__CSS_HASH__", cssHash)
-	out = strings.ReplaceAll(out, "__FBPIXEL__", metaPixelSnippet(true))
+	out = strings.ReplaceAll(out, "__FBPIXEL__", consentGate(true))
 	out = strings.ReplaceAll(out, "__ANALYTICS__", analyticsSnippet())
 	w.Write([]byte(out))
 }

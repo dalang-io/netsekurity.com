@@ -80,7 +80,7 @@ func trimUSD(v float64) string {
 
 var checkoutTpl = template.Must(template.New("checkout").Funcs(template.FuncMap{
 	"cssHash": func() string { return cssHash },
-	"fbpixel": func() template.HTML { return template.HTML(metaPixelSnippet(true)) },
+	"fbpixel": func() template.HTML { return template.HTML(consentGate(true)) },
 }).Parse(checkoutHTML))
 
 const checkoutHTML = `{{define "checkout"}}<!DOCTYPE html>
@@ -143,7 +143,7 @@ const checkoutHTML = `{{define "checkout"}}<!DOCTYPE html>
       <form hx-post="/api/topup" hx-target="#pay-result" hx-swap="innerHTML" hx-disabled-elt="find button" class="mt-4">
         <input type="hidden" name="package_id" value="{{.Package.ID}}"/>
         <button
-          onclick="fbq('track','InitiateCheckout',{content_name:'{{.Package.Name}}',content_type:'product',value:{{.Package.USD}},currency:'USD'})"
+          onclick="nskTrack('InitiateCheckout',{content_name:'{{.Package.Name}}',content_type:'product',value:{{.Package.USD}},currency:'USD'})"
           class="w-full rounded border-2 border-emerald-400 bg-emerald-500/10 px-5 py-3 font-mono text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 glow disabled:cursor-not-allowed disabled:opacity-50">
           proceed to payment — {{.Total}} USD
         </button>

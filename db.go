@@ -177,7 +177,10 @@ func initDB() error {
 
 	// Meta Conversions API context captured at checkout and replayed when the
 	// payment settles — the Xendit webhook has no browser request of its own.
-	for _, c := range []string{"meta_fbp", "meta_fbc", "meta_ip", "meta_ua"} {
+	// meta_consent stores the visitor's choice from that same checkout request:
+	// without it the webhook would have to guess, and guessing means sending a
+	// Purchase event for someone who never agreed (see consent.go).
+	for _, c := range []string{"meta_fbp", "meta_fbc", "meta_ip", "meta_ua", "meta_consent"} {
 		if !columnExists("payments", c) {
 			if _, err := db.Exec(`ALTER TABLE payments ADD COLUMN ` + c + ` TEXT`); err != nil {
 				return fmt.Errorf("add payments.%s: %w", c, err)

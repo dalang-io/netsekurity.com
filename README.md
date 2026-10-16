@@ -38,7 +38,7 @@ This README is the **handover/operations reference** for whoever takes over the 
 | Payments | Xendit invoices (auto-credit poller; webhook optional) |
 | Hosting | Linux + systemd + Pingora proxy + Cloudflare (flexible SSL) |
 | Scanning agent | Hermes agent + `nsec_scan.py` (see AGENT_WORKER.md) |
-| Analytics | Meta Pixel (ads) + optional Plausible / GA4 via `PLAUSIBLE_DOMAIN` / `GA_MEASUREMENT_ID` |
+| Analytics | Meta Pixel (ads), consent-gated; Umami (cookieless) + optional Plausible / GA4 via `PLAUSIBLE_DOMAIN` / `GA_MEASUREMENT_ID` |
 
 ---
 
@@ -82,6 +82,8 @@ netsekurity.com/
 ├── marketing.go       # landing HTMX fragments (contact form → contact_messages, FAQ, scan-count proof)
 ├── sample_report.go   # /sample-report — fictional domain, real report structure
 ├── analytics.go       # optional Plausible / GA4 tag for public pages
+├── consent.go         # consent gate: Meta Pixel loads only after Accept (nsk_consent cookie)
+├── fbevents.go        # Meta Pixel base code + Conversions API (server-side Lead/Purchase)
 ├── ratelimit.go       # per-IP fixed-window limiter on write endpoints
 ├── stack.go           # "cat stack.conf" section (real SVG logos + CRT glow tiles)
 ├── header.go          # shared reusable header (brand + desktop nav + mobile burger)
@@ -202,6 +204,31 @@ User dashboard → /reports/YYYYMMDD-hh:mm-<domain>.pdf  (owner/admin only)
   `security.txt` (+ `/.well-known/security.txt`), `og.png`, JSON-LD on landing.
 - Client-facing scope/methodology: `static/PRODUCT_SCOPE.md`.
 - Social/ads copy: `marketing-copy.md` (Vibe Coder + CI/CD use cases).
+
+### Tracking & consent
+
+No tracker talks to anyone before the visitor agrees (Owner decision, 2026-10-16;
+same rule as `dalang.io`'s `consent.js`). `consent.go` is the netsekurity port:
+
+- The Meta Pixel base code lives in `fbevents.go:metaPixelBaseJS` and is shipped
+  as a **JSON string**, not a `<script>`. `consentGate()` puts it into the document
+  only after Accept, so `connect.facebook.net` is never requested first — and with
+  it go `www.facebook.com/tr` and the CAPI Gateway POST to `*.on.aws/events`, which
+  Meta's own config script derives from the pixel.
+- Every client event goes through `nskTrack()` (no-op without consent) instead of
+  calling `fbq` directly, and the `<noscript>` tracking pixel is gone: it fired for
+  visitors with JS off, who had no banner to answer.
+- Server-side Conversions API events obey the same gate: `Lead` (`auth.go`) and
+  `Purchase` (`payment.go`) are skipped unless the request — or, for the Xendit
+  webhook, the `payments.meta_consent` stored at checkout — says `granted`.
+- The choice is a cookie, `nsk_consent=granted|denied` (180 days, `SameSite=Lax`),
+  not localStorage, because Go needs to read it too. Absent ≠ granted.
+- Umami stays ungated: cookieless, no personal data — the exemption `dalang.io`
+  documents in `src/lib/analytics/consent.js`.
+- **Residual, not ours to switch off:** Cloudflare Web Analytics (RUM) is injected
+  by the CDN, not by this app, and still fires before consent. It is turned off in
+  the Cloudflare dashboard (Analytics → Web Analytics → Manage site → Advanced
+  options), not in this repo.
 
 ---
 

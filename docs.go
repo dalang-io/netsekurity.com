@@ -288,7 +288,7 @@ func handleDocs(w http.ResponseWriter, r *http.Request) {
 	}
 	hdr := string(renderHeader(docsNav, template.HTML(authNav), "/")) + headerMobileJS
 	out := strings.ReplaceAll(docsHTMLRaw, "__DOCS_HEADER__", hdr)
-	out = strings.ReplaceAll(out, "__FBPIXEL__", metaPixelSnippet(true))
+	out = strings.ReplaceAll(out, "__FBPIXEL__", consentGate(true))
 	out = strings.ReplaceAll(out, "__CSS_HASH__", cssHash)
 	out = strings.ReplaceAll(out, "__ANALYTICS__", analyticsSnippet())
 	w.Write([]byte(out))

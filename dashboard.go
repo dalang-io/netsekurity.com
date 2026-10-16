@@ -416,5 +416,5 @@ var tmpl = template.Must(template.New("dashboard").Funcs(template.FuncMap{
 	"cssHash": func() string { return cssHash },
 	// template.HTML, not string: html/template escapes a plain string in an
 	// element context and the pixel would render as literal &lt;script&gt; text.
-	"fbpixel": func() template.HTML { return template.HTML(metaPixelSnippet(true)) },
+	"fbpixel": func() template.HTML { return template.HTML(consentGate(true)) },
 }).Parse(dashboardHTML))

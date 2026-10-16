@@ -67,7 +67,14 @@ func ensureUser(email, name, picture, sub string) (string, bool, error) {
 // trackSignupLead fires the Meta Lead event for a brand-new account. event_id is
 // derived from the user id so a replay can never double-count, and the call runs
 // in a goroutine so it cannot delay the login redirect.
+//
+// Only for visitors who agreed: this sends a hashed email, IP and user agent to
+// Meta, which is the same tracker the browser gate covers — a server call is not
+// a loophole around it. No consent cookie, no event.
 func trackSignupLead(r *http.Request, userID, email string) {
+	if !consentGranted(r) {
+		return
+	}
 	go sendMetaEvent(metaEvent{
 		Name:      "Lead",
 		ID:        "lead-" + userID,

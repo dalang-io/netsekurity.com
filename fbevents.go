@@ -18,6 +18,10 @@ import (
 // Meta Pixel / Events Manager integration for netsekurity.com.
 // Client events track landing & UI actions; Purchase is fired SERVER-SIDE from the
 // Xendit webhook so it is accurate (value + currency) and not lost to ad-blockers.
+//
+// Consent comes first: the browser pixel is only created by consentGate()
+// (consent.go) after the visitor accepts, and every server-side call below is
+// skipped unless that visitor's request carried the consent cookie.
 
 const fbPixelID = "3401314126707507"
 const fbAPIBase = "https://graph.facebook.com/v21.0"
@@ -32,34 +36,22 @@ func fbToken() string { return getenv("META_CAPI_TOKEN", "") }
 // and payment-webhook paths, so an unbounded client would hang them.
 var fbClient = &http.Client{Timeout: 5 * time.Second}
 
-// metaPixelSnippet returns the <head> Meta Pixel base script (init + fbq.queue).
-// PageView is fired by default unless pageView=false (callers that fire it manually).
-func metaPixelSnippet(pageView bool) string {
-	pv := ""
-	if pageView {
-		pv = "fbq('track', 'PageView');"
-	}
-	return fmt.Sprintf(`<script>
-!function(f,b,e,v,n,t,s)
+// metaPixelBaseJS returns the Meta Pixel base code (library load + init).
+//
+// It is a JavaScript *string*, never markup: consentGate() hands it to the page
+// as a JSON literal and only turns it into a real <script> after the visitor
+// agrees. The old version returned the code inside a <script> tag, plus a
+// <noscript> tracking pixel — that one fired for every visitor with JavaScript
+// off, who had no way to consent at all, so it is gone.
+func metaPixelBaseJS() string {
+	return fmt.Sprintf(`!function(f,b,e,v,n,t,s)
 {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
 n.callMethod.apply(n,arguments):n.queue.push(arguments)};
 if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
 n.queue=[];t=b.createElement(e);t.async=!0;
 t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,
 document,'script','https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '%s');
-%s</script>
-<noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=%s&ev=PageView&noscript=1"/></noscript>
-`, fbPixelID, pv, fbPixelID)
-}
-
-// metaEventJS returns a short inline script that fires an fbq client event.
-func metaEventJS(event string, extra string) string {
-	if extra != "" {
-		return fmt.Sprintf("<script>fbq('track', '%s', %s);</script>", event, extra)
-	}
-	return fmt.Sprintf("<script>fbq('track', '%s');</script>", event)
+fbq('init', '%s');`, fbPixelID)
 }
 
 // metaUser carries the identifiers Meta requires on a Conversions API event.

@@ -186,9 +186,11 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	s = strings.ReplaceAll(s, "__ANALYTICS__", analyticsSnippet())
 	s = strings.ReplaceAll(s, "__SCANS_PROOF__", renderScansProof())
 
-	// Meta Pixel: base snippet (PageView) in head + ViewContent on pricing section.
-	s = strings.ReplaceAll(s, "__FBPIXEL__", metaPixelSnippet(true))
-	s = strings.ReplaceAll(s, "__FB_VIEWCONTENT__", metaEventJS("ViewContent", `{"content_name":"Pricing","content_type":"product","currency":"USD","value":0.0}`))
+	// Meta Pixel, consent-gated (see consent.go): the base snippet is handed to
+	// the page as an inert string and only becomes a script once the visitor
+	// agrees. ViewContent waits for nskTrack, which no-ops without consent.
+	s = strings.ReplaceAll(s, "__FBPIXEL__", consentGate(true))
+	s = strings.ReplaceAll(s, "__FB_VIEWCONTENT__", metaTrackJS("ViewContent", `{"content_name":"Pricing","content_type":"product","currency":"USD","value":0.0}`))
 	// Shared stack coverage section (real SVG logos).
 	s = strings.ReplaceAll(s, "__STACK_BLOCK__", string(renderStack()))
 	// Shared header component (landing + docs use the same renderHeader).
