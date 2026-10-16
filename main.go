@@ -196,35 +196,37 @@ func handleIndex(w http.ResponseWriter, r *http.Request) {
 	// the .prompt class, so the terminal flavour survives while each label stays
 	// scannable — "pip install cicd" did not read as "integrations" at a glance.
 	landingNav := []hdrLink{
-		{Href: "#how", Text: "how it works"},
-		{Href: "#features", Text: "features"},
-		{Href: "#stack", Text: "stack"},
-		{Href: "#cicd", Text: "ci/cd"},
-		{Href: "/docs", Text: "docs"},
-		{Href: "#pricing", Text: "pricing"},
-		{Href: "#faq", Text: "faq"},
+		{Href: "#how", Text: "how it works", UmamiEvent: "netsekurity_nav_cara_kerja"},
+		{Href: "#features", Text: "features", UmamiEvent: "netsekurity_nav_fitur"},
+		{Href: "#stack", Text: "stack", UmamiEvent: "netsekurity_nav_stack"},
+		{Href: "#cicd", Text: "ci/cd", UmamiEvent: "netsekurity_nav_cicd"},
+		{Href: "/docs", Text: "docs", UmamiEvent: "netsekurity_nav_docs"},
+		{Href: "#pricing", Text: "pricing", UmamiEvent: "netsekurity_nav_harga"},
+		{Href: "#faq", Text: "faq", UmamiEvent: "netsekurity_nav_faq"},
 	}
-	// Auth-aware nav: logged-in shows dashboard, anonymous shows login.
+	// Auth-aware nav: logged-in shows dashboard, anonymous shows login. Every CTA
+	// carries its umami click event; the destination travels as a property so one
+	// event name covers both the signed-in and the anonymous variant.
 	_, auErr := currentUser(r)
-	hdrNav := `<a href="/dashboard" class="whitespace-nowrap rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 glow">./dashboard<span class="cursor"></span></a>`
-	loginNav := `<a href="/login" class="whitespace-nowrap rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 glow">login</a>`
-	heroBtn := `<a href="/dashboard" class="rounded border-2 border-emerald-400 bg-emerald-500/10 px-5 py-2.5 font-mono text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 glow">./run pentest</a>`
-	verifyCTA := `<a href="/dashboard" class="mt-4 inline-block rounded border-2 border-cyan-400 bg-cyan-500/10 px-5 py-2.5 font-mono text-sm font-bold text-cyan-300 hover:bg-cyan-500/20 glow-cyan">add your domain →</a>`
+	hdrNav := `<a href="/dashboard" data-umami-event="netsekurity_header_masuk" data-umami-event-tujuan="/dashboard" class="whitespace-nowrap rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 glow">./dashboard<span class="cursor"></span></a>`
+	loginNav := `<a href="/login" data-umami-event="netsekurity_header_masuk" data-umami-event-tujuan="/login" class="whitespace-nowrap rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 glow">login</a>`
+	heroBtn := `<a href="/dashboard" data-umami-event="netsekurity_hero_cta" data-umami-event-tujuan="/dashboard" class="rounded border-2 border-emerald-400 bg-emerald-500/10 px-5 py-2.5 font-mono text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 glow">./run pentest</a>`
+	verifyCTA := `<a href="/dashboard" data-umami-event="netsekurity_verify_domain" data-umami-event-tujuan="/dashboard" class="mt-4 inline-block rounded border-2 border-cyan-400 bg-cyan-500/10 px-5 py-2.5 font-mono text-sm font-bold text-cyan-300 hover:bg-cyan-500/20 glow-cyan">add your domain →</a>`
 	if auErr != nil {
 		// Anonymous visitors are sent to Google OAuth by /dashboard. Say so on the
 		// button instead of surprising them with a consent screen.
-		heroBtn = `<a href="/login" class="rounded border-2 border-emerald-400 bg-emerald-500/10 px-5 py-2.5 font-mono text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 glow">./start — sign in with Google</a>`
-		verifyCTA = `<a href="/login" class="mt-4 inline-block rounded border-2 border-cyan-400 bg-cyan-500/10 px-5 py-2.5 font-mono text-sm font-bold text-cyan-300 hover:bg-cyan-500/20 glow-cyan">sign in to verify your domain →</a>`
+		heroBtn = `<a href="/login" data-umami-event="netsekurity_hero_cta" data-umami-event-tujuan="/login" class="rounded border-2 border-emerald-400 bg-emerald-500/10 px-5 py-2.5 font-mono text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 glow">./start — sign in with Google</a>`
+		verifyCTA = `<a href="/login" data-umami-event="netsekurity_verify_domain" data-umami-event-tujuan="/login" class="mt-4 inline-block rounded border-2 border-cyan-400 bg-cyan-500/10 px-5 py-2.5 font-mono text-sm font-bold text-cyan-300 hover:bg-cyan-500/20 glow-cyan">sign in to verify your domain →</a>`
 	}
 	s = strings.ReplaceAll(s, "__HERO_CTA__", heroBtn)
 	s = strings.ReplaceAll(s, "__VERIFY_CTA__", verifyCTA)
 
 	if auErr == nil {
 		s = strings.ReplaceAll(s, "__HEADER_BLOCK__", string(renderHeader(landingNav, template.HTML(hdrNav), "#top"))+headerMobileJS)
-		s = strings.ReplaceAll(s, "__FOOTER_AUTH_NAV__", `<a href="/dashboard" class="hover:text-emerald-300">dashboard</a>`)
+		s = strings.ReplaceAll(s, "__FOOTER_AUTH_NAV__", `<a href="/dashboard" data-umami-event="netsekurity_footer_masuk" data-umami-event-tujuan="/dashboard" class="hover:text-emerald-300">dashboard</a>`)
 	} else {
 		s = strings.ReplaceAll(s, "__HEADER_BLOCK__", string(renderHeader(landingNav, template.HTML(loginNav), "#top"))+headerMobileJS)
-		s = strings.ReplaceAll(s, "__FOOTER_AUTH_NAV__", `<a href="/login" class="hover:text-emerald-300">login</a>`)
+		s = strings.ReplaceAll(s, "__FOOTER_AUTH_NAV__", `<a href="/login" data-umami-event="netsekurity_footer_masuk" data-umami-event-tujuan="/login" class="hover:text-emerald-300">login</a>`)
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")

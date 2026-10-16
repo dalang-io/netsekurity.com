@@ -11,6 +11,20 @@ type hdrLink struct {
 	Text string
 	// NewTab opens in a new tab.
 	NewTab bool
+	// UmamiEvent is the click event name reported to umami, e.g.
+	// "netsekurity_nav_harga". Empty means the link is not tracked.
+	UmamiEvent string
+}
+
+// umamiAttrs renders the umami click attributes for one link. The event name is
+// spelled out per link (no guessing from the href) and the destination travels
+// along as a property, so the report can tell which nav item was used.
+func umamiAttrs(l hdrLink) string {
+	if l.UmamiEvent == "" {
+		return ""
+	}
+	return ` data-umami-event="` + template.HTMLEscapeString(l.UmamiEvent) + `"` +
+		` data-umami-event-tujuan="` + template.HTMLEscapeString(l.Href) + `"`
 }
 
 // renderHeader renders the shared site header (brand + desktop nav + mobile burger
@@ -28,7 +42,7 @@ func renderHeader(nav []hdrLink, authNav template.HTML, brandURL string) templat
 		if l.NewTab {
 			target = ` target="_blank" rel="noopener"`
 		}
-		desktop.WriteString(`<a href="` + template.HTMLEscapeString(l.Href) + `"` + target + ` class="prompt whitespace-nowrap hover:text-emerald-300">` + template.HTMLEscapeString(l.Text) + `</a>`)
+		desktop.WriteString(`<a href="` + template.HTMLEscapeString(l.Href) + `"` + target + umamiAttrs(l) + ` class="prompt whitespace-nowrap hover:text-emerald-300">` + template.HTMLEscapeString(l.Text) + `</a>`)
 	}
 
 	var mobile strings.Builder
@@ -37,7 +51,7 @@ func renderHeader(nav []hdrLink, authNav template.HTML, brandURL string) templat
 		if l.NewTab {
 			target = ` target="_blank" rel="noopener"`
 		}
-		mobile.WriteString(`<a href="` + template.HTMLEscapeString(l.Href) + `"` + target + ` class="prompt whitespace-nowrap rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">` + template.HTMLEscapeString(l.Text) + `</a>`)
+		mobile.WriteString(`<a href="` + template.HTMLEscapeString(l.Href) + `"` + target + umamiAttrs(l) + ` class="prompt whitespace-nowrap rounded px-2 py-2 text-gray-300 hover:bg-white/5 hover:text-emerald-300">` + template.HTMLEscapeString(l.Text) + `</a>`)
 	}
 
 	auth := string(authNav)
