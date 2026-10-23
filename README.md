@@ -189,7 +189,9 @@ survives only in internal identifiers (`/api/partner/v1`, `PARTNER_SECRET`,
 HMAC is `sha256(PARTNER_SECRET, partner_id \n timestamp \n nonce \n body)`, with a
 ±5-minute window and a single-use nonce. `proof_type=txt` requires a verified
 domain; `proof_type=cloudflare` records a Cloudflare-activated hostname asserted
-by the platform. Platform-owned hostnames (`*.dalang.io`, `*.netsekurity.com`)
+by the platform; `proof_type=registrar` records the hosting panel's assertion
+that the domain was sold/verified at the registrar
+(`domains.verified_by='registrar'`). Platform-owned hostnames (`*.dalang.io`, `*.netsekurity.com`)
 are refused. Attempts are capped at 3 and a scan that passes its deadline is
 failed; see `AGENT_WORKER.md` and `PLAN-dalang-integration.md`.
 
