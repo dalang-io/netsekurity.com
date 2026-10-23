@@ -14,6 +14,8 @@ import (
 type suUser struct {
 	ID, Email, Name, Role string
 	Credits               float64
+	// PartnerUser is the Dalang external id for synthetic partner accounts.
+	PartnerUser string
 }
 
 type suTrx struct {
@@ -24,6 +26,9 @@ type suTrx struct {
 type suDomain struct {
 	ID                                        int64
 	UserEmail, Domain, Status, TXT, CreatedAt string
+	// PartnerUser is the Dalang external user id when this domain belongs to a
+	// partner scan account; the stored email is a synthetic placeholder.
+	PartnerUser string
 }
 
 type suPentest struct {
@@ -31,6 +36,19 @@ type suPentest struct {
 	// Findings is the severity breakdown reported by the scanner, pre-rendered;
 	// empty when the worker never sent one.
 	Findings template.HTML
+	// Partner scans belong to a synthetic account. Show who they really belong
+	// to instead of the placeholder address.
+	Origin        string
+	PartnerUser   string
+	ExternalOrder string
+}
+
+// shortID keeps UUIDs readable in the admin tables.
+func shortID(s string) string {
+	if len(s) <= 8 {
+		return s
+	}
+	return s[:8] + "…"
 }
 
 // suStats are the aggregates the console needs at a glance. Without them the
@@ -133,11 +151,14 @@ func handleAdmin(w http.ResponseWriter, r *http.Request) {
 	db.QueryRow(`SELECT COUNT(*) FROM contact_messages WHERE handled_at IS NULL`).Scan(&st.ContactsOpen)
 
 	// Bounded: this query used to load every user row on every page view.
-	rows, _ := db.Query(`SELECT u.id, u.email, COALESCE(u.name,''), COALESCE(u.role,'user'), COALESCE(cb.balance,0)
-		FROM users u LEFT JOIN credit_balance cb ON cb.user_id=u.id ORDER BY u.created_at DESC LIMIT 500`)
+	rows, _ := db.Query(`SELECT u.id, u.email, COALESCE(u.name,''), COALESCE(u.role,'user'), COALESCE(cb.balance,0),
+			COALESCE(pa.external_user_id,'')
+		FROM users u LEFT JOIN credit_balance cb ON cb.user_id=u.id
+		LEFT JOIN partner_accounts pa ON pa.user_id=u.id AND pa.platform='dalang'
+		ORDER BY u.created_at DESC LIMIT 500`)
 	for rows.Next() {
 		var u suUser
-		rows.Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.Credits)
+		rows.Scan(&u.ID, &u.Email, &u.Name, &u.Role, &u.Credits, &u.PartnerUser)
 		data.Users = append(data.Users, u)
 	}
 	rows.Close()
@@ -152,24 +173,29 @@ func handleAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 	trows.Close()
 
-	drows, _ := db.Query(`SELECT d.id, COALESCE(u.email,''), d.domain, d.status, d.txt_verification_token, d.created_at
-		FROM domains d LEFT JOIN users u ON u.id=d.user_id ORDER BY d.id DESC`)
+	drows, _ := db.Query(`SELECT d.id, COALESCE(u.email,''), d.domain, d.status, d.txt_verification_token, d.created_at,
+			COALESCE(pa.external_user_id,'')
+		FROM domains d LEFT JOIN users u ON u.id=d.user_id
+		LEFT JOIN partner_accounts pa ON pa.user_id=d.user_id AND pa.platform='dalang'
+		ORDER BY d.id DESC`)
 	for drows.Next() {
 		var d suDomain
-		drows.Scan(&d.ID, &d.UserEmail, &d.Domain, &d.Status, &d.TXT, &d.CreatedAt)
+		drows.Scan(&d.ID, &d.UserEmail, &d.Domain, &d.Status, &d.TXT, &d.CreatedAt, &d.PartnerUser)
 		data.Domains = append(data.Domains, d)
 	}
 	drows.Close()
 
 	prows, _ := db.Query(`SELECT p.id, COALESCE(u.email,''), COALESCE(d.domain,''), p.status, COALESCE(p.mode,'standard'), COALESCE(p.report_ref,''), p.created_at,
-			p.findings_reported, p.findings_critical, p.findings_high, p.findings_medium, p.findings_low, p.findings_info
+			p.findings_reported, p.findings_critical, p.findings_high, p.findings_medium, p.findings_low, p.findings_info,
+			COALESCE(p.origin,'self'), COALESCE(pa.external_user_id,''), COALESCE(p.external_order_id,'')
 		FROM pentests p LEFT JOIN users u ON u.id=p.user_id LEFT JOIN domains d ON d.id=p.domain_id
+		LEFT JOIN partner_accounts pa ON pa.user_id=p.user_id AND pa.platform='dalang'
 		ORDER BY p.created_at DESC LIMIT 100`)
 	for prows.Next() {
 		var p suPentest
 		var reported, crit, high, med, low, info int
 		prows.Scan(&p.ID, &p.UserEmail, &p.Domain, &p.Status, &p.Mode, &p.ReportRef, &p.CreatedAt,
-			&reported, &crit, &high, &med, &low, &info)
+			&reported, &crit, &high, &med, &low, &info, &p.Origin, &p.PartnerUser, &p.ExternalOrder)
 		if reported == 1 {
 			p.Findings = template.HTML(severityChips(map[string]int{
 				"critical": crit, "high": high, "medium": med, "low": low, "info": info}))
@@ -396,7 +422,10 @@ func handleReport(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, filepath.Join(reportsDir(), name))
 }
 
-var suTpl = template.Must(template.New("su").Funcs(template.FuncMap{"cssHash": func() string { return cssHash }}).Parse(suHTML))
+var suTpl = template.Must(template.New("su").Funcs(template.FuncMap{
+	"cssHash": func() string { return cssHash },
+	"shortID": shortID,
+}).Parse(suHTML))
 
 const suHTML = `{{define "su"}}<!DOCTYPE html>
 <html lang="en">
@@ -512,12 +541,14 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
         <tbody>
         {{range .Users}}
         <tr class="border-t border-white/10">
-          <td class="py-1 text-white">{{.Email}}</td>
+          <td class="py-1 text-white">{{if .PartnerUser}}<span class="rounded bg-cyan-500/15 px-1 text-[10px] text-cyan-300">dalang</span> <span class="text-gray-400" title="{{.ID}}">{{shortID .PartnerUser}}</span>{{else}}{{.Email}}{{end}}</td>
           <td>{{.Name}}</td>
           <td>{{if eq .Role "admin"}}<span class="text-yellow-300">admin</span>{{else}}<span class="text-gray-400">user</span>{{end}}</td>
           <td class="text-emerald-300">{{printf "%.1f" .Credits}}</td>
           <td>
-            {{if eq .ID $.CurrentID}}
+            {{if .PartnerUser}}
+            <span class="font-mono text-[11px] text-gray-600">— partner —</span>
+            {{else if eq .ID $.CurrentID}}
             <span class="font-mono text-[11px] text-gray-600" title="You cannot change your own role.">— you —</span>
             {{else}}
             <form method="post" action="/su/users/role" class="flex gap-1"
@@ -532,12 +563,16 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
             {{end}}
           </td>
           <td>
+            {{if .PartnerUser}}
+            <span class="font-mono text-[11px] text-gray-600">—</span>
+            {{else}}
             <form method="post" action="/su/users/credit" class="flex gap-1"
               onsubmit="return confirm('Grant ' + this.amount.value + ' credit(s) to {{.Email}}?\n\nCredits are the product currency. This is immediate and has no undo.')">
               <input type="hidden" name="user_id" value="{{.ID}}"/>
               <input name="amount" type="number" step="0.5" min="0.5" required placeholder="amt" aria-label="Credit amount" class="w-16 rounded border border-white/15 bg-ink px-1 py-0.5 font-mono text-[11px] text-white"/>
               <button class="rounded border border-cyan-400/60 px-2 py-0.5 text-[11px] font-bold text-cyan-300 hover:bg-cyan-500/15">+credit</button>
             </form>
+            {{end}}
           </td>
         </tr>
         {{end}}
@@ -590,7 +625,7 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
         <tbody>
         {{range .Domains}}
         <tr class="border-t border-white/10">
-          <td class="py-1 text-gray-300">{{.UserEmail}}</td>
+          <td class="py-1 text-gray-300">{{if .PartnerUser}}<span class="rounded bg-cyan-500/15 px-1 text-[10px] text-cyan-300">dalang</span> <span class="text-gray-400">{{shortID .PartnerUser}}</span>{{else}}{{.UserEmail}}{{end}}</td>
           <td class="text-white">{{.Domain}}</td>
           <td>{{if eq .Status "verified"}}<span class="text-emerald-300">[verified]</span>{{else}}<span class="text-yellow-300">[{{.Status}}]</span>{{end}}</td>
           <td data-pentest-cell="{{.ID}}">
@@ -622,7 +657,7 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
         {{range .Pentests}}
         <tr class="border-t border-white/10">
           <td class="py-1 text-gray-300">{{.ID}}</td>
-          <td>{{.UserEmail}}</td>
+          <td>{{if .PartnerUser}}<span class="rounded bg-cyan-500/15 px-1 text-[10px] text-cyan-300">dalang</span> <span class="text-gray-400" title="{{.ExternalOrder}}">{{shortID .PartnerUser}}</span>{{else}}{{.UserEmail}}{{end}}</td>
           <td class="text-white">{{.Domain}}</td>
           <td>{{if eq .Mode "destructive"}}<span class="text-red-300 font-bold">destructive</span>{{else}}<span class="text-cyan-300">{{.Mode}}</span>{{end}}</td>
           <td>{{.Status}}</td>

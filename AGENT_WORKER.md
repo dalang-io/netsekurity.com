@@ -138,6 +138,9 @@ consume Netsekurity credits and never write a `credit_transactions` row.
   `proof_type=cloudflare` records a Cloudflare-activated hostname asserted by
   the platform (`domains.verified_by='partner'`). Platform-owned hostnames
   (`*.dalang.io`, `*.netsekurity.com`) are refused.
+- **Admin view:** `/su` labels partner rows `dalang · <external id>` (users,
+  domains, and pentests). The synthetic `…@partner.invalid` address is an
+  internal placeholder and never reaches the console.
 - **Auth:** HMAC-SHA256 over `partner_id \n timestamp \n nonce \n body` with
   `PARTNER_SECRET`, a ±5-minute window and a single-use nonce ledger
   (`partner_nonces`). A request is replayed only via its idempotency key
