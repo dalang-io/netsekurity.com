@@ -1,10 +1,8 @@
 # Rencana integrasi scan Netsekurity ke platform Dalang
 
-> Status: **sisi Netsekurity sudah diimplementasikan** (partner API, deadline,
-> refund gate). Sisi `api.dalang.io`, `hosting.dalang.io`, dan `dalang.io` belum.
-> Keputusan pemilik per 2026-10-23.
-> Dokumen ini adalah sumber kebenaran untuk desain; kontrak rinci per endpoint
-> menyusul sebelum kode ditulis.
+> Status: **Netsekurity, api.dalang.io, dan dalang.io sudah diimplementasikan.**
+> `hosting.dalang.io` belum. Keputusan pemilik per 2026-10-23.
+> Dokumen ini adalah sumber kebenaran untuk desain dan keadaan implementasi.
 
 ## Tujuan
 
@@ -219,6 +217,26 @@ Sudah ada di repo ini:
 
 Belum ada (memang di luar sisi ini): endpoint callback push. Kontraknya polling
 dari api.dalang.io ke `GET /api/partner/v1/scans/{id}`.
+
+## Operasional: mengaktifkan dan merotasi
+
+Produksi **belum di-deploy**. Partner API dalam keadaan mati sampai kredensial
+dipasang, dan itu harus dilakukan di kedua sisi:
+
+1. Netsekurity `.env`: `PARTNER_ID=dalang`, `PARTNER_SECRET=<acak>`, lalu
+   stop/start `netsekurity.service`.
+2. api.dalang.io `.env`: `PARTNER_ID`, `PARTNER_SECRET` (nilai sama),
+   `PARTNER_API_URL=http://127.0.0.1:8094` (default),
+   `PARTNER_PUBLIC_URL=https://netsekurity.com` (untuk redirect laporan), lalu
+   deploy API seperti biasa (migrasi `20261023130000` dijalankan lebih dulu).
+3. Sebelum secret dipasang, endpoint partner menjawab 503
+   `PARTNER_API_DISABLED`; scan mandiri Netsekurity tidak terpengaruh.
+
+**Rotasi:** ganti `PARTNER_SECRET` di kedua `.env`, restart Netsekurity lalu
+api.dalang.io. Tidak ada state yang perlu dimigrasikan — nonce/replay ledger
+hanya berisi permintaan lama dan kedaluwarsa sendiri. Rotasi di satu sisi lebih
+dulu akan menolak semua scan (401) sampai sisi lain menyusul, jadi urutkan
+Netsekurity → API atau sebaliknya dengan jeda sesingkat mungkin.
 
 ## Keamanan dan penyalahgunaan
 
