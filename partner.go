@@ -36,6 +36,10 @@ const (
 	partnerReportURLTTL    = 10 * time.Minute
 	partnerProofTXT        = "txt"
 	partnerProofCloudflare = "cloudflare"
+	// Registrar/panel proof: a trusted platform (hosting.dalang.io) asserts it
+	// sold or verified the domain at the registrar. Still an assertion, but a
+	// stronger one than an arbitrary row.
+	partnerProofRegistrar = "registrar"
 )
 
 func partnerSecret() string { return getenv("PARTNER_SECRET", "") }
@@ -294,7 +298,7 @@ func handlePartnerReserve(w http.ResponseWriter, r *http.Request) {
 		partnerErr(w, http.StatusBadRequest, "TARGET_NOT_ALLOWED", "platform-owned hostnames cannot be scanned")
 		return
 	}
-	if req.ProofType != partnerProofTXT && req.ProofType != partnerProofCloudflare {
+	if req.ProofType != partnerProofTXT && req.ProofType != partnerProofCloudflare && req.ProofType != partnerProofRegistrar {
 		partnerErr(w, http.StatusBadRequest, "PARTNER_PROOF_INVALID", "proof_type must be txt or cloudflare")
 		return
 	}
@@ -316,15 +320,19 @@ func handlePartnerReserve(w http.ResponseWriter, r *http.Request) {
 				"add the _netsekurity TXT record and verify the domain first")
 			return
 		}
-	case partnerProofCloudflare:
-		// The platform holds a Cloudflare-activated hostname for this user; the
-		// HMAC proves the assertion came from the platform.
+	case partnerProofCloudflare, partnerProofRegistrar:
+		// The platform holds a Cloudflare-activated hostname, or sold the domain
+		// at the registrar; the HMAC proves the assertion came from the platform.
+		verifiedBy := "partner"
+		if req.ProofType == partnerProofRegistrar {
+			verifiedBy = "registrar"
+		}
 		tok := "partner-" + req.ExternalOrderID
 		if _, err := db.Exec(`INSERT INTO domains (user_id, domain, txt_verification_token, status, verified_at, verified_by, verified_ref)
-			VALUES (?,?,?,'verified',?,'partner',?)
+			VALUES (?,?,?,'verified',?,?,?)
 			ON CONFLICT(user_id, domain) DO UPDATE SET status='verified', verified_at=excluded.verified_at,
-				verified_by='partner', verified_ref=excluded.verified_ref`,
-			userID, domain, tok, now(), req.ProofRef); err != nil {
+				verified_by=excluded.verified_by, verified_ref=excluded.verified_ref`,
+			userID, domain, tok, now(), verifiedBy, req.ProofRef); err != nil {
 			partnerErr(w, http.StatusInternalServerError, "PARTNER_DOMAIN", "cannot record the domain")
 			return
 		}

@@ -135,8 +135,9 @@ consume Netsekurity credits and never write a `credit_transactions` row.
   been claimed 3 times is marked `failed` instead of being requeued, so a dying
   worker cannot spin the order forever.
 - **Ownership proof:** `proof_type=txt` requires an existing verified domain;
-  `proof_type=cloudflare` records a Cloudflare-activated hostname asserted by
-  the platform (`domains.verified_by='partner'`). Platform-owned hostnames
+  `proof_type=cloudflare` records a Cloudflare-activated hostname, and
+  `proof_type=registrar` an assertion from the hosting panel that the domain was
+  sold/verified at the registrar (`domains.verified_by='registrar'`). Platform-owned hostnames
   (`*.dalang.io`, `*.netsekurity.com`) are refused.
 - **Admin view:** `/su` labels Dalang-created rows `dalang · <external id>` (users,
   domains, and pentests). The synthetic `…@partner.invalid` address is an
