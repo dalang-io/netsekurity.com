@@ -11,6 +11,12 @@ import (
 	"time"
 )
 
+// xenditBaseURL is the invoice API origin. Production leaves it unset and talks
+// to the real API; tests point it at a local stub so no live invoice is created.
+func xenditBaseURL() string {
+	return strings.TrimRight(getenv("XENDIT_API_BASE_URL", "https://api.xendit.co"), "/")
+}
+
 // handleTopUp creates a Xendit invoice for a credit package and returns the
 // payment URL (used from the dashboard, HTMX friendly).
 func handleTopUp(w http.ResponseWriter, r *http.Request) {
@@ -59,7 +65,7 @@ func handleTopUp(w http.ResponseWriter, r *http.Request) {
 	})
 
 	auth := base64.StdEncoding.EncodeToString([]byte(getenv("XENDIT_SECRET_KEY", "") + ":"))
-	req, _ := http.NewRequest("POST", "https://api.xendit.co/v2/invoices", bytes.NewReader(payload))
+	req, _ := http.NewRequest("POST", xenditBaseURL()+"/v2/invoices", bytes.NewReader(payload))
 	req.Header.Set("Authorization", "Basic "+auth)
 	req.Header.Set("Content-Type", "application/json")
 	client := &http.Client{Timeout: 30 * time.Second}
@@ -123,7 +129,7 @@ func topUpAmountUSD(usd float64, currency string, rate float64) int64 {
 // xenditInvoiceStatus returns the current status of an invoice on Xendit.
 func xenditInvoiceStatus(invoiceID string) (string, error) {
 	auth := base64.StdEncoding.EncodeToString([]byte(getenv("XENDIT_SECRET_KEY", "") + ":"))
-	req, _ := http.NewRequest("GET", "https://api.xendit.co/v2/invoices/"+invoiceID, nil)
+	req, _ := http.NewRequest("GET", xenditBaseURL()+"/v2/invoices/"+invoiceID, nil)
 	req.Header.Set("Authorization", "Basic "+auth)
 	resp, err := (&http.Client{Timeout: 20 * time.Second}).Do(req)
 	if err != nil {

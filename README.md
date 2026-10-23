@@ -159,8 +159,11 @@ Created automatically at startup (`db.go`); migrations run idempotently via `sch
 ## Payments — Xendit
 
 - **Top-up:** `POST /api/topup` → creates a Xendit invoice for the selected package.
-  Currency = `XENDIT_CURRENCY` (default **IDR**; USD unsupported on this account yet — charging
-  USD returns `UNSUPPORTED_CURRENCY`). IDR amount = `usd_price × XENDIT_USD_RATE`.
+  Currency = `XENDIT_CURRENCY` (code default **USD**). This Xendit account is not enabled
+  for USD — a USD invoice is rejected with `UNSUPPORTED_CURRENCY` — so production sets
+  `XENDIT_CURRENCY=IDR`; the checkout footnote and the `/su` banner state the converted
+  amount. IDR amount = `usd_price × XENDIT_USD_RATE`. Switch back to USD only once Xendit
+  enables it on the account.
 - **Auto-credit:** the poller checks pending payments against Xendit and credits when
   `PAID`/`SETTLED` (idempotent). Runs every 30s + on dashboard load. Webhook `/webhook/xendit`
   is optional (token-gated by `XENDIT_CALLBACK_KEY`).
@@ -244,8 +247,9 @@ Full template: [`env.example`](env.example). Key vars:
 | `JWT_SECRET` | session signing (reuse `api.dalang.io/.env`) |
 | `SUPER_ADMIN_EMAIL` | default `hans@dalang.io` |
 | `XENDIT_SECRET_KEY/CALLBACK_KEY` | Xendit (reuse `api.dalang.io/.env`) |
-| `XENDIT_CURRENCY` | `IDR` (default) or `USD` (if enabled) |
+| `XENDIT_CURRENCY` | `USD` (code default) or `IDR` (required while the account is IDR-only) |
 | `XENDIT_USD_RATE` | IDR-per-USD for IDR charges |
+| `XENDIT_API_BASE_URL` | invoice API origin; default `https://api.xendit.co`. Set only to point tests at a local stub |
 | `BOT_AUTH_TOKEN` | agent↔platform secret (`openssl rand -hex 32`) |
 | `PLAUSIBLE_DOMAIN` / `GA_MEASUREMENT_ID` | optional analytics tag on public pages (set one) |
 
