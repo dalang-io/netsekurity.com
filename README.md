@@ -168,11 +168,15 @@ Created automatically at startup (`db.go`); migrations run idempotently via `sch
   `PAID`/`SETTLED` (idempotent). Runs every 30s + on dashboard load. Webhook `/webhook/xendit`
   is optional (token-gated by `XENDIT_CALLBACK_KEY`).
 
-### Partner API (Dalang platform)
+### Dalang platform scan API
 
 `api.dalang.io` sells scans to its own customers and uses Netsekurity as
 fulfilment. The platform debits its wallet, then drives this API; no credit is
-consumed here and a failed partner scan is refunded on the Dalang side.
+consumed here and a failed platform scan is refunded on the Dalang side.
+
+Netsekurity is a **Dalang Pte Ltd product**, not a third-party partner. `partner`
+survives only in internal identifiers (`/api/partner/v1`, `PARTNER_SECRET`,
+`billing_source='partner'`).
 
 | Endpoint | Auth | Purpose |
 |---|---|---|

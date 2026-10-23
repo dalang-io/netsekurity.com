@@ -547,7 +547,7 @@ const suHTML = `{{define "su"}}<!DOCTYPE html>
           <td class="text-emerald-300">{{printf "%.1f" .Credits}}</td>
           <td>
             {{if .PartnerUser}}
-            <span class="font-mono text-[11px] text-gray-600">— partner —</span>
+            <span class="font-mono text-[11px] text-gray-600">— Dalang —</span>
             {{else if eq .ID $.CurrentID}}
             <span class="font-mono text-[11px] text-gray-600" title="You cannot change your own role.">— you —</span>
             {{else}}

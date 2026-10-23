@@ -116,9 +116,9 @@ Full steps, verification and troubleshooting: **[HERMES_UPDATE.md](HERMES_UPDATE
 | `/api/partner/v1/scans/{id}` | GET | partner HMAC | status, attempts, deadline, findings, signed report URL |
 | `/api/partner/v1/scans/{id}/report?exp=&sig=` | GET | signed URL | PDF download without a session |
 
-## Partner scans (Dalang platform)
+## Dalang platform scans
 
-Partner scans are created by `api.dalang.io` through `partner.go`. They never
+Dalang platform scans are created by `api.dalang.io` through `partner.go`. They never
 consume Netsekurity credits and never write a `credit_transactions` row.
 
 - **States:** `reserved` (not claimable) → `queued` (after `confirm`) →
@@ -131,14 +131,14 @@ consume Netsekurity credits and never write a `credit_transactions` row.
   `queued_at + 6h`. `sweepPartnerScans()` (called by the claim handler and the
   payment poller) fails queued/running rows past the deadline and cancels
   expired reservations.
-- **Attempts:** `attempts` increments on every claim. A partner scan that has
+- **Attempts:** `attempts` increments on every claim. A platform-created scan that has
   been claimed 3 times is marked `failed` instead of being requeued, so a dying
   worker cannot spin the order forever.
 - **Ownership proof:** `proof_type=txt` requires an existing verified domain;
   `proof_type=cloudflare` records a Cloudflare-activated hostname asserted by
   the platform (`domains.verified_by='partner'`). Platform-owned hostnames
   (`*.dalang.io`, `*.netsekurity.com`) are refused.
-- **Admin view:** `/su` labels partner rows `dalang · <external id>` (users,
+- **Admin view:** `/su` labels Dalang-created rows `dalang · <external id>` (users,
   domains, and pentests). The synthetic `…@partner.invalid` address is an
   internal placeholder and never reaches the console.
 - **Auth:** HMAC-SHA256 over `partner_id \n timestamp \n nonce \n body` with
@@ -184,7 +184,7 @@ POST /api/pentests/worker/fail        (header: X-Bot-Token)
 - Only a pentest in `running` may fail; anything else returns `409`.
 - For self-serve scans the credit is refunded automatically: 1 for a standard scan, 2
   for a destructive one, recorded as an `admin_credit` transaction (the type the
-  dashboard lists) with the pentest id as reference. Partner scans
+  dashboard lists) with the pentest id as reference. Dalang platform scans
   (`billing_source='partner'`) are paid on the Dalang wallet and get `refunded:0` —
   the platform issues that refund.
 - The dashboard shows a red `failed` badge plus *"scan failed — credit refunded"*, and

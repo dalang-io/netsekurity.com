@@ -6,6 +6,10 @@
 
 ## Tujuan
 
+> Netsekurity adalah produk milik **Dalang Pte Ltd**, bukan mitra pihak ketiga.
+> Istilah "partner" di dokumen ini hanya nama internal API/kolom, bukan hubungan
+> bisnis.
+
 Pelanggan `dalang.io`, `api.dalang.io`, dan `hosting.dalang.io` yang memiliki
 domain terverifikasi bisa memindai domainnya dengan mesin scan Netsekurity.
 Harga khusus: **NET Rp 10.000 per scan** (PPN Rp 1.100, debit wallet Rp 11.100),
