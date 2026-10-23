@@ -168,6 +168,27 @@ Created automatically at startup (`db.go`); migrations run idempotently via `sch
   `PAID`/`SETTLED` (idempotent). Runs every 30s + on dashboard load. Webhook `/webhook/xendit`
   is optional (token-gated by `XENDIT_CALLBACK_KEY`).
 
+### Partner API (Dalang platform)
+
+`api.dalang.io` sells scans to its own customers and uses Netsekurity as
+fulfilment. The platform debits its wallet, then drives this API; no credit is
+consumed here and a failed partner scan is refunded on the Dalang side.
+
+| Endpoint | Auth | Purpose |
+|---|---|---|
+| `POST /api/partner/v1/scans/reserve` | HMAC | reserve a scan (not queued, not claimable) |
+| `POST /api/partner/v1/scans/{id}/confirm` | HMAC | payment confirmed → `queued`, deadline starts (6h) |
+| `POST /api/partner/v1/scans/{id}/release` | HMAC | abandon an unpaid reservation |
+| `GET /api/partner/v1/scans/{id}` | HMAC | status, attempts, deadline, findings, signed report URL |
+| `GET /api/partner/v1/scans/{id}/report?exp=&sig=` | signed URL | PDF download without a session |
+
+HMAC is `sha256(PARTNER_SECRET, partner_id \n timestamp \n nonce \n body)`, with a
+±5-minute window and a single-use nonce. `proof_type=txt` requires a verified
+domain; `proof_type=cloudflare` records a Cloudflare-activated hostname asserted
+by the platform. Platform-owned hostnames (`*.dalang.io`, `*.netsekurity.com`)
+are refused. Attempts are capped at 3 and a scan that passes its deadline is
+failed; see `AGENT_WORKER.md` and `PLAN-dalang-integration.md`.
+
 ---
 
 ## Domain Verification (TXT)
@@ -250,6 +271,7 @@ Full template: [`env.example`](env.example). Key vars:
 | `XENDIT_CURRENCY` | `USD` (code default) or `IDR` (required while the account is IDR-only) |
 | `XENDIT_USD_RATE` | IDR-per-USD for IDR charges |
 | `XENDIT_API_BASE_URL` | invoice API origin; default `https://api.xendit.co`. Set only to point tests at a local stub |
+| `PARTNER_ID` / `PARTNER_SECRET` | Dalang partner API; empty secret disables the endpoints (503) |
 | `BOT_AUTH_TOKEN` | agent↔platform secret (`openssl rand -hex 32`) |
 | `PLAUSIBLE_DOMAIN` / `GA_MEASUREMENT_ID` | optional analytics tag on public pages (set one) |
 

@@ -192,6 +192,7 @@ func startPaymentPolling() {
 	ticker := time.NewTicker(30 * time.Second)
 	for {
 		syncPendingPayments()
+		sweepPartnerScans()
 		<-ticker.C
 	}
 }

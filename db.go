@@ -127,6 +127,26 @@ func initDB() error {
 			created_at TEXT NOT NULL DEFAULT (datetime('now')),
 			last_used_at TEXT
 		)`,
+		// Partner (Dalang platform) integration: one mapping row per external
+		// user, one replay cache per idempotency key, one nonce ledger for HMAC
+		// replay protection. None of this touches the credit ledger.
+		`CREATE TABLE IF NOT EXISTS partner_accounts (
+			platform TEXT NOT NULL,
+			external_user_id TEXT NOT NULL,
+			user_id TEXT NOT NULL,
+			created_at TEXT NOT NULL DEFAULT (datetime('now')),
+			PRIMARY KEY (platform, external_user_id)
+		)`,
+		`CREATE TABLE IF NOT EXISTS partner_nonces (
+			nonce TEXT PRIMARY KEY,
+			seen_at TEXT NOT NULL
+		)`,
+		`CREATE TABLE IF NOT EXISTS partner_requests (
+			idempotency_key TEXT PRIMARY KEY,
+			platform TEXT NOT NULL,
+			response_json TEXT NOT NULL,
+			created_at TEXT NOT NULL DEFAULT (datetime('now'))
+		)`,
 	}
 	for _, s := range stmts {
 		if _, err := db.Exec(s); err != nil {
@@ -194,6 +214,38 @@ func initDB() error {
 			return fmt.Errorf("add users.role: %w", err)
 		}
 	}
+
+	// Partner scans (Dalang platform). `origin` separates self-serve scans from
+	// partner-created ones; `billing_source` decides whether the worker may
+	// refund a Netsekurity credit (partner scans are paid on the platform, so a
+	// credit refund there would invent balance). `attempts`/`deadline_at` bound
+	// the retry loop, and `failure_reason` surfaces why a scan closed.
+	for _, c := range []struct{ name, ddl string }{
+		{"origin", `ALTER TABLE pentests ADD COLUMN origin TEXT NOT NULL DEFAULT 'self'`},
+		{"billing_source", `ALTER TABLE pentests ADD COLUMN billing_source TEXT NOT NULL DEFAULT 'credits'`},
+		{"external_order_id", `ALTER TABLE pentests ADD COLUMN external_order_id TEXT`},
+		{"attempts", `ALTER TABLE pentests ADD COLUMN attempts INTEGER NOT NULL DEFAULT 0`},
+		{"deadline_at", `ALTER TABLE pentests ADD COLUMN deadline_at TEXT`},
+		{"queued_at", `ALTER TABLE pentests ADD COLUMN queued_at TEXT`},
+		{"failure_reason", `ALTER TABLE pentests ADD COLUMN failure_reason TEXT`},
+		{"verified_by", `ALTER TABLE domains ADD COLUMN verified_by TEXT NOT NULL DEFAULT 'txt'`},
+		{"verified_ref", `ALTER TABLE domains ADD COLUMN verified_ref TEXT`},
+	} {
+		table := "pentests"
+		if c.name == "verified_by" || c.name == "verified_ref" {
+			table = "domains"
+		}
+		if !columnExists(table, c.name) {
+			if _, err := db.Exec(c.ddl); err != nil {
+				return fmt.Errorf("add %s.%s: %w", table, c.name, err)
+			}
+		}
+	}
+	// One platform order may create at most one scan, even if the reserve call
+	// is retried with a different idempotency key.
+	db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS pentests_partner_order
+		ON pentests(billing_source, external_order_id)
+		WHERE external_order_id IS NOT NULL AND external_order_id != ''`)
 
 	// Make sure the super admin exists (linked lazily on Google login) and is admin.
 	sa := getenv("SUPER_ADMIN_EMAIL", "hans@dalang.io")

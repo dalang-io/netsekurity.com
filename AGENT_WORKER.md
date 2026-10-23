@@ -109,7 +109,39 @@ Full steps, verification and troubleshooting: **[HERMES_UPDATE.md](HERMES_UPDATE
 | `/api/pentests/list` | GET | session (user) | HTMX list of user's pentests |
 | `/api/pentests/worker/claim` | POST | `X-Bot-Token` | agent claims next queued job |
 | `/api/pentests/worker/report` | POST | `X-Bot-Token` | agent uploads completed PDF (+ optional `findings`) |
-| `/reports/{name}.pdf` | GET | session (owner/admin) | report download |
+| `/api/pentests/worker/fail` | POST | `X-Bot-Token` | agent closes a scan it cannot finish; refunds credits only for self-serve scans |
+| `/api/partner/v1/scans/reserve` | POST | partner HMAC | platform reserves a scan (not queued, no credit) |
+| `/api/partner/v1/scans/{id}/confirm` | POST | partner HMAC | platform confirms payment; scan enters the queue |
+| `/api/partner/v1/scans/{id}/release` | POST | partner HMAC | platform abandons an unpaid reservation |
+| `/api/partner/v1/scans/{id}` | GET | partner HMAC | status, attempts, deadline, findings, signed report URL |
+| `/api/partner/v1/scans/{id}/report?exp=&sig=` | GET | signed URL | PDF download without a session |
+
+## Partner scans (Dalang platform)
+
+Partner scans are created by `api.dalang.io` through `partner.go`. They never
+consume Netsekurity credits and never write a `credit_transactions` row.
+
+- **States:** `reserved` (not claimable) → `queued` (after `confirm`) →
+  `running` → `completed` / `failed`; `reserved` → `cancelled` on `release` or
+  reservation expiry.
+- **Billing:** `pentests.billing_source='partner'` and `origin='dalang'`. The
+  worker refuses to refund credits for these rows; a failed scan is compensated
+  on the Dalang wallet by the platform.
+- **Deadline:** `deadline_at` is the reservation TTL while `reserved`, then
+  `queued_at + 6h`. `sweepPartnerScans()` (called by the claim handler and the
+  payment poller) fails queued/running rows past the deadline and cancels
+  expired reservations.
+- **Attempts:** `attempts` increments on every claim. A partner scan that has
+  been claimed 3 times is marked `failed` instead of being requeued, so a dying
+  worker cannot spin the order forever.
+- **Ownership proof:** `proof_type=txt` requires an existing verified domain;
+  `proof_type=cloudflare` records a Cloudflare-activated hostname asserted by
+  the platform (`domains.verified_by='partner'`). Platform-owned hostnames
+  (`*.dalang.io`, `*.netsekurity.com`) are refused.
+- **Auth:** HMAC-SHA256 over `partner_id \n timestamp \n nonce \n body` with
+  `PARTNER_SECRET`, a ±5-minute window and a single-use nonce ledger
+  (`partner_nonces`). A request is replayed only via its idempotency key
+  (`partner_requests`), which returns the original response.
 
 ## Security controls
 
@@ -147,8 +179,10 @@ POST /api/pentests/worker/fail        (header: X-Bot-Token)
 ```
 
 - Only a pentest in `running` may fail; anything else returns `409`.
-- The credit is refunded automatically: 1 for a standard scan, 2 for a destructive one,
-  recorded as an `admin_credit` transaction (the type the dashboard lists) with the
-  pentest id as reference.
+- For self-serve scans the credit is refunded automatically: 1 for a standard scan, 2
+  for a destructive one, recorded as an `admin_credit` transaction (the type the
+  dashboard lists) with the pentest id as reference. Partner scans
+  (`billing_source='partner'`) are paid on the Dalang wallet and get `refunded:0` —
+  the platform issues that refund.
 - The dashboard shows a red `failed` badge plus *"scan failed — credit refunded"*, and
   never offers a report download for a failed scan.

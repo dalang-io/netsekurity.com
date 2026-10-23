@@ -101,6 +101,11 @@ func main() {
 	mux.HandleFunc("/api/pentests/worker/report", handleWorkerReport)
 	mux.HandleFunc("/api/pentests/worker/fail", handleWorkerFail)
 
+	// Partner API (Dalang platform). HMAC-authenticated; never touches credits.
+	// The report route is a signed URL so the platform can hand it to a browser.
+	mux.HandleFunc("/api/partner/v1/scans/reserve", handlePartnerReserve)
+	mux.HandleFunc("/api/partner/v1/scans/", handlePartnerScan)
+
 	// API tokens (user-managed for CI/CD)
 	mux.HandleFunc("/api/tokens", requireAuth(handleTokensList))                                 // GET list
 	mux.HandleFunc("/api/tokens/create", rateLimit(writeLimit, requireAuth(handleTokensCreate))) // POST create

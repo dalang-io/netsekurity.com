@@ -1,6 +1,8 @@
 # Rencana integrasi scan Netsekurity ke platform Dalang
 
-> Status: **rencana, belum diimplementasikan.** Keputusan pemilik per 2026-10-23.
+> Status: **sisi Netsekurity sudah diimplementasikan** (partner API, deadline,
+> refund gate). Sisi `api.dalang.io`, `hosting.dalang.io`, dan `dalang.io` belum.
+> Keputusan pemilik per 2026-10-23.
 > Dokumen ini adalah sumber kebenaran untuk desain; kontrak rinci per endpoint
 > menyusul sebelum kode ditulis.
 
@@ -197,6 +199,26 @@ dengan login Google di masa depan.
 2. Halaman status + polling.
 3. i18n en/zh/id.
 4. Render harga dari quote.
+
+## Status implementasi sisi Netsekurity (2026-10-23)
+
+Sudah ada di repo ini:
+
+| Bagian | Implementasi |
+|---|---|
+| Partner API | `partner.go` — reserve/confirm/release/status/report, HMAC + nonce ledger |
+| Idempotensi | `partner_requests` (key → respons asli) dan `external_order_id` unik per partner |
+| Shadow user | `partner_accounts` + email sintetis `<platform>+<external_id>@partner.invalid` |
+| Verifikasi domain | `proof_type=txt` wajib domain `verified`; `proof_type=cloudflare` mencatat `verified_by='partner'` |
+| Blocklist | `*.dalang.io` dan `*.netsekurity.com` ditolak (`TARGET_NOT_ALLOWED`) |
+| Reservasi | TTL default 15 menit, clamp 5–60 menit; `reserved` tidak bisa di-claim worker |
+| Batas terminal | 6 jam sejak `queued`; `attempts` naik tiap claim, maksimum 3 |
+| Sweep | `sweepPartnerScans()` dipanggil claim handler dan poller 30 detik |
+| Refund | `handleWorkerFail` hanya me-refund kredit bila `billing_source='credits'` |
+| Laporan | signed URL `?exp=&sig=` (10 menit) tanpa sesi |
+
+Belum ada (memang di luar sisi ini): endpoint callback push. Kontraknya polling
+dari api.dalang.io ke `GET /api/partner/v1/scans/{id}`.
 
 ## Keamanan dan penyalahgunaan
 
