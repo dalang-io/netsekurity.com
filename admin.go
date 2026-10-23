@@ -44,6 +44,16 @@ type suPentest struct {
 }
 
 // shortID keeps UUIDs readable in the admin tables.
+// countCustomerUsers excludes synthetic Dalang scan accounts.
+func countCustomerUsers() (int, error) {
+	var n int
+	err := db.QueryRow(`
+		SELECT COUNT(*) FROM users u
+		LEFT JOIN partner_accounts pa ON pa.user_id = u.id AND pa.platform = 'dalang'
+		WHERE pa.user_id IS NULL`).Scan(&n)
+	return n, err
+}
+
 func shortID(s string) string {
 	if len(s) <= 8 {
 		return s
@@ -119,7 +129,12 @@ func handleAdmin(w http.ResponseWriter, r *http.Request) {
 	data.CurrencyWarning = operatorCurrencyWarning()
 
 	st := &data.Stats
-	db.QueryRow(`SELECT COUNT(*) FROM users`).Scan(&st.Users)
+	// Dalang scan accounts are synthetic rows that exist only so a scan has an
+	// owner. They are not customers, so they do not inflate the user count
+	// (the table below still shows them, labelled).
+	if n, err := countCustomerUsers(); err == nil {
+		st.Users = n
+	}
 	db.QueryRow(`SELECT
 			COALESCE(SUM(status='paid'),0), COALESCE(SUM(status='expired'),0), COALESCE(SUM(status='pending'),0),
 			COALESCE(SUM(CASE WHEN status='paid' THEN amount_usd ELSE 0 END),0)
