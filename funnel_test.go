@@ -259,7 +259,7 @@ func TestPublicPagesClaims(t *testing.T) {
 	rr := httptest.NewRecorder()
 	handleIndex(rr, httptest.NewRequest("GET", "/", nil))
 	body := rr.Body.String()
-	for _, want := range []string{`href="/checkout?package=starter"`, `href="/checkout?package=professional"`, `href="/sample-report"`, `hx-post="/contact"`, "whoami", "expert review"} {
+	for _, want := range []string{`href="/checkout?package=starter"`, `href="/checkout?package=professional"`, `href="/sample-report"`, `hx-post="/contact"`, "expert review"} {
 		if !strings.Contains(body, want) {
 			t.Errorf("landing missing %q", want)
 		}

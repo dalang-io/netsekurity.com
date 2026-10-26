@@ -46,16 +46,13 @@ func TestConsentGrantedOnlyForExplicitGrant(t *testing.T) {
 // banner can take that back — this is the regression guard for that.
 func TestServedPagesDoNotLoadThePixelEagerly(t *testing.T) {
 	pages := map[string]string{
-		"landing": func() string {
-			rr := httptest.NewRecorder()
-			handleIndex(rr, httptest.NewRequest("GET", "/", nil))
-			return rr.Body.String()
-		}(),
 		"consent gate": consentGate(true),
 		"checkout":     checkoutHTML,
 		"dashboard":    dashboardHTML,
-		"docs":         docsHTMLRaw,
-		"sample":       sampleReportHTML,
+	}
+	// Every public page, as served: the home pages, the guides and the evidence pages.
+	for _, path := range publicPagePaths {
+		pages[path] = renderPublic(t, path)
 	}
 	for name, html := range pages {
 		if strings.Contains(html, `src="https://connect.facebook.net`) ||
@@ -74,22 +71,18 @@ func TestServedPagesDoNotLoadThePixelEagerly(t *testing.T) {
 // The gate itself must be present on every page that used to carry the pixel,
 // otherwise a visitor could never agree and the pixel would never run.
 func TestServedPagesCarryTheGate(t *testing.T) {
-	landing := func() string {
-		rr := httptest.NewRecorder()
-		handleIndex(rr, httptest.NewRequest("GET", "/", nil))
-		return rr.Body.String()
-	}()
-	if !strings.Contains(landing, consentCookieName) || !strings.Contains(landing, "nskTrack") {
-		t.Error("landing page has no consent gate — a visitor could never enable the pixel")
+	for _, path := range publicPagePaths {
+		page := renderPublic(t, path)
+		if !strings.Contains(page, consentCookieName) || !strings.Contains(page, "nskTrack") {
+			t.Errorf("%s has no consent gate — a visitor could never enable the pixel", path)
+		}
 	}
 
-	// The other pages are template sources: the gate arrives through their
+	// The signed-in templates are sources: the gate arrives through their
 	// placeholder, which the tests above prove renders gated output.
 	templates := map[string]string{
 		"checkout":  checkoutHTML,
 		"dashboard": dashboardHTML,
-		"docs":      docsHTMLRaw,
-		"sample":    sampleReportHTML,
 	}
 	for name, html := range templates {
 		if !strings.Contains(html, "{{fbpixel}}") && !strings.Contains(html, "__FBPIXEL__") {
@@ -237,8 +230,5 @@ func TestCheckoutFiresThroughTheGate(t *testing.T) {
 	}
 	if !strings.Contains(checkoutHTML, "nskTrack('InitiateCheckout'") {
 		t.Error("checkout no longer tracks InitiateCheckout at all")
-	}
-	if !strings.Contains(docsHTMLRaw, "__FBPIXEL__") {
-		t.Error("docs page lost its pixel placeholder")
 	}
 }

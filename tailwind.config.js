@@ -3,7 +3,7 @@ module.exports = {
   // Every Go file that emits markup, not a hand-maintained subset: marketing.go,
   // pentests.go, domains.go, apitokens.go and payment.go all write Tailwind
   // classes in HTMX fragments, and were being purged out of the stylesheet.
-  content: ["./static/index.html", "./*.go"],
+  content: ["./*.go"],
   // alertHTML() builds "nsk-alert-" + kind at runtime, which the content scan
   // cannot see; without this the ok variant was purged and the toast shipped
   // with no background.

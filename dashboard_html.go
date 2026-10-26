@@ -204,7 +204,7 @@ const dashHomeHTML = `{{define "dashboard"}}{{template "shell_open" shell . "hom
   <section class="nsk-card mb-6">
     <h2 class="nsk-card-head">Scan a website</h2>
     <div class="p-4">
-      <p class="mb-3 text-gray-700">Pick a website and we'll check it. A scan takes a few minutes, and you can leave this page while it runs.</p>
+      <p class="mb-3 text-gray-700">Pick a website and we'll check it. A scan takes 10 minutes to 24 hours, depending on what it finds. You can leave this page while it runs.</p>
       {{template "scanpicker" .}}
     </div>
   </section>
@@ -369,7 +369,7 @@ const dashScansHTML = `{{define "dashboard_scans"}}{{template "shell_open" shell
     <h2 class="nsk-card-head">Start a scan</h2>
     <div class="p-4">
       {{template "scanpicker" .}}
-      <p class="mt-3 text-sm text-gray-700">Each scan uses 1 credit and takes a few minutes. One scan runs at a time.</p>
+      <p class="mt-3 text-sm text-gray-700">Each scan uses 1 credit and takes 10 minutes to 24 hours, depending on what it finds. One scan runs at a time.</p>
     </div>
   </section>
 

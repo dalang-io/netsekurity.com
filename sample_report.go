@@ -3,7 +3,6 @@ package main
 import (
 	"html/template"
 	"net/http"
-	"strings"
 )
 
 // /sample-report — what a customer gets for a credit, before they pay for one.
@@ -12,168 +11,130 @@ import (
 // to spend $50 on a document they had never seen. This page mirrors the real
 // report's structure (Document Control, Findings Summary, Risk Register,
 // Findings & Analysis, Remediation Plan) with findings drawn only from checks
-// nsec_scan.py actually performs, against a fictional domain.
+// nsec_scan.py actually performs, against a fictional domain. The full PDF also
+// carries a methodology section and an evidence appendix.
+//
+// Wording rules (CLAIMS.md): no statistic without a source, and nothing the
+// external scan cannot establish (it cannot say a site is, or is not,
+// compromised). Exposure probes discard the response body, so the sample says
+// "kept", not "downloaded".
 func handleSampleReport(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	authNav := `<a href="/login" class="whitespace-nowrap rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 glow">login</a>`
-	if _, err := currentUser(r); err == nil {
-		authNav = `<a href="/dashboard" class="whitespace-nowrap rounded border border-emerald-400 bg-emerald-500/10 px-3 py-1.5 text-xs font-bold text-emerald-300 hover:bg-emerald-500/20 glow">./dashboard<span class="cursor"></span></a>`
-	}
-	nav := []hdrLink{
-		{Href: "/", Text: "home"},
-		{Href: "/#how", Text: "how it works"},
-		{Href: "/#pricing", Text: "pricing"},
-		{Href: "/product-scope", Text: "scope"},
-		{Href: "/docs", Text: "docs"},
-	}
-	out := strings.ReplaceAll(sampleReportHTML, "__HEADER__", string(renderHeader(nav, template.HTML(authNav), "/"))+headerMobileJS)
-	out = strings.ReplaceAll(out, "__CSS_HASH__", cssHash)
-	out = strings.ReplaceAll(out, "__FBPIXEL__", consentGate(true))
-	out = strings.ReplaceAll(out, "__ANALYTICS__", analyticsSnippet())
-	w.Write([]byte(out))
+	body := template.HTML(loadSitePricing().replacer().Replace(sampleReportBody))
+	serveRawPage(w, r, rawPage{
+		Key: "sample", Path: "/sample-report", Crumb: "Sample report", Body: body,
+		Title:       "Sample Security Assessment Report: What One Credit Delivers",
+		Description: "A worked example of a Netsekurity external web security assessment report: document control, findings summary, risk register, evidence and a 30/60/90-day plan.",
+	})
 }
 
-const sampleReportHTML = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>sample report — netsekurity.com</title>
-<meta name="description" content="A sample Netsekurity external web security assessment report: what one credit buys, section by section, for a fictional domain."/>
-<link rel="canonical" href="https://netsekurity.com/sample-report"/>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
-__FBPIXEL__
-__ANALYTICS__
-<link rel="stylesheet" href="/css/styles.css?v=__CSS_HASH__"/>
-</head>
-<body class="scanlines bg-ink text-gray-300 min-h-screen overflow-x-hidden">
-__HEADER__
-<main class="mx-auto max-w-4xl px-4 py-10 sm:px-6">
-  <p class="font-mono text-xs text-cyan-300">[ sample — fictional domain, real report structure ]</p>
-  <h1 class="mt-2 font-mono text-2xl font-bold text-white sm:text-3xl"><span class="text-emerald-400">$</span> cat 20260901-09:14-shop.example.com.pdf</h1>
-  <p class="copy mt-3 text-gray-400">This is what one credit delivers. Every finding below comes from a check the scanner really performs; the domain and evidence are invented. Your report is a PDF with the same sections, in English, downloadable from the dashboard.</p>
+const sampleReportBody = `
+<section class="border-b-2 border-black bg-[#fffbeb]">
+  <div class="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:py-16">
+    <span class="nsk-tag">Sample · fictional domain, real report structure</span>
+    <h1 class="mt-4 max-w-4xl text-4xl font-extrabold leading-[1.1] tracking-tight sm:text-5xl">What one credit delivers</h1>
+    <p class="mt-5 max-w-3xl text-lg text-gray-800">Every finding below comes from a check the scanner really performs. The domain and the evidence are invented. Your report is a PDF in English with this structure, downloadable from the dashboard; the full PDF also contains the methodology and an evidence appendix.</p>
+    <p class="mt-5"><a href="/dashboard" class="nsk-btn">Get this for your domain · {single}</a> <a href="/#pricing" class="ml-2 font-bold underline">All packages →</a></p>
+  </div>
+</section>
 
-  <!-- Document control -->
-  <section class="mt-8 rounded border border-emerald-500/30 bg-[#04060c]">
-    <div class="border-b border-emerald-500/20 px-4 py-2 font-mono text-[11px] text-gray-500">$ 1 · document control</div>
-    <dl class="grid grid-cols-1 gap-x-6 gap-y-2 px-4 py-4 font-mono text-xs sm:grid-cols-2">
-      <div><dt class="text-gray-500">target</dt><dd class="text-white">shop.example.com</dd></div>
-      <div><dt class="text-gray-500">assessment type</dt><dd class="text-white">external · unauthenticated · read-only</dd></div>
-      <div><dt class="text-gray-500">ownership</dt><dd class="text-white">verified via TXT <span class="text-gray-500">_netsekurity</span></dd></div>
-      <div><dt class="text-gray-500">completed</dt><dd class="text-white">2026-09-01 09:14 UTC</dd></div>
-      <div><dt class="text-gray-500">auditor</dt><dd class="text-white">Netsekurity.com Security Agent</dd></div>
-      <div><dt class="text-gray-500">classification</dt><dd class="text-white">confidential — owner &amp; admins only</dd></div>
+<div class="mx-auto max-w-7xl space-y-8 px-4 py-12 sm:px-6">
+
+  <section class="nsk-card" aria-labelledby="s1">
+    <h2 id="s1" class="nsk-card-head">1 · Document control</h2>
+    <dl class="grid divide-y-2 divide-gray-200 text-sm sm:grid-cols-2 sm:divide-y-0">
+      <div class="flex justify-between gap-4 px-5 py-3"><dt class="font-extrabold">Target</dt><dd class="nsk-mono">shop.example.com</dd></div>
+      <div class="flex justify-between gap-4 px-5 py-3"><dt class="font-extrabold">Assessment type</dt><dd>External · unauthenticated · read-only</dd></div>
+      <div class="flex justify-between gap-4 px-5 py-3"><dt class="font-extrabold">Ownership</dt><dd>Verified via TXT <span class="nsk-mono">_netsekurity</span></dd></div>
+      <div class="flex justify-between gap-4 px-5 py-3"><dt class="font-extrabold">Completed</dt><dd>2026-09-01 09:14 UTC</dd></div>
+      <div class="flex justify-between gap-4 px-5 py-3"><dt class="font-extrabold">Prepared by</dt><dd>Netsekurity.com Security Agent</dd></div>
+      <div class="flex justify-between gap-4 px-5 py-3"><dt class="font-extrabold">Classification</dt><dd>Confidential: owner and operators only</dd></div>
     </dl>
   </section>
 
-  <!-- Findings summary -->
-  <section class="mt-6 rounded border border-white/10 bg-[#04060c]">
-    <div class="border-b border-white/10 px-4 py-2 font-mono text-[11px] text-gray-500">$ 2 · findings summary</div>
-    <div class="px-4 py-4">
-      <div class="flex flex-wrap items-center gap-1">
-        <span class="rounded bg-red-500/20 px-2 py-0.5 font-mono text-[11px] font-bold text-red-300">1 high</span>
-        <span class="rounded bg-yellow-500/20 px-2 py-0.5 font-mono text-[11px] font-bold text-yellow-300">2 medium</span>
-        <span class="rounded bg-cyan-500/20 px-2 py-0.5 font-mono text-[11px] font-bold text-cyan-300">2 low</span>
-        <span class="rounded bg-white/10 px-2 py-0.5 font-mono text-[11px] font-bold text-gray-400">4 info</span>
-      </div>
-      <p class="copy mt-3 text-gray-400">Overall posture: <span class="text-yellow-300">needs attention</span>. One file exposure can leak credentials today; the remaining items are hardening. Nothing found suggests the site is currently compromised.</p>
+  <section class="nsk-card" aria-labelledby="s2">
+    <h2 id="s2" class="nsk-card-head">2 · Findings summary</h2>
+    <div class="p-5">
+      <p class="flex flex-wrap gap-2">
+        <span class="nsk-badge nsk-badge-bad">1 High</span>
+        <span class="nsk-badge nsk-badge-warn">2 Medium</span>
+        <span class="nsk-badge nsk-badge-blue">2 Low</span>
+        <span class="nsk-badge nsk-badge-muted">4 Info</span>
+      </p>
+      <p class="mt-4 text-gray-800"><strong class="font-extrabold">Overall posture: needs attention.</strong> One file exposure can leak credentials today; the remaining items are hardening.</p>
     </div>
   </section>
 
-  <!-- Risk register -->
-  <section class="mt-6 rounded border border-white/10 bg-[#04060c]">
-    <div class="border-b border-white/10 px-4 py-2 font-mono text-[11px] text-gray-500">$ 3 · risk register</div>
-    <div class="overflow-x-auto p-3">
-      <table class="w-full font-mono text-xs">
-        <thead><tr class="text-left text-gray-500"><th class="py-1 pr-3">#</th><th class="pr-3">finding</th><th class="pr-3">severity</th><th class="pr-3">cvss</th><th class="pr-3">cwe</th><th>owasp</th></tr></thead>
-        <tbody class="text-gray-300">
-          <tr class="border-t border-white/10"><td class="py-1.5 pr-3">F-01</td><td class="pr-3 text-white">Environment file exposed at /.env</td><td class="pr-3 text-red-300">HIGH</td><td class="pr-3">7.5</td><td class="pr-3">CWE-538</td><td>A05 · A02</td></tr>
-          <tr class="border-t border-white/10"><td class="py-1.5 pr-3">F-02</td><td class="pr-3 text-white">Missing security headers (4 of 6)</td><td class="pr-3 text-yellow-300">MEDIUM</td><td class="pr-3">5.3</td><td class="pr-3">CWE-1021</td><td>A05</td></tr>
-          <tr class="border-t border-white/10"><td class="py-1.5 pr-3">F-03</td><td class="pr-3 text-white">Open redirect via <code>?next=</code></td><td class="pr-3 text-yellow-300">MEDIUM</td><td class="pr-3">5.4</td><td class="pr-3">CWE-601</td><td>A01</td></tr>
-          <tr class="border-t border-white/10"><td class="py-1.5 pr-3">F-04</td><td class="pr-3 text-white">Server version disclosed (nginx/1.18.0)</td><td class="pr-3 text-cyan-300">LOW</td><td class="pr-3">3.7</td><td class="pr-3">CWE-200</td><td>A05</td></tr>
-          <tr class="border-t border-white/10"><td class="py-1.5 pr-3">F-05</td><td class="pr-3 text-white">TLS certificate expires in 41 days</td><td class="pr-3 text-cyan-300">LOW</td><td class="pr-3">3.7</td><td class="pr-3">CWE-295</td><td>A02</td></tr>
-          <tr class="border-t border-white/10 text-gray-500"><td class="py-1.5 pr-3">I-01…04</td><td class="pr-3">DNS resolution · 7 subdomains · WAF detected · robots.txt disallow entries</td><td class="pr-3">INFO</td><td class="pr-3">—</td><td class="pr-3">—</td><td>—</td></tr>
+  <section class="nsk-card" aria-labelledby="s3">
+    <h2 id="s3" class="nsk-card-head">3 · Risk register</h2>
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[640px] text-left text-sm">
+        <thead><tr class="border-b-2 border-black bg-[#fffbeb]"><th scope="col" class="px-4 py-3">#</th><th scope="col" class="px-4 py-3">Finding</th><th scope="col" class="px-4 py-3">Severity</th><th scope="col" class="px-4 py-3">CVSS</th><th scope="col" class="px-4 py-3">CWE</th><th scope="col" class="px-4 py-3">OWASP</th></tr></thead>
+        <tbody class="[&>tr]:border-b-2 [&>tr]:border-gray-200">
+          <tr><td class="px-4 py-3 font-extrabold">F-01</td><td class="px-4 py-3">Environment file exposed at /.env</td><td class="px-4 py-3"><span class="nsk-badge nsk-badge-bad">High</span></td><td class="px-4 py-3">7.5</td><td class="px-4 py-3">CWE-538</td><td class="px-4 py-3">A05 · A02</td></tr>
+          <tr><td class="px-4 py-3 font-extrabold">F-02</td><td class="px-4 py-3">Missing security headers (4 of 6)</td><td class="px-4 py-3"><span class="nsk-badge nsk-badge-warn">Medium</span></td><td class="px-4 py-3">5.3</td><td class="px-4 py-3">CWE-1021</td><td class="px-4 py-3">A05</td></tr>
+          <tr><td class="px-4 py-3 font-extrabold">F-03</td><td class="px-4 py-3">Open redirect via ?next=</td><td class="px-4 py-3"><span class="nsk-badge nsk-badge-warn">Medium</span></td><td class="px-4 py-3">5.4</td><td class="px-4 py-3">CWE-601</td><td class="px-4 py-3">A01</td></tr>
+          <tr><td class="px-4 py-3 font-extrabold">F-04</td><td class="px-4 py-3">Server version disclosed (nginx/1.18.0)</td><td class="px-4 py-3"><span class="nsk-badge nsk-badge-blue">Low</span></td><td class="px-4 py-3">3.7</td><td class="px-4 py-3">CWE-200</td><td class="px-4 py-3">A05</td></tr>
+          <tr><td class="px-4 py-3 font-extrabold">F-05</td><td class="px-4 py-3">TLS certificate expires in 41 days</td><td class="px-4 py-3"><span class="nsk-badge nsk-badge-blue">Low</span></td><td class="px-4 py-3">3.7</td><td class="px-4 py-3">CWE-295</td><td class="px-4 py-3">A02</td></tr>
+          <tr><td class="px-4 py-3 font-extrabold">I-01…04</td><td class="px-4 py-3">DNS resolution · 7 subdomains · WAF detected · robots.txt disallow entries</td><td class="px-4 py-3"><span class="nsk-badge nsk-badge-muted">Info</span></td><td class="px-4 py-3">—</td><td class="px-4 py-3">—</td><td class="px-4 py-3">—</td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <!-- Findings & analysis -->
-  <section class="mt-6 rounded border border-white/10 bg-[#04060c]">
-    <div class="border-b border-white/10 px-4 py-2 font-mono text-[11px] text-gray-500">$ 4 · findings &amp; analysis</div>
-    <div class="space-y-5 px-4 py-4">
-
-      <article class="rounded border border-red-500/30 bg-red-500/5 p-4">
-        <div class="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 class="font-mono text-sm font-bold text-white">F-01 · Environment file exposed at /.env</h3>
-          <span class="rounded bg-red-500/20 px-2 py-0.5 font-mono text-[11px] font-bold text-red-300">HIGH · CVSS 7.5</span>
-        </div>
-        <dl class="mt-3 space-y-2 font-mono text-xs">
-          <div><dt class="text-gray-500">what we saw</dt><dd class="copy text-gray-300">The path <code>/.env</code> returned HTTP 200 with a 1.2 KB body. Files with this name normally hold database passwords, API keys and signing secrets. We did not download or store the contents.</dd></div>
-          <div><dt class="text-gray-500">evidence</dt><dd><pre class="mt-1 overflow-x-auto rounded bg-black/60 p-2 text-[11px] text-emerald-300">GET /.env -> 200 1247</pre></dd></div>
-          <div><dt class="text-gray-500">impact</dt><dd class="copy text-gray-300">Anyone can read your production secrets. This is the single most common way vibe-coded deployments get taken over.</dd></div>
-          <div><dt class="text-gray-500">fix</dt><dd class="copy text-gray-300">Block the file at the web server (nginx: <code>location ~ /\.env { deny all; }</code>), move it outside the web root, then <strong>rotate every secret it contains</strong> — assume it has already been read.</dd></div>
+  <section class="nsk-card" aria-labelledby="s4">
+    <h2 id="s4" class="nsk-card-head">4 · Findings and analysis</h2>
+    <div class="divide-y-2 divide-gray-200">
+      <article class="space-y-2 p-5">
+        <h3 class="text-lg font-extrabold">F-01 · Environment file exposed at /.env <span class="nsk-badge nsk-badge-bad ml-2">High · CVSS 7.5</span></h3>
+        <dl class="space-y-2 text-sm text-gray-800">
+          <div><dt class="inline font-extrabold">What we saw: </dt><dd class="inline">The path /.env returned HTTP 200 with a 1.2 KB body. Files with this name normally hold database passwords, API keys and signing secrets. We did not keep the contents.</dd></div>
+          <div><dt class="inline font-extrabold">Evidence: </dt><dd class="inline nsk-mono">GET /.env -&gt; 200 1247</dd></div>
+          <div><dt class="inline font-extrabold">Impact: </dt><dd class="inline">Anyone can read your production secrets.</dd></div>
+          <div><dt class="inline font-extrabold">Fix: </dt><dd class="inline">Block the file at the web server (nginx: <span class="nsk-mono">location ~ /\.env { deny all; }</span>), move it outside the web root, then rotate every secret it contains: assume it has already been read.</dd></div>
         </dl>
       </article>
-
-      <article class="rounded border border-yellow-500/30 bg-yellow-500/5 p-4">
-        <div class="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 class="font-mono text-sm font-bold text-white">F-02 · Missing security headers</h3>
-          <span class="rounded bg-yellow-500/20 px-2 py-0.5 font-mono text-[11px] font-bold text-yellow-300">MEDIUM · CVSS 5.3</span>
-        </div>
-        <dl class="mt-3 space-y-2 font-mono text-xs">
-          <div><dt class="text-gray-500">what we saw</dt><dd class="copy text-gray-300">The response lacks <code>strict-transport-security</code>, <code>content-security-policy</code>, <code>referrer-policy</code> and <code>permissions-policy</code>. <code>x-frame-options</code> and <code>x-content-type-options</code> are present.</dd></div>
-          <div><dt class="text-gray-500">evidence</dt><dd><pre class="mt-1 overflow-x-auto rounded bg-black/60 p-2 text-[11px] text-emerald-300">missing=strict-transport-security, content-security-policy, referrer-policy, permissions-policy</pre></dd></div>
-          <div><dt class="text-gray-500">fix</dt><dd class="copy text-gray-300">Add the four headers at the proxy or framework. Start HSTS at <code>max-age=300</code>, raise to a year once nothing breaks. A CSP of <code>default-src 'self'</code> plus your CDN hosts is a safe first version.</dd></div>
+      <article class="space-y-2 p-5">
+        <h3 class="text-lg font-extrabold">F-02 · Missing security headers <span class="nsk-badge nsk-badge-warn ml-2">Medium · CVSS 5.3</span></h3>
+        <dl class="space-y-2 text-sm text-gray-800">
+          <div><dt class="inline font-extrabold">What we saw: </dt><dd class="inline">The response lacks strict-transport-security, content-security-policy, referrer-policy and permissions-policy. x-frame-options and x-content-type-options are present.</dd></div>
+          <div><dt class="inline font-extrabold">Evidence: </dt><dd class="inline nsk-mono">missing=strict-transport-security, content-security-policy, referrer-policy, permissions-policy</dd></div>
+          <div><dt class="inline font-extrabold">Fix: </dt><dd class="inline">Add the four headers at the proxy or framework. Start HSTS at max-age=300, raise it to a year once nothing breaks. A CSP of <span class="nsk-mono">default-src 'self'</span> plus your CDN hosts is a safe first version.</dd></div>
         </dl>
       </article>
-
-      <article class="rounded border border-yellow-500/30 bg-yellow-500/5 p-4">
-        <div class="flex flex-wrap items-baseline justify-between gap-2">
-          <h3 class="font-mono text-sm font-bold text-white">F-03 · Open redirect via <code>?next=</code></h3>
-          <span class="rounded bg-yellow-500/20 px-2 py-0.5 font-mono text-[11px] font-bold text-yellow-300">MEDIUM · CVSS 5.4</span>
-        </div>
-        <dl class="mt-3 space-y-2 font-mono text-xs">
-          <div><dt class="text-gray-500">what we saw</dt><dd class="copy text-gray-300">Requesting <code>/?next=https://evil.example</code> answered with a 302 to that external address.</dd></div>
-          <div><dt class="text-gray-500">evidence</dt><dd><pre class="mt-1 overflow-x-auto rounded bg-black/60 p-2 text-[11px] text-emerald-300">GET /?next=https://evil.example -> 302 https://evil.example</pre></dd></div>
-          <div><dt class="text-gray-500">impact</dt><dd class="copy text-gray-300">Phishing links can carry your real domain and still land on an attacker's page.</dd></div>
-          <div><dt class="text-gray-500">fix</dt><dd class="copy text-gray-300">Only accept a relative path that starts with a single <code>/</code>, or check the target against an allowlist of your own hosts.</dd></div>
+      <article class="space-y-2 p-5">
+        <h3 class="text-lg font-extrabold">F-03 · Open redirect via ?next= <span class="nsk-badge nsk-badge-warn ml-2">Medium · CVSS 5.4</span></h3>
+        <dl class="space-y-2 text-sm text-gray-800">
+          <div><dt class="inline font-extrabold">What we saw: </dt><dd class="inline">Requesting /?next=https://evil.example answered with a 302 to that external address.</dd></div>
+          <div><dt class="inline font-extrabold">Evidence: </dt><dd class="inline nsk-mono">GET /?next=https://evil.example -&gt; 302 https://evil.example</dd></div>
+          <div><dt class="inline font-extrabold">Impact: </dt><dd class="inline">Phishing links can carry your real domain and still land on an attacker's page.</dd></div>
+          <div><dt class="inline font-extrabold">Fix: </dt><dd class="inline">Only accept a relative path that starts with a single /, or check the target against an allowlist of your own hosts.</dd></div>
         </dl>
       </article>
-
-      <details class="rounded border border-white/10 p-4">
-        <summary class="cursor-pointer font-mono text-xs text-gray-400 hover:text-white">F-04, F-05 and the four informational items — expand</summary>
-        <div class="mt-3 space-y-3 font-mono text-xs text-gray-300">
-          <p><span class="text-cyan-300">F-04 · Server version disclosed.</span> <code>server: nginx/1.18.0</code> tells an attacker exactly which CVEs to try. Set <code>server_tokens off;</code>.</p>
-          <p><span class="text-cyan-300">F-05 · Certificate expires in 41 days.</span> Issuer Let's Encrypt, 3 SAN entries. Confirm auto-renewal is running; an expired certificate takes the site offline.</p>
-          <p><span class="text-gray-500">I-01 · DNS.</span> Apex resolves to 203.0.113.10. <span class="text-gray-500">I-02 · Subdomains.</span> 7 hosts found via certificate transparency, including <code>staging.shop.example.com</code> — check it is meant to be public. <span class="text-gray-500">I-03 · WAF.</span> Cloudflare fingerprint present. <span class="text-gray-500">I-04 · robots.txt.</span> Disallows <code>/admin/</code>, which confirms the path exists.</p>
+      <details class="p-5">
+        <summary class="cursor-pointer font-extrabold">F-04, F-05 and the four informational items</summary>
+        <div class="mt-3 space-y-2 text-sm text-gray-800">
+          <p><strong class="font-extrabold">F-04 · Server version disclosed.</strong> <span class="nsk-mono">server: nginx/1.18.0</span> tells an attacker exactly which CVEs to try. Set <span class="nsk-mono">server_tokens off;</span>.</p>
+          <p><strong class="font-extrabold">F-05 · Certificate expires in 41 days.</strong> Issuer Let's Encrypt, 3 SAN entries. Confirm auto-renewal is running; an expired certificate takes the site offline.</p>
+          <p><strong class="font-extrabold">I-01 · DNS.</strong> Apex resolves to 203.0.113.10. <strong class="font-extrabold">I-02 · Subdomains.</strong> 7 hosts found via certificate transparency, including staging.shop.example.com: check it is meant to be public. <strong class="font-extrabold">I-03 · WAF.</strong> Cloudflare fingerprint present. <strong class="font-extrabold">I-04 · robots.txt.</strong> Disallows /admin/, which confirms the path exists.</p>
         </div>
       </details>
     </div>
   </section>
 
-  <!-- Remediation plan -->
-  <section class="mt-6 rounded border border-white/10 bg-[#04060c]">
-    <div class="border-b border-white/10 px-4 py-2 font-mono text-[11px] text-gray-500">$ 5 · remediation plan (30 / 60 / 90)</div>
-    <div class="grid gap-3 px-4 py-4 sm:grid-cols-3">
-      <div class="rounded border border-red-500/30 p-3 font-mono text-xs"><div class="font-bold text-red-300">today</div><p class="copy mt-1 text-gray-300">Block <code>/.env</code>. Rotate every secret in it.</p></div>
-      <div class="rounded border border-yellow-500/30 p-3 font-mono text-xs"><div class="font-bold text-yellow-300">this month</div><p class="copy mt-1 text-gray-300">Fix the redirect. Add HSTS, CSP, Referrer-Policy, Permissions-Policy.</p></div>
-      <div class="rounded border border-cyan-500/30 p-3 font-mono text-xs"><div class="font-bold text-cyan-300">next quarter</div><p class="copy mt-1 text-gray-300">Hide the server version. Decide whether <code>staging.</code> should be public. Re-scan (1 credit) to confirm.</p></div>
+  <section class="nsk-card" aria-labelledby="s5">
+    <h2 id="s5" class="nsk-card-head">5 · Remediation plan (30 / 60 / 90)</h2>
+    <div class="grid gap-0 divide-y-2 divide-gray-200 md:grid-cols-3 md:divide-x-2 md:divide-y-0">
+      <div class="p-5"><p class="text-sm font-extrabold uppercase tracking-wide text-gray-700">Today</p><p class="mt-2 text-gray-800">Block /.env. Rotate every secret in it.</p></div>
+      <div class="p-5"><p class="text-sm font-extrabold uppercase tracking-wide text-gray-700">This month</p><p class="mt-2 text-gray-800">Fix the redirect. Add HSTS, CSP, Referrer-Policy and Permissions-Policy.</p></div>
+      <div class="p-5"><p class="text-sm font-extrabold uppercase tracking-wide text-gray-700">Next quarter</p><p class="mt-2 text-gray-800">Hide the server version. Decide whether staging. should be public. Re-scan (1 credit) to confirm.</p></div>
     </div>
   </section>
 
-  <section class="mt-6 rounded border border-white/10 bg-[#04060c] px-4 py-4 font-mono text-xs text-gray-400">
-    <div class="text-gray-500">$ 6 · what this report does not cover</div>
-    <p class="copy mt-2">Nothing behind a login, no authorization (IDOR) or business-logic testing, and no injection payloads (SQLi, XSS, LFI). Those need the <a href="/#pricing" class="text-cyan-400 hover:underline">whitebox tier</a>. Full list on the <a href="/product-scope" class="text-cyan-400 hover:underline">product scope</a> page.</p>
+  <section class="nsk-alert nsk-alert-warn" aria-labelledby="s6">
+    <h2 id="s6" class="text-lg font-extrabold">6 · What this report does not cover</h2>
+    <p class="mt-2">Nothing behind a login, no authorization (IDOR) or business-logic testing, and no injection payloads (SQLi, XSS, LFI). Those need the whitebox tier. A finding that does not appear means “not scanned for”, not “verified safe”. The full list is on the <a class="font-bold underline" href="/product-scope">product scope</a> page.</p>
   </section>
 
-  <div class="mt-8 flex flex-wrap items-center gap-3">
-    <a href="/checkout?package=starter" class="rounded border-2 border-emerald-400 bg-emerald-500/10 px-5 py-2.5 font-mono text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 glow">get this for your domain — $50</a>
-    <a href="/#pricing" class="font-mono text-xs text-gray-500 hover:text-white">all packages →</a>
-  </div>
-</main>
-<footer class="mt-10 border-t border-white/10 py-6 text-center font-mono text-[11px] text-gray-600">
-  &copy; 2026 Dalang Pte Ltd · <a href="/" class="text-cyan-400 hover:underline">netsekurity.com</a>
-</footer>
-</body>
-</html>`
+  <p class="flex flex-wrap items-center gap-3"><a href="/dashboard" class="nsk-btn">Get this for your domain · {single}</a><a href="/#pricing" class="font-bold underline">All packages →</a></p>
+</div>
+`

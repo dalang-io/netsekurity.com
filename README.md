@@ -50,11 +50,14 @@ assets (`go:embed`). It is stateless except for the SQLite file; sessions are JW
 ```
 Browser (HTTPS) → Cloudflare (flexible) → Pingora :80
    Host: netsekurity.com → 127.0.0.1:8094 → netsekurity (Go)
-     ├── /                    landing page (HTML, injects client id + CSS hash)
+     ├── / and /id/           home (English / Indonesian), rendered from site_copy_*.go
+     ├── /enterprise, /trust, /external-assessment-vs-penetration-test  (+ /id/… twins)
      ├── /sample-report       public example of what one credit delivers
-     ├── /product-scope       PRODUCT_SCOPE.md rendered in the site shell
-     ├── /css/*, /og.png, /robots.txt, /sitemap.xml, /llms*.txt, /security.txt
-     ├── /auth/*              Google OAuth + One Tap
+     ├── /product-scope       PRODUCT_SCOPE.md rendered to semantic HTML (md.go)
+     ├── /docs                CI/CD + API reference
+     ├── /sitemap.xml, /llms.txt, /llms-full.txt   generated from the same copy and prices
+     ├── /css/*, /og.png, /og-id.png, /robots.txt, /security.txt   static
+     ├── /auth/*              Google OAuth
      ├── /dashboard           customer app, light theme + sidebar (HTMX): Home, then
      │   /dashboard/websites | /scans | /credits | /automation
      ├── /checkout, /su       order confirmation; super-admin panel
@@ -69,7 +72,7 @@ Browser (HTTPS) → Cloudflare (flexible) → Pingora :80
 
 ```
 netsekurity.com/
-├── main.go            # server bootstrap, routes, handleIndex (injects client id / css hash)
+├── main.go            # server bootstrap, routes; handleIndex dispatches to the page registry
 ├── auth.go            # Google OAuth + One Tap, JWT session, requireAuth / requireAdmin / isAdmin
 ├── jwt.go             # HS256 JWT (stdlib)
 ├── db.go              # SQLite init, schema, seed packages, super-admin seed
@@ -83,15 +86,20 @@ netsekurity.com/
 ├── domains.go         # domain add / TXT verify (authoritative NS) / delete
 ├── pentests.go        # pentest start/list + worker claim/report (queue)
 ├── apitokens.go       # CI/CD API tokens (expiry 7/14/30/60/90d)
-├── marketing.go       # landing HTMX fragments (contact form → contact_messages, FAQ, scan-count proof)
+├── site.go            # public site engine: page registry, view model, SEO head, JSON-LD, sitemap
+├── site_copy.go       # copy types + helpers (token expansion, completeness checks)
+├── site_copy_en.go    # English copy (all pages)         ┐ same structure, enforced
+├── site_copy_id.go    # Indonesian copy (all pages)      ┘ by TestSiteCopyIsComplete
+├── site_html.go       # layout, shared partials, home / enterprise / trust / guide templates
+├── site_llms.go       # /llms.txt and /llms-full.txt, generated from the copy and prices
+├── md.go              # tiny Markdown renderer (for PRODUCT_SCOPE.md)
+├── marketing.go       # contact form (→ contact_messages, localised), scan-count proof, /product-scope
 ├── sample_report.go   # /sample-report — fictional domain, real report structure
 ├── analytics.go       # optional Plausible / GA4 tag for public pages
 ├── consent.go         # consent gate: Meta Pixel loads only after Accept (nsk_consent cookie)
 ├── fbevents.go        # Meta Pixel base code + Conversions API (server-side Lead/Purchase)
 ├── ratelimit.go       # per-IP fixed-window limiter on write endpoints
-├── stack.go           # "cat stack.conf" section (real SVG logos + CRT glow tiles)
-├── header.go          # shared reusable header (brand + desktop nav + mobile burger)
-├── docs.go            # /docs page (CI/CD + API reference)
+├── docs.go            # /docs page (CI/CD + API reference; examples are data)
 ├── *_test.go          # unit tests (JWT, credit idempotency, topup amount, domain, index, auth)
 ├── deploy.sh          # test → build → commit+push → deploy (scp + systemd stop/start, PID check)
 ├── nsec_scan.py       # scanning agent scanner (enterprise-grade, produces PDF)
@@ -100,16 +108,16 @@ netsekurity.com/
 ├── nsec_worker.sh     # standalone one-shot worker
 ├── AGENT_WORKER.md    # agent behavior reference (authoritative)
 ├── HERMES_UPDATE.md   # Hermes agent: update steps + verification runbook
-├── marketing-copy.md  # social/ads copy (vibe-coder + CI/CD use cases)
+├── CLAIMS.md          # every public claim with its source, and what is deliberately not claimed
+├── marketing-copy.md  # older social/ads copy (vibe-coder angle; not used by the site)
+├── tools/og/          # Open Graph card sources + render.sh (headless Chrome → static/og*.png)
 ├── env.example        # environment template
 ├── README.md          # this doc
 └── static/
-    ├── index.html                 # landing (HTMX, One Tap, JSON-LD)
     ├── css/styles.css             # built Tailwind output (embedded)
-    ├── og.png                     # OG/Twitter social image
-    ├── sitemap.xml, robots.txt    # SEO/GEO
-    ├── llms.txt, llms-full.txt    # LLM/GEO discovery
-    ├── security.txt               # + .well-known/security.txt (RFC 9116)
+    ├── og.png, og-id.png          # OG/Twitter share cards, 1200x630 (tools/og/render.sh)
+    ├── robots.txt                 # one shared rule set for search and AI crawlers
+    ├── security.txt               # + .well-known/security.txt (RFC 9116); Policy → /trust#disclosure
     └── PRODUCT_SCOPE.md           # client-facing scope & methodology
 ```
 
@@ -316,6 +324,38 @@ The landing page, `/docs`, `/sample-report` and `/su` keep the dark terminal loo
 - **Fonts.** Plus Jakarta Sans loads from Google Fonts (as on dalang.io), with system fallbacks.
 - After changing any template or class, run `npm run build:css` and commit `static/css/styles.css`
   (it is embedded in the binary).
+
+## Public site (SEO and GEO)
+
+Written for boards, lead engineers and procurement. Read `CLAIMS.md` before touching
+copy: every statement has a source, and the tests refuse the ones that do not.
+
+- **One source per language.** All copy is Go values in `site_copy_en.go` and
+  `site_copy_id.go`; one template per page (`site_html.go`). A section missing from one
+  language fails the build; an empty string or a differing list length fails
+  `TestSiteCopyIsComplete`.
+- **Prices are tokens**, never typed: `{single}`, `{volume}`, `{volumeCredits}`,
+  `{whitebox}`, `{packs}`, filled from `credit_packages`. Change a price in the database
+  and the pages, the JSON-LD `Offer`s and `/llms.txt` follow.
+- **The FAQ is one slice** that renders the visible `<details>` list *and* the `FAQPage`
+  JSON-LD, so they cannot disagree (`TestFAQMarkupMatchesVisibleFAQ`).
+- **Generated, not hand-kept:** `/sitemap.xml` (from the page registry, with hreflang),
+  `/llms.txt` and `/llms-full.txt` (from the copy). A new page is one entry in `sitePages`.
+- **Adding a page:** add a `sitePage`, a copy struct per language, a template body, and a
+  line in `buildSiteView`. The tests then cover metadata, hreflang, headings, links,
+  anchors, sitemap, banned claims and structured data automatically.
+- **English-only pages** (`/sample-report`, `/docs`, `/product-scope`) use the same layout
+  through `serveRawPage` and declare no hreflang.
+- **After a content change:** bump `siteModified` in `site.go` (it is the sitemap
+  `lastmod`, every `dateModified` and the `?v=` on the share images), run the tests, and
+  run `tools/og/render.sh` if the headline or sample card changed.
+- **Policies** are Dalang's own, at dalang.io/privacy, /terms-of-use and /security, linked from
+  every footer and from the trust page. They do not name Netsekurity. Nothing states a data
+  retention period, a DPA, an SLA or the VAT treatment for Netsekurity: `CLAIMS.md` lists these gaps.
+- **The scanner's User-Agent** (`NetSekurity Scanner`) is stated on the trust and enterprise
+  pages and checked against `nsec_scan.py` by a test. The agent host runs a separate checkout:
+  after changing the scanner, follow `HERMES_UPDATE.md` there, or the pages describe behaviour
+  that is not live.
 
 ## Local Development
 

@@ -12,9 +12,11 @@ verified domain / credit. 1 credit = 1 external assessment · 1 domain.
 
 ## Methodology (blackbox, external)
 
-1. **Recon & attack-surface mapping** — DNS resolution, passive subdomain enumeration,
-   open-port discovery, technology & platform fingerprinting.
-2. **Web fingerprint** — HTTP/S response analysis, server & WAF detection, CMS/stack identification.
+1. **Recon & attack-surface mapping** — DNS resolution and passive subdomain listing from
+   certificate-transparency and public sources. Subdomains are listed for your information;
+   only the domain you verified is assessed.
+2. **Web fingerprint** — the server header, server-version disclosure and web application
+   firewall detection, read from the HTTP/S response.
 3. **Security headers** — full OWASP set: HSTS, X-Content-Type-Options, X-Frame-Options,
    Content-Security-Policy, Referrer-Policy, Permissions-Policy; clickjacking check.
 4. **TLS / PKI** — certificate validity, expiry window, issuer, SAN coverage.
@@ -35,8 +37,8 @@ CWE mapping, reproduction steps, and remediation guidance.
 
 | Area | Checks performed |
 |------|------------------|
-| **Recon & attack-surface mapping** | DNS, passive subdomain enumeration, open ports, tech/WAF fingerprint |
-| **Web application fingerprint** | HTTP/S response, server & WAF, CMS/stack identification |
+| **Recon & attack-surface mapping** | DNS resolution, passive subdomain listing (subdomains are listed, not assessed) |
+| **Web application fingerprint** | Server header, server-version disclosure, WAF detection |
 | **Security headers** | HSTS, X-Content-Type-Options, X-Frame-Options, CSP, Referrer-Policy, Permissions-Policy; clickjacking |
 | **TLS / PKI** | Certificate validity, expiry, issuer, SAN coverage |
 | **Information disclosure** | `.git`, `.env`, backups, server-status, phpinfo, robots.txt, SVN metadata, admin/login paths |
@@ -56,13 +58,14 @@ CWE mapping, reproduction steps, and remediation guidance.
 
 1. **Authenticated testing.** Scans are unauthenticated; logic behind a login/session is not exercised.
 2. **Authorization / IDOR / privilege escalation.** Requires multiple identities; not tested.
-2a. **Injection payload testing.** The standard scan sends no SQLi, XSS, LFI/RFI or path-traversal
+3. **Injection payload testing.** The standard scan sends no SQLi, XSS, LFI/RFI or path-traversal
    payloads. It finds exposure and misconfiguration, not exploitable input bugs.
-3. **Business-logic, workflow, payment, or race-condition testing.** Not included.
-4. **Deep / manual exploit chains.** We detect vulnerabilities; we do not build multi-stage exploit chains.
-5. **Source-code analysis.** Blackbox only.
-6. **Destructive actions.** All testing is read-only and non-destructive.
-7. **Extended manual engagement.** Not a multi-day APT-style engagement.
+4. **Business-logic, workflow, payment, or race-condition testing.** Not included.
+5. **Network port scanning.** The standard assessment does not scan ports.
+6. **Deep / manual exploit chains.** We detect vulnerabilities; we do not build multi-stage exploit chains.
+7. **Source-code analysis.** Blackbox only.
+8. **Destructive actions.** All testing is read-only and non-destructive.
+9. **Extended manual engagement.** Not a multi-day APT-style engagement.
 
 ## Deliverables
 
@@ -70,7 +73,7 @@ CWE mapping, reproduction steps, and remediation guidance.
   - Executive summary & overall security posture score
   - Risk register (likelihood × impact)
   - Detailed findings: severity, CVSS v3.1, CWE mapping, evidence, reproduction steps, remediation guidance
-  - Compliance & control mapping
+  - CWE / CVE references and a proof of concept (PoC) for each finding
 - Remediation roadmap (30/60/90) per finding.
 
 ## Whitebox (deeper assurance — separate offering)
@@ -110,4 +113,4 @@ request. Please do not test against other customers' domains.
 ---
 
 *Scope per domain. 1 credit = 1 external assessment · 1 domain. A worked example is at
-https://netsekurity.com/sample-report. Full technical detail in `AGENT_WORKER.md`.*
+https://netsekurity.com/sample-report.*

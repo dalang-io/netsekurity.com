@@ -3,6 +3,8 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -360,5 +362,31 @@ func TestPentestListEmptyStateDoesNotMisdirect(t *testing.T) {
 	out := w.Body.String()
 	if !strings.Contains(out, "No scans yet") || strings.Contains(out, "verify a website") {
 		t.Errorf("empty state = %s", out)
+	}
+}
+
+// The scan duration is the owner's statement (2026-10-26): 10 minutes to 24 hours,
+// depending on what the scan finds. No customer-facing copy may quote a different
+// or narrower figure, and the 24-hour end must never appear without the range.
+// domains.go is exempt: its "a few minutes" is DNS propagation, not scan time.
+func TestScanDurationIsAlwaysTheStatedRange(t *testing.T) {
+	near := regexp.MustCompile(`(?is)(10 minutes|10 menit).{0,120}(24 hours|24 jam)`)
+	// 24 hours also appears as an invoice expiry and a session lifetime; neither is a scan time.
+	other := regexp.MustCompile(`(?i)(expired after|valid for|berlaku|kedaluwarsa setelah)\s+24\s+(hours|jam)`)
+	any24 := regexp.MustCompile(`(?i)24 hours|24 jam`)
+	for _, f := range []string{"dashboard.go", "dashboard_html.go", "pentests.go", "site_copy_en.go", "site_copy_id.go", "sample_report.go"} {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		text := other.ReplaceAllString(string(b), "")
+		for _, banned := range []string{"few minutes", "within minutes", "takes minutes"} {
+			if strings.Contains(strings.ToLower(text), banned) {
+				t.Errorf("%s says %q: a scan duration the owner did not state", f, banned)
+			}
+		}
+		if got, want := len(any24.FindAllString(text, -1)), len(near.FindAllString(text, -1)); got != want {
+			t.Errorf("%s mentions 24 hours %d times but only %d with the 10-minute lower bound", f, got, want)
+		}
 	}
 }

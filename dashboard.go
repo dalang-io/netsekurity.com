@@ -97,7 +97,7 @@ func (d dashboardData) Steps() []step {
 			Body: "Each scan uses 1 credit. Credits never expire.",
 			CTA:  "Choose a credit pack", Href: "/dashboard/credits", Done: d.Balance > 0 || d.ScanCount > 0},
 		{N: 4, Title: "Run your first scan",
-			Body: "It takes a few minutes. Then you get a PDF report that explains what was found and what to fix.",
+			Body: "A scan takes 10 minutes to 24 hours, depending on what it finds. You get a PDF that explains what was found and what to fix.",
 			CTA:  "Start a scan", Href: "/dashboard/scans", Done: d.ScanCount > 0},
 	}
 	for i := range steps {

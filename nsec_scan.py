@@ -21,7 +21,9 @@ import os, sys, re, sqlite3, subprocess, datetime, socket, json, time, ssl
 DB = "/opt/data/report/assessment.db"
 TEMPLATES = "/opt/data/report/templates"
 OUTROOT = "/opt/data/report"
-UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/126.0 Safari/537.36"
+# Every HTTP request identifies itself. The trust page and the enterprise page both
+# state this exact string, and TestScannerUserAgentMatchesThePublicClaim fails if they differ.
+UA = "NetSekurity Scanner"
 HOST = "163.128.54.5"
 KEY = "/opt/data/recon/keys/dalang_key"
 

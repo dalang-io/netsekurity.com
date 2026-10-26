@@ -1,5 +1,23 @@
 # Hermes agent — update runbook
 
+## 2026-10-26 — the scanner now identifies itself
+
+`nsec_scan.py` sends **`User-Agent: NetSekurity Scanner`** (it used to send a Chrome
+browser string). The public trust and enterprise pages state this, so the change is
+only true for customers once the agent host has pulled it:
+
+```bash
+cd <your checkout of netsekurity.com> && git pull
+grep -c '^UA = "NetSekurity Scanner"' nsec_scan.py   # expect 1
+grep -ci 'mozilla\|chrome/' nsec_scan.py              # expect 0
+```
+
+To confirm on a real request, scan a domain you control and look for
+`NetSekurity Scanner` in that server's access log. Until the pull lands, the
+pages describe behaviour the live scanner does not yet have.
+
+---
+
 For the operator (human or agent) of the **Hermes scan worker**. Behaviour
 reference lives in [AGENT_WORKER.md](AGENT_WORKER.md); this file is only the
 "what do I run, and how do I know it worked" note.
