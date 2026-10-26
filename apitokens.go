@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 	"strings"
 	"time"
@@ -95,14 +96,14 @@ func handleTokensCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	// Return the plaintext ONCE (HTMX renders it so the user can copy it).
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprintf(w, `<div class="rounded border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
-  <div class="font-bold">Token created (shown once):</div>
-  <code class="block break-all font-mono text-[11px] text-white">%s</code>
-  <div class="text-[10px] text-gray-400">expires %s · name: %s · store it securely — it will not be shown again.
-  Add it to your CI/CD as <span class="text-cyan-300">X-API-Token</span>.</div>
-  <button hx-post="/api/tokens" hx-vals='{"name":"%s","expiry_days":"7"}' hx-target="#token-result" hx-swap="innerHTML"
-    class="mt-2 rounded border border-emerald-400/60 px-2 py-1 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/15">generate another</button>
-</div>`, secret, expires, name, name)
+	// The list on the page listens for this, so the new token appears at once
+	// instead of after the next 15-second poll.
+	w.Header().Set("HX-Trigger", "tokens-changed")
+	fmt.Fprint(w, alertHTML("ok", `<strong>Token created. Copy it now — it is shown only once.</strong>
+  <div class="nsk-code mt-2 bg-white"><span>`+template.HTMLEscapeString(secret)+`</span>
+    <button type="button" data-copy="`+template.HTMLEscapeString(secret)+`" onclick="nskCopy(this)" class="nsk-btn nsk-btn-ghost nsk-btn-sm">`+string(icon("copy", 14))+`<span class="nsk-copy-label">Copy</span></button></div>
+  <p class="mt-2 text-sm">Name: `+template.HTMLEscapeString(name)+` · valid until `+string(timeTag(expires))+`.
+  Keep it somewhere safe, such as your pipeline's secret settings, and send it as the <code>X-API-Token</code> header.</p>`))
 }
 
 // handleTokensList shows the user's existing API tokens (masked).
@@ -121,33 +122,37 @@ func handleTokensList(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	rows, _ := db.Query(`SELECT id, name, prefix, expires_at, COALESCE(last_used_at,'') FROM api_tokens WHERE user_id=? ORDER BY created_at DESC`, claims.Sub)
 	defer rows.Close()
-	fmt.Fprint(w, `<div class="mt-2"><div class="mb-1 font-mono text-[11px] text-gray-500"># api tokens</div><ul class="space-y-1.5">`)
+	fmt.Fprint(w, `<ul class="divide-y-2 divide-gray-200">`)
 	found := false
 	for rows.Next() {
 		var id, name, prefix, expires, last string
 		rows.Scan(&id, &name, &prefix, &expires, &last)
 		found = true
 		exp, _ := time.Parse(time.RFC3339, expires)
-		fmt.Fprintf(w, `<li class="rounded border border-white/10 bg-ink px-2.5 py-1.5 font-mono text-[11px]">
-  <div class="flex items-center justify-between gap-2"><span class="text-white">%s</span>
-  <span class="text-gray-500">%s…</span></div>
-  <div class="flex items-center justify-between gap-2 text-[10px]"><span class="text-gray-500">expires %s%s</span>
-  <button hx-delete="/api/tokens/%s" hx-target="closest li" hx-swap="outerHTML" hx-confirm="Delete this API token?"
-    class="text-red-300 hover:underline">revoke</button></div></li>`,
-			name, prefix[:14], exp.Format("2006-01-02"), func() string {
-				if exp.Before(time.Now()) {
-					return " (expired)"
-				} else if last != "" {
-					return " · used " + last
-				} else {
-					return ""
-				}
-			}(), id)
+		status := `<span class="nsk-badge nsk-badge-ok">Active</span>`
+		if exp.Before(time.Now()) {
+			status = `<span class="nsk-badge nsk-badge-muted">Expired</span>`
+		}
+		used := "Not used yet"
+		if last != "" {
+			used = "Last used " + string(timeTag(last))
+		}
+		fmt.Fprintf(w, `<li class="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+  <div class="min-w-0">
+    <p class="font-bold">%s %s</p>
+    <p class="nsk-mono text-sm text-gray-700">%s…</p>
+    <p class="text-sm text-gray-700">Valid until %s · %s</p>
+  </div>
+  <button hx-delete="/api/tokens/%s" hx-target="closest li" hx-swap="outerHTML"
+    hx-confirm="Delete this token? Anything still using it will stop working."
+    class="nsk-btn nsk-btn-danger nsk-btn-sm">Delete</button></li>`,
+			template.HTMLEscapeString(name), status, template.HTMLEscapeString(prefix[:14]),
+			string(timeTag(expires)), used, template.HTMLEscapeString(id))
 	}
 	if !found {
-		fmt.Fprint(w, `<li class="text-[11px] text-gray-600">no API tokens yet — generate one for CI/CD</li>`)
+		fmt.Fprint(w, `<li class="text-gray-700">No tokens yet. Create one above if a developer needs to connect Netsekurity to your deployment pipeline.</li>`)
 	}
-	fmt.Fprintf(w, `</ul></div>`)
+	fmt.Fprint(w, `</ul>`)
 }
 
 // handleTokensDelete revokes an API token.

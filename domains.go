@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"html/template"
 	"net"
 	"net/http"
 	"strings"
@@ -24,26 +25,26 @@ func handleAddDomain(w http.ResponseWriter, r *http.Request) {
 	if !isValidDomain(domain) {
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
 		w.WriteHeader(http.StatusBadRequest)
-		fmt.Fprint(w, `<div class="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">`+
-			`<strong>That is not a hostname.</strong> Enter just the host — <code class="font-mono">app.example.com</code> — `+
-			`without <code class="font-mono">https://</code>, a path, or a trailing slash.</div>`)
+		fmt.Fprint(w, alertHTML("bad", `<strong>That doesn't look like a website address.</strong> Type just the address, like <code>www.mybusiness.com</code> — no spaces, and nothing after the .com.`))
 		return
 	}
 	token := "ns-verify-" + randomHex(12)
-	if _, err := db.Exec(`INSERT OR IGNORE INTO domains (user_id, domain, txt_verification_token, status) VALUES (?,?,?,'pending')`,
-		claims.Sub, domain, token); err != nil {
+	res, err := db.Exec(`INSERT OR IGNORE INTO domains (user_id, domain, txt_verification_token, status) VALUES (?,?,?,'pending')`,
+		claims.Sub, domain, token)
+	if err != nil {
 		http.Error(w, "db error", http.StatusInternalServerError)
 		return
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprintf(w, `<div class="rounded-lg border border-cyan-500/40 bg-cyan-500/10 p-3 font-mono text-xs">
-  <div class="text-cyan-400">Name</div><div class="text-gray-200">_netsekurity</div>
-  <div class="mt-2 text-cyan-400">Type</div><div class="text-gray-200">TXT</div>
-  <div class="mt-2 text-cyan-400">Value</div><div class="break-all text-gray-200">%s</div>
-</div>
-<button hx-post="/api/domains/verify" hx-vals='{"domain":"%s"}' hx-swap="outerHTML"
-  class="mt-3 w-full rounded-md bg-emerald-500 px-4 py-2 text-sm font-bold text-black hover:bg-emerald-400">Verify now</button>`,
-		token, domain)
+	// The verification steps live on the domain's own card, which carries the
+	// stored token. Echoing the freshly generated one here was wrong whenever the
+	// domain already existed: INSERT OR IGNORE keeps the original token.
+	if n, _ := res.RowsAffected(); n == 0 {
+		fmt.Fprint(w, alertHTML("info", `<strong>`+template.HTMLEscapeString(domain)+`</strong> is already in your list.`))
+	} else {
+		fmt.Fprint(w, alertHTML("ok", `<strong>`+template.HTMLEscapeString(domain)+`</strong> added. Next, prove it is yours: follow the steps on its card below.`))
+	}
+	renderDomainListOOB(w, claims.Sub)
 }
 
 // handleVerifyDomain checks the TXT record in public DNS for the domain.
@@ -82,16 +83,14 @@ func handleVerifyDomain(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if matched {
 		db.Exec(`UPDATE domains SET status='verified', verified_at=? WHERE user_id=? AND domain=?`, now(), claims.Sub, domain)
-		fmt.Fprintf(w, `<div class="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-300"><strong>Verified!</strong> %s ownership confirmed — a pentest can now be scheduled.</div>`, domain)
+		fmt.Fprint(w, alertHTML("ok", `<strong>Verified!</strong> We confirmed you own `+template.HTMLEscapeString(domain)+`. You can scan it now.`))
 		renderDomainListOOB(w, claims.Sub)
 		return
 	}
-	// Not found yet — offer a retry.
-	fmt.Fprintf(w, `<div class="space-y-3">
-  <div class="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">TXT record not found yet. Add <code class="font-mono">%s</code> at <code class="font-mono">_netsekurity.%s</code> and retry.</div>
-  <button hx-post="/api/domains/verify" hx-vals='{"domain":"%s"}' hx-swap="outerHTML"
-    class="rounded-md bg-emerald-500 px-4 py-2 text-sm font-bold text-black hover:bg-emerald-400">Retry verification</button>
-</div>`, stored, domain, domain)
+	// Not found yet. The domain's card still has the record and its Check now
+	// button, so this only has to say what to do — not repeat the controls.
+	fmt.Fprint(w, alertHTML("warn", `<strong>We can't see the record yet.</strong> DNS changes can take a few minutes to spread. `+
+		`Check that the TXT record <code>_netsekurity</code> (or <code>_netsekurity.`+template.HTMLEscapeString(domain)+`</code>) has exactly the value shown on the card, then press <strong>Check now</strong> again.`))
 }
 
 // handleDeleteDomain removes a domain — but only while it is NOT verified.
@@ -115,11 +114,11 @@ func handleDeleteDomain(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	if status == "verified" {
 		w.WriteHeader(http.StatusForbidden)
-		fmt.Fprintf(w, `<div class="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300"><strong>Cannot delete.</strong> %s is already verified — contact support to remove it.</div>`, domain)
+		fmt.Fprint(w, alertHTML("bad", `<strong>This website can't be removed here.</strong> `+template.HTMLEscapeString(domain)+` is already verified. Contact us and we will remove it for you.`))
 		return
 	}
 	db.Exec(`DELETE FROM domains WHERE user_id=? AND domain=?`, claims.Sub, domain)
-	fmt.Fprintf(w, `<div class="rounded-lg border border-white/10 bg-white/5 px-4 py-3 text-sm text-gray-300">%s removed.</div>`, domain)
+	fmt.Fprint(w, alertHTML("info", `<strong>`+template.HTMLEscapeString(domain)+`</strong> was removed.`))
 	renderDomainListOOB(w, claims.Sub)
 }
 

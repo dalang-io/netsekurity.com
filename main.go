@@ -82,6 +82,10 @@ func main() {
 
 	// Dashboard (protected)
 	mux.HandleFunc("/dashboard", requireAuth(handleDashboard))
+	mux.HandleFunc("/dashboard/websites", requireAuth(handleDashboardWebsites))
+	mux.HandleFunc("/dashboard/scans", requireAuth(handleDashboardScans))
+	mux.HandleFunc("/dashboard/credits", requireAuth(handleDashboardCredits))
+	mux.HandleFunc("/dashboard/automation", requireAuth(handleDashboardAutomation))
 	mux.HandleFunc("/checkout", requireAuth(handleCheckout))
 
 	// Super admin

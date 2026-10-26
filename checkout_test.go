@@ -32,7 +32,7 @@ func TestCheckoutFootnoteStatesTheChargeCurrency(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := b.String()
-	for _, want := range []string{"Starter", "$50", "USD", "buyer@example.com", "proceed to payment"} {
+	for _, want := range []string{"Starter", "$50", "USD", "buyer@example.com", "Proceed to payment"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("checkout page missing %q", want)
 		}

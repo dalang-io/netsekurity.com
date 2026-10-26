@@ -79,8 +79,11 @@ func trimUSD(v float64) string {
 }
 
 var checkoutTpl = template.Must(template.New("checkout").Funcs(template.FuncMap{
-	"cssHash": func() string { return cssHash },
-	"fbpixel": func() template.HTML { return template.HTML(consentGate(true)) },
+	"cssHash":      func() string { return cssHash },
+	"fbpixel":      func() template.HTML { return template.HTML(consentGate(true)) },
+	"icon":         icon,
+	"credits":      fmtCredits,
+	"creditsLabel": creditsLabel,
 }).Parse(checkoutHTML))
 
 const checkoutHTML = `{{define "checkout"}}<!DOCTYPE html>
@@ -88,81 +91,93 @@ const checkoutHTML = `{{define "checkout"}}<!DOCTYPE html>
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>checkout — netsekurity</title>
+<title>Confirm your order — Netsekurity</title>
 <meta name="robots" content="noindex, nofollow"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"/>
 <link rel="stylesheet" href="/css/styles.css?v={{cssHash}}"/>
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />{{fbpixel}}
 <script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
 </head>
-<body class="scanlines bg-ink text-gray-300 min-h-screen">
-<header class="border-b border-emerald-500/25 bg-ink/85">
-  <div class="mx-auto flex max-w-3xl items-center justify-between px-4 py-3">
-    <a href="/" class="font-mono text-base font-bold text-white"><span class="glow text-emerald-400">net</span>sekurity<span class="text-emerald-500">.com</span> <span class="text-xs text-cyan-300">/checkout</span></a>
-    <a href="/dashboard" class="prompt font-mono text-xs text-gray-500 hover:text-white">back to dashboard</a>
+<body class="nsk-app min-h-screen overflow-x-hidden">
+<header class="fixed inset-x-0 top-0 z-40 h-16 border-b-2 border-black bg-white">
+  <div class="mx-auto flex h-full max-w-5xl items-center justify-between gap-3 px-4">
+    <a href="/dashboard" class="flex items-center gap-2.5" aria-label="Netsekurity home">
+      <img src="/favicon.svg" width="34" height="34" alt="" class="h-[34px] w-[34px]"/>
+      <span class="text-xl font-extrabold tracking-tight">Netsekurity</span>
+    </a>
+    <a href="/dashboard/credits" class="nsk-btn nsk-btn-ghost nsk-btn-sm">Back to credits</a>
   </div>
 </header>
 
-<main class="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-  <h1 class="font-mono text-2xl font-bold text-white"><span class="text-emerald-400">$</span> confirm order</h1>
-  <p class="copy mt-2 text-gray-400">Review what you are buying. You will be taken to our payment provider to complete it.</p>
+<main class="mx-auto max-w-xl px-4 pb-16 pt-28">
+  <h1 class="text-2xl font-extrabold sm:text-3xl">Confirm your order</h1>
+  <p class="mt-1 text-gray-700">Check the details below. Next you go to our secure payment page to finish.</p>
 
-  <section class="mt-6 rounded border border-emerald-500/30 bg-[#04060c]">
-    <div class="flex items-center gap-1.5 border-b border-emerald-500/20 px-4 py-2">
-      <span class="h-2.5 w-2.5 rounded-full bg-emerald-500/70"></span>
-      <span class="ml-1 font-mono text-[11px] text-gray-500">$ order</span>
-    </div>
+  <section class="nsk-card mt-6">
+    <h2 class="nsk-card-head">Order summary</h2>
 
-    <dl class="divide-y divide-white/10 px-4">
-      <div class="flex items-baseline justify-between py-3">
-        <dt class="font-mono text-xs text-gray-500">package</dt>
-        <dd class="font-mono text-sm text-white">{{.Package.Name}}</dd>
+    <dl class="divide-y-2 divide-gray-200 px-4">
+      <div class="flex items-baseline justify-between gap-4 py-3">
+        <dt class="text-gray-700">Pack</dt>
+        <dd class="font-extrabold">{{.Package.Name}}</dd>
       </div>
-      <div class="flex items-baseline justify-between py-3">
-        <dt class="font-mono text-xs text-gray-500">credits</dt>
-        <dd class="font-mono text-sm text-emerald-300">{{printf "%.0f" .Package.Credits}}</dd>
+      <div class="flex items-baseline justify-between gap-4 py-3">
+        <dt class="text-gray-700">Credits</dt>
+        <dd class="font-extrabold">{{creditsLabel .Package.Credits}}</dd>
       </div>
-      <div class="flex items-baseline justify-between py-3">
-        <dt class="font-mono text-xs text-gray-500">what 1 credit buys</dt>
-        <dd class="font-mono text-xs text-gray-400">1 external assessment · 1 domain</dd>
+      <div class="flex items-baseline justify-between gap-4 py-3">
+        <dt class="text-gray-700">What you get</dt>
+        <dd class="text-right text-sm">Each credit runs 1 security scan of 1 website</dd>
       </div>
-      <div class="flex items-baseline justify-between py-3">
-        <dt class="font-mono text-xs text-gray-500">billed to</dt>
-        <dd class="font-mono text-xs text-gray-400">{{.Email}}</dd>
+      <div class="flex items-baseline justify-between gap-4 py-3">
+        <dt class="text-gray-700">Billed to</dt>
+        <dd class="break-all text-right text-sm">{{.Email}}</dd>
       </div>
-      <div class="flex items-baseline justify-between py-3">
-        <dt class="font-mono text-sm font-bold text-white">total</dt>
-        <dd class="font-mono text-2xl font-bold text-emerald-300 glow">{{.Total}} <span class="text-sm font-normal text-gray-500">USD</span></dd>
+      <div class="flex items-baseline justify-between gap-4 py-4">
+        <dt class="text-lg font-extrabold">Total</dt>
+        <dd class="text-3xl font-extrabold">{{.Total}} <span class="text-sm font-bold text-gray-700">USD</span></dd>
       </div>
     </dl>
 
     <div class="px-4 pb-4">
-      <p class="copy rounded border {{if .Mismatch}}border-yellow-500/40 bg-yellow-500/10 text-yellow-200{{else}}border-white/10 bg-white/5 text-gray-400{{end}} px-3 py-2 text-[13px]">
-        {{if .Mismatch}}<span class="font-bold">Note on currency — </span>{{end}}{{.ChargeNote}}
+      <p class="nsk-alert {{if .Mismatch}}nsk-alert-warn{{else}}nsk-alert-info{{end}} text-sm">
+        {{if .Mismatch}}<strong>Note on currency — </strong>{{end}}{{.ChargeNote}}
       </p>
 
       <form hx-post="/api/topup" hx-target="#pay-result" hx-swap="innerHTML" hx-disabled-elt="find button" class="mt-4">
         <input type="hidden" name="package_id" value="{{.Package.ID}}"/>
         <button
           onclick="nskTrack('InitiateCheckout',{content_name:'{{.Package.Name}}',content_type:'product',value:{{.Package.USD}},currency:'USD'})"
-          class="w-full rounded border-2 border-emerald-400 bg-emerald-500/10 px-5 py-3 font-mono text-sm font-bold text-emerald-300 hover:bg-emerald-500/20 glow disabled:cursor-not-allowed disabled:opacity-50">
-          proceed to payment — {{.Total}} USD
+          class="nsk-btn nsk-btn-block min-h-[52px] text-base">
+          {{icon "lock" 18}}Proceed to payment — {{.Total}} USD
         </button>
       </form>
-      <div id="pay-result" class="mt-3"></div>
+      <div id="pay-result" class="mt-3" aria-live="polite"></div>
 
-      <p class="copy mt-3 text-[13px] text-gray-600">
-        Credits are added to your balance as soon as the payment settles, and never expire.
-        Your current balance is {{printf "%.1f" .Balance}}.
-      </p>
-      <p class="copy mt-1 text-[13px] text-gray-600">
-        Payment is handled by Xendit. We never see or store your card details.
-      </p>
+      <ul class="mt-4 space-y-1.5 text-sm text-gray-700">
+        <li>Credits are added as soon as the payment goes through, and they never expire. Your balance now: <strong>{{credits .Balance}}</strong>.</li>
+        <li>Payment is handled by Xendit. We never see or store your card details.</li>
+      </ul>
     </div>
   </section>
 
-  <p class="mt-5 text-center font-mono text-xs">
-    <a href="/dashboard" class="text-gray-500 hover:text-emerald-300">← pick a different package</a>
+  <p class="mt-5 text-center">
+    <a href="/dashboard/credits" class="font-bold underline">← Choose a different pack</a>
   </p>
 </main>
+<script>
+// HTMX does not swap error responses by default; show our own alert boxes (and only those).
+document.addEventListener('htmx:beforeSwap', function (e) {
+  if (e.detail.xhr.status >= 400 && (e.detail.serverResponse || '').indexOf('nsk-alert') !== -1) {
+    e.detail.shouldSwap = true; e.detail.isError = false;
+  }
+});
+document.addEventListener('htmx:responseError', function (e) {
+  var r = document.getElementById('pay-result');
+  if (r && !r.innerHTML) r.innerHTML = '<div class="nsk-alert nsk-alert-bad" role="alert"><strong>Something went wrong.</strong> Please try again.</div>';
+});
+</script>
 </body>
 </html>{{end}}`

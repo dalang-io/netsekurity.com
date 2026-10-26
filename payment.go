@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"strings"
@@ -92,7 +93,7 @@ func handleTopUp(w http.ResponseWriter, r *http.Request) {
 		if xr.ErrorCode == "UNSUPPORTED_CURRENCY" {
 			msg = "Our payment provider cannot bill in " + currency + " right now. Nothing was charged. Email sales@dalang.io and we will invoice you directly."
 		}
-		fmt.Fprintf(w, `<div class="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-xs text-red-300">%s</div>`, msg)
+		fmt.Fprint(w, alertHTML("bad", template.HTMLEscapeString(msg)))
 		return
 	}
 	// Capture the Meta Pixel cookies / IP / UA now: the settlement webhook is a
@@ -111,7 +112,7 @@ func handleTopUp(w http.ResponseWriter, r *http.Request) {
 	// HX-Redirect and navigates to it). No extra "pay now" step.
 	w.Header().Set("HX-Redirect", xr.InvoiceURL)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	fmt.Fprintf(w, `<meta http-equiv="refresh" content="0;url=%s"><div class="rounded bg-emerald-500/15 px-3 py-2 text-xs text-emerald-300">Redirecting to payment… %v credits</div>`, xr.InvoiceURL, credits)
+	fmt.Fprintf(w, `<meta http-equiv="refresh" content="0;url=%s">`+alertHTML("ok", "Taking you to the secure payment page…"), xr.InvoiceURL)
 }
 
 // topUpAmountUSD returns the invoice amount in the configured currency. USD is

@@ -55,7 +55,9 @@ Browser (HTTPS) → Cloudflare (flexible) → Pingora :80
      ├── /product-scope       PRODUCT_SCOPE.md rendered in the site shell
      ├── /css/*, /og.png, /robots.txt, /sitemap.xml, /llms*.txt, /security.txt
      ├── /auth/*              Google OAuth + One Tap
-     ├── /dashboard, /su      authenticated pages (HTMX)
+     ├── /dashboard           customer app, light theme + sidebar (HTMX): Home, then
+     │   /dashboard/websites | /scans | /credits | /automation
+     ├── /checkout, /su       order confirmation; super-admin panel
      ├── /api/*               top-up, domains/verify, pentests, api-tokens
      ├── /reports/*           pentest PDFs (owner/admin only, no-store)
      └── SQLite (data/netsekurity.db) + data/reports/
@@ -73,7 +75,9 @@ netsekurity.com/
 ├── db.go              # SQLite init, schema, seed packages, super-admin seed
 ├── env.go             # .env loader
 ├── util.go            # parseFloat, secureCompare
-├── dashboard.go       # authenticated dashboard (HTML template + cssHash func)
+├── dashboard.go       # customer dashboard: data loading, page handlers, template funcs, sidebar nav
+├── dashboard_html.go  # dashboard templates: shell (top bar + sidebar + toast) and the five pages
+├── ui.go              # shared UI helpers: credit/time formatting, icons, alertHTML()
 ├── admin.go           # super-admin panel (/su) + report serving + add-credit
 ├── payment.go         # Xendit top-up, webhook, auto-credit poller (syncPendingPayments)
 ├── domains.go         # domain add / TXT verify (authoritative NS) / delete
@@ -133,7 +137,7 @@ Created automatically at startup (`db.go`); migrations run idempotently via `sch
 
 ### Credit rules
 - `1 credit = 1 external assessment · 1 domain`.
-- Top-up credits are added by the **auto-credit poller** (`syncPendingPayments`, every 30s + on dashboard load) — the Xendit **webhook is optional** (kept as a fallback).
+- Top-up credits are added by the **auto-credit poller** (`syncPendingPayments`, every 30s + when Home or Credits loads) — the Xendit **webhook is optional** (kept as a fallback).
 - Spending a credit writes a `spend` row and decrements `balance` atomically.
 
 ---
@@ -165,7 +169,7 @@ Created automatically at startup (`db.go`); migrations run idempotently via `sch
   amount. IDR amount = `usd_price × XENDIT_USD_RATE`. Switch back to USD only once Xendit
   enables it on the account.
 - **Auto-credit:** the poller checks pending payments against Xendit and credits when
-  `PAID`/`SETTLED` (idempotent). Runs every 30s + on dashboard load. Webhook `/webhook/xendit`
+  `PAID`/`SETTLED` (idempotent). Runs every 30s + when Home or Credits loads. Webhook `/webhook/xendit`
   is optional (token-gated by `XENDIT_CALLBACK_KEY`).
 
 ### Dalang platform scan API
@@ -283,6 +287,36 @@ Full template: [`env.example`](env.example). Key vars:
 
 ---
 
+## Customer UI (dashboard + checkout)
+
+Light theme that mirrors `dalang.io/dashboard`: white surfaces, yellow `#facc15` primary,
+near-black `#1c1a17` borders with hard offset shadows, Plus Jakarta Sans, a left sidebar.
+The landing page, `/docs`, `/sample-report` and `/su` keep the dark terminal look.
+
+- **Scope.** Everything is under `.nsk-app` (a class on `<body>`); the component classes
+  (`nsk-card`, `nsk-btn`, `nsk-badge-*`, `nsk-alert-*`, `nsk-nav-link`, `nsk-input`, …) live in
+  `assets/input.css` under `@layer components`. The shared stylesheet is global, so never put
+  a bare rule there that the landing page would pick up.
+- **Pages.** One task per page: Home (next step, balance, latest scans), My websites, Security
+  scans, Credits & payments, Automation (API tokens, for developers). Only Home and Credits call
+  `syncPendingPayments` — it hits Xendit once per pending invoice and must not run on every click.
+- **Results are a toast.** Every action posts to `#flash`, a fixed, dismissible, auto-clearing
+  message, so nothing underneath shifts. Handlers answer a refused request with `alertHTML(...)`
+  **and an error status**: the shell's `htmx:beforeSwap` swaps any error response that contains
+  `nsk-alert` (HTMX drops 4xx/5xx bodies by default, which used to hide "not a hostname" and
+  "cannot delete"). Other failures (401, 429, network) get a generic message from the shell.
+- **Dynamic class names are purged.** `alertHTML` builds `nsk-alert-<kind>` at runtime, which
+  Tailwind's content scan cannot see; `tailwind.config.js` carries a `safelist` for the
+  `nsk-alert-*` / `nsk-badge-*` variants. Add new dynamic variants there.
+- **Don't name a class after a severity.** `TestSeverityChipsDistinguishCleanFromUnknown`
+  looks for the substrings `info`/`medium` in the chips to prove a zero row is omitted.
+- **Times** are stored in UTC and rendered by `timeTag` as `<time datetime=…>`; the shell
+  script localises them in the browser. SQLite writes `YYYY-MM-DD HH:MM:SS`, Go writes RFC3339 —
+  `parseStoredTime` accepts both.
+- **Fonts.** Plus Jakarta Sans loads from Google Fonts (as on dalang.io), with system fallbacks.
+- After changing any template or class, run `npm run build:css` and commit `static/css/styles.css`
+  (it is embedded in the binary).
+
 ## Local Development
 
 ```bash
@@ -292,6 +326,13 @@ cp env.example .env      # fill values (or rely on defaults)
 go run .                 # serves on :8094 (PORT env to override)
 go test ./...            # unit tests
 ```
+
+> **Trap — `.env` beats real environment variables.** `env.go` says the opposite in a comment,
+> but `getenv` reads the `.env` map first. If `.env` holds real secrets (Xendit, Google,
+> `DATABASE_PATH`), `go run .` uses them whatever you export. To run an isolated copy for UI
+> work, `go build -o /tmp/nsk-dev .` and start it from an **empty directory** with
+> `PORT`, `DATABASE_PATH`, `JWT_SECRET` and `SUPER_ADMIN_EMAIL` set; the assets are embedded,
+> so it needs nothing else. Mint a session with `issueJWT` (cookie `nsk_session`).
 
 ---
 

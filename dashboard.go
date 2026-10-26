@@ -9,6 +9,18 @@ import (
 	"strings"
 )
 
+// The customer dashboard is a handful of task-sized pages inside one shell
+// (sidebar + top bar, the same layout as dalang.io/dashboard):
+//
+//	/dashboard             Home        — what to do next, balance, latest scans
+//	/dashboard/websites    Websites    — add a domain, prove it is yours, scan it
+//	/dashboard/scans       Scans       — start a scan, read the results
+//	/dashboard/credits     Credits     — packages, payments, credit activity
+//	/dashboard/automation  Automation  — API tokens for CI/CD (developers)
+//
+// Templates live in dashboard_html.go. Every page is rendered from the same
+// dashboardData; loadDashboardData only fills what the page in question uses.
+
 type dashboardData struct {
 	Name         string
 	Email        string
@@ -19,6 +31,11 @@ type dashboardData struct {
 	Payments     []pymt // pending + paid
 	Expired      []pymt // expired, collapsed behind a disclosure
 	Domains      []dom
+
+	// Home only.
+	ScanCount     int   // every scan the account has ever started
+	VerifiedCount int   // domains whose ownership is confirmed
+	PendingPay    *pymt // an unpaid invoice that can still be finished
 }
 
 type pkg struct {
@@ -32,7 +49,7 @@ type txn struct {
 	Amount                       float64
 }
 
-// pymt is an Xendit invoice shown in the transaction history (incl. pending/expired).
+// pymt is an Xendit invoice shown in the payment history (incl. pending/expired).
 type pymt struct {
 	ExternalID, Package, Status, CreatedAt, URL string
 	AmountUSD                                   float64
@@ -43,30 +60,105 @@ type dom struct {
 	Domain, Status, TXT string
 }
 
-// renderDomainListOOB writes the shared domain list as an HTMX out-of-band swap.
-// Handlers that change a domain append it to their response so the list refreshes
-// in place — the dashboard used to force a full location.reload() instead, which
-// threw away the very message the user had just been shown.
+// step is one line of the Home page's getting-started checklist.
+type step struct {
+	N             int
+	Title, Body   string
+	CTA, Href     string
+	Done, Current bool
+}
+
+func (d dashboardData) FirstName() string { return firstName(d.Name, d.Email) }
+func (d dashboardData) Initial() string   { return initial(d.Name, d.Email) }
+
+// Verified is the subset of domains a scan can be started for.
+func (d dashboardData) Verified() []dom {
+	var out []dom
+	for _, x := range d.Domains {
+		if x.Status == "verified" {
+			out = append(out, x)
+		}
+	}
+	return out
+}
+
+// Steps is the path from a new account to a first report. A step is done when
+// the account's data says so, and exactly one — the first unfinished — is
+// current, so the page always has a single obvious next action.
+func (d dashboardData) Steps() []step {
+	steps := []step{
+		{N: 1, Title: "Add your website",
+			Body: "Type the address of the website you want to check, like www.mybusiness.com.",
+			CTA:  "Add a website", Href: "/dashboard/websites", Done: len(d.Domains) > 0},
+		{N: 2, Title: "Prove it's yours",
+			Body: "We only scan websites you own. You add one small record in your domain settings — we show you exactly how.",
+			CTA:  "Verify my website", Href: "/dashboard/websites", Done: d.VerifiedCount > 0},
+		{N: 3, Title: "Get a credit",
+			Body: "Each scan uses 1 credit. Credits never expire.",
+			CTA:  "Choose a credit pack", Href: "/dashboard/credits", Done: d.Balance > 0 || d.ScanCount > 0},
+		{N: 4, Title: "Run your first scan",
+			Body: "It takes a few minutes. Then you get a PDF report that explains what was found and what to fix.",
+			CTA:  "Start a scan", Href: "/dashboard/scans", Done: d.ScanCount > 0},
+	}
+	for i := range steps {
+		if !steps[i].Done {
+			steps[i].Current = true
+			break
+		}
+	}
+	return steps
+}
+
+func (d dashboardData) StepsDone() int {
+	n := 0
+	for _, s := range d.Steps() {
+		if s.Done {
+			n++
+		}
+	}
+	return n
+}
+
+func (d dashboardData) AllDone() bool { return d.StepsDone() == len(d.Steps()) }
+
+// loadDomains reads one customer's domains, newest first.
+func loadDomains(userID string) []dom {
+	rows, err := db.Query(`SELECT domain, status, txt_verification_token FROM domains WHERE user_id=? ORDER BY created_at DESC`, userID)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var out []dom
+	for rows.Next() {
+		var d dom
+		rows.Scan(&d.Domain, &d.Status, &d.TXT)
+		out = append(out, d)
+	}
+	return out
+}
+
+// renderDomainListOOB writes the domain list, and the scan picker that mirrors
+// it, as HTMX out-of-band swaps. Handlers that change a domain append it to
+// their response so the page refreshes in place — the dashboard used to force a
+// full location.reload() instead, which threw away the very message the user
+// had just been shown. A target that is not on the current page is skipped by
+// HTMX, so this is safe to send from every page.
 func renderDomainListOOB(w io.Writer, userID string) {
 	var d dashboardData
 	db.QueryRow(`SELECT balance FROM credit_balance WHERE user_id=?`, userID).Scan(&d.Balance)
-	rows, err := db.Query(`SELECT domain, status, txt_verification_token FROM domains WHERE user_id=? ORDER BY created_at DESC`, userID)
-	if err != nil {
-		return
+	d.Domains = loadDomains(userID)
+	for _, part := range []struct{ tpl, id string }{
+		{"domainlist", "domain-list"},
+		{"scanpicker", "scan-picker"},
+	} {
+		var b strings.Builder
+		if err := tmpl.ExecuteTemplate(&b, part.tpl, d); err != nil {
+			log.Printf("%s render error: %v", part.tpl, err)
+			continue
+		}
+		io.WriteString(w, strings.Replace(b.String(),
+			`<div id="`+part.id+`">`, `<div id="`+part.id+`" hx-swap-oob="true">`, 1))
 	}
-	for rows.Next() {
-		var dm dom
-		rows.Scan(&dm.Domain, &dm.Status, &dm.TXT)
-		d.Domains = append(d.Domains, dm)
-	}
-	rows.Close()
-	var b strings.Builder
-	if err := tmpl.ExecuteTemplate(&b, "domainlist", d); err != nil {
-		log.Printf("domainlist render error: %v", err)
-		return
-	}
-	io.WriteString(w, strings.Replace(b.String(),
-		`<div id="domain-list">`, `<div id="domain-list" hx-swap-oob="true">`, 1))
 }
 
 // renderBalanceOOB writes the credit balance as an HTMX out-of-band swap so an
@@ -74,48 +166,105 @@ func renderDomainListOOB(w io.Writer, userID string) {
 func renderBalanceOOB(w io.Writer, userID string) {
 	var balance float64
 	db.QueryRow(`SELECT balance FROM credit_balance WHERE user_id=?`, userID).Scan(&balance)
-	fmt.Fprintf(w, `<span id="credit-balance" hx-swap-oob="true" class="font-mono text-3xl font-bold text-emerald-300 glow">%.1f</span>`, balance)
+	fmt.Fprintf(w, `<span id="credit-balance" hx-swap-oob="true" class="font-extrabold">%s</span>`, fmtCredits(balance))
 }
 
-// handleDashboard renders the authenticated dashboard.
-func handleDashboard(w http.ResponseWriter, r *http.Request) {
+func handleDashboard(w http.ResponseWriter, r *http.Request) { serveDashboardPage(w, r, "dashboard") }
+func handleDashboardWebsites(w http.ResponseWriter, r *http.Request) {
+	serveDashboardPage(w, r, "dashboard_websites")
+}
+func handleDashboardScans(w http.ResponseWriter, r *http.Request) {
+	serveDashboardPage(w, r, "dashboard_scans")
+}
+func handleDashboardCredits(w http.ResponseWriter, r *http.Request) {
+	serveDashboardPage(w, r, "dashboard_credits")
+}
+func handleDashboardAutomation(w http.ResponseWriter, r *http.Request) {
+	serveDashboardPage(w, r, "dashboard_automation")
+}
+
+// serveDashboardPage renders one named dashboard template for the signed-in user.
+func serveDashboardPage(w http.ResponseWriter, r *http.Request, page string) {
 	w.Header().Set("Cache-Control", "no-store, private")
 	w.Header().Set("X-Robots-Tag", "noindex, nofollow")
-	// Sync any newly-paid payments so credits appear immediately (no webhook needed).
-	syncPendingPayments()
 	claims, err := currentUser(r)
 	if err != nil {
 		http.Redirect(w, r, "/login", http.StatusFound)
 		return
 	}
-	var name, email string
-	var balance float64
-	db.QueryRow(`SELECT name, email FROM users WHERE id=?`, claims.Sub).Scan(&name, &email)
-	db.QueryRow(`SELECT balance FROM credit_balance WHERE user_id=?`, claims.Sub).Scan(&balance)
+	// Sync any newly-paid payments so credits appear immediately (no webhook
+	// needed). This calls Xendit once per pending invoice, so it runs only where
+	// a customer returning from payment lands or reads the balance — not on every
+	// click through the sidebar.
+	if page == "dashboard" || page == "dashboard_credits" {
+		syncPendingPayments()
+	}
+	data := loadDashboardData(claims.Sub, page)
+	if err := tmpl.ExecuteTemplate(w, page, data); err != nil {
+		log.Printf("%s render error: %v", page, err)
+	}
+}
 
-	data := dashboardData{Name: name, Email: email, Balance: balance, IsAdmin: isAdmin(email)}
+// loadDashboardData reads the account header (name, balance) plus whatever the
+// given page shows.
+func loadDashboardData(userID, page string) dashboardData {
+	var d dashboardData
+	db.QueryRow(`SELECT name, email FROM users WHERE id=?`, userID).Scan(&d.Name, &d.Email)
+	db.QueryRow(`SELECT balance FROM credit_balance WHERE user_id=?`, userID).Scan(&d.Balance)
+	d.IsAdmin = isAdmin(d.Email)
 
+	switch page {
+	case "dashboard":
+		d.Domains = loadDomains(userID)
+		d.VerifiedCount = len(d.Verified())
+		db.QueryRow(`SELECT COUNT(*) FROM pentests WHERE user_id=?`, userID).Scan(&d.ScanCount)
+		d.PendingPay = loadPendingPayment(userID)
+	case "dashboard_websites", "dashboard_scans":
+		d.Domains = loadDomains(userID)
+	case "dashboard_credits":
+		loadCreditsData(&d, userID)
+	}
+	return d
+}
+
+// loadPendingPayment returns the newest invoice that is still payable, so Home
+// can offer to finish it instead of leaving the customer to hunt for it.
+func loadPendingPayment(userID string) *pymt {
+	var p pymt
+	err := db.QueryRow(`SELECT external_id, COALESCE((SELECT name FROM credit_packages cp WHERE cp.id=payments.package_id), COALESCE(package_id,'')),
+			status, amount_usd, credits, created_at, COALESCE(url,'')
+		FROM payments WHERE user_id=? AND status='pending' AND COALESCE(url,'') != '' AND created_at >= datetime('now','-1 day')
+		ORDER BY id DESC LIMIT 1`, userID).
+		Scan(&p.ExternalID, &p.Package, &p.Status, &p.AmountUSD, &p.Credits, &p.CreatedAt, &p.URL)
+	if err != nil {
+		return nil
+	}
+	return &p
+}
+
+func loadCreditsData(d *dashboardData, userID string) {
 	rows, _ := db.Query(`SELECT id, name, usd_price, credits FROM credit_packages WHERE is_active=1 ORDER BY usd_price`)
 	for rows.Next() {
 		var p pkg
 		rows.Scan(&p.ID, &p.Name, &p.USD, &p.Credits)
-		data.Packages = append(data.Packages, p)
+		d.Packages = append(d.Packages, p)
 	}
 	rows.Close()
 
-	trows, _ := db.Query(`SELECT type, amount, description, created_at FROM credit_transactions WHERE user_id=? ORDER BY created_at DESC LIMIT 20`, claims.Sub)
+	trows, _ := db.Query(`SELECT type, amount, description, created_at FROM credit_transactions WHERE user_id=? ORDER BY created_at DESC LIMIT 20`, userID)
 	for trows.Next() {
 		var t txn
 		trows.Scan(&t.Type, &t.Amount, &t.Description, &t.CreatedAt)
-		data.Transactions = append(data.Transactions, t)
+		d.Transactions = append(d.Transactions, t)
 	}
 	trows.Close()
 
 	// Mark overdue pending invoices as expired, then load the user's payment history
-	// (instances/pending/paid/expired) so the dashboard reflects real invoice state.
-	db.Exec(`UPDATE payments SET status='expired' WHERE user_id=? AND status='pending' AND created_at < datetime('now','-1 day')`, claims.Sub)
-	ptrows, _ := db.Query(`SELECT external_id, COALESCE(package_id,''), status, COALESCE(paid_at,''), amount_usd, credits, created_at, COALESCE(url,'')
-		FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 20`, claims.Sub)
+	// (pending/paid/expired) so the page reflects real invoice state.
+	db.Exec(`UPDATE payments SET status='expired' WHERE user_id=? AND status='pending' AND created_at < datetime('now','-1 day')`, userID)
+	ptrows, _ := db.Query(`SELECT external_id, COALESCE((SELECT name FROM credit_packages cp WHERE cp.id=payments.package_id), COALESCE(package_id,'')),
+			status, COALESCE(paid_at,''), amount_usd, credits, created_at, COALESCE(url,'')
+		FROM payments WHERE user_id=? ORDER BY id DESC LIMIT 20`, userID)
 	for ptrows.Next() {
 		var p pymt
 		var paidSrc string
@@ -124,297 +273,78 @@ func handleDashboard(w http.ResponseWriter, r *http.Request) {
 			p.CreatedAt = paidSrc
 		}
 		// Expired invoices are noise on every page load — collapse them so the
-		// history panel leads with what the customer can still act on.
+		// history leads with what the customer can still act on.
 		if p.Status == "expired" {
-			data.Expired = append(data.Expired, p)
+			d.Expired = append(d.Expired, p)
 		} else {
-			data.Payments = append(data.Payments, p)
+			d.Payments = append(d.Payments, p)
 		}
 	}
 	ptrows.Close()
-
-	drows, _ := db.Query(`SELECT domain, status, txt_verification_token FROM domains WHERE user_id=? ORDER BY created_at DESC`, claims.Sub)
-	for drows.Next() {
-		var d dom
-		drows.Scan(&d.Domain, &d.Status, &d.TXT)
-		data.Domains = append(data.Domains, d)
-	}
-	drows.Close()
-
-	if err := tmpl.ExecuteTemplate(w, "dashboard", data); err != nil {
-		log.Printf("dashboard render error: %v", err)
-	}
 }
 
-const dashboardHTML = `{{define "dashboard"}}<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>dashboard — netsekurity</title>
-<meta name="robots" content="noindex, nofollow"/>
-<link rel="stylesheet" href="/css/styles.css?v={{cssHash}}"/>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />{{fbpixel}}
-<script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
-</head>
-<body class="scanlines bg-ink text-gray-300 min-h-screen overflow-x-hidden">
-<header class="border-b border-emerald-500/25 bg-ink/85">
-  <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3">
-    <a href="/" class="font-mono text-base font-bold text-white"><span class="glow text-emerald-400">net</span>sekurity<span class="text-emerald-500">.com</span> <span class="text-xs text-cyan-300">/dashboard</span></a>
-    <div class="flex items-center gap-3 font-mono text-xs">
-      {{if .IsAdmin}}<a href="/su" class="text-yellow-300 hover:text-yellow-200">su</a>{{end}}
-      <span class="hidden text-gray-500 sm:inline">{{.Name}} · {{.Email}}</span>
-      <a href="/logout" class="prompt text-gray-500 hover:text-white">logout</a>
-    </div>
-  </div>
-</header>
-<main id="main" class="mx-auto max-w-6xl overflow-x-hidden px-4 py-5 sm:px-6">
-  <div class="grid w-full gap-4 lg:grid-cols-2">
-    <!-- Left: balance + topup + transactions -->
-    <div class="min-w-0 w-full space-y-4">
-      <section class="min-w-0 w-full rounded border border-emerald-500/30 bg-[#04060c]">
-        <div class="flex items-center gap-1.5 border-b border-emerald-500/20 px-3 py-2">
-          <span class="h-2.5 w-2.5 rounded-full bg-emerald-500/70"></span>
-          <span class="ml-1 font-mono text-[11px] text-gray-500">$ balance</span>
-        </div>
-        <div class="px-4 py-3">
-          <div class="flex items-baseline justify-between">
-            <span class="font-mono text-xs text-gray-400">credits</span>
-            <span id="credit-balance" class="font-mono text-3xl font-bold text-emerald-300 glow">{{printf "%.1f" .Balance}}</span>
-          </div>
-          <p class="mt-1 font-mono text-[11px] text-gray-600"># 1 credit = 1 external assessment · 1 domain</p>
-          {{if le .Balance 0.0}}
-          <p class="mt-2 rounded border border-yellow-500/30 bg-yellow-500/10 px-2 py-1.5 font-mono text-[11px] text-yellow-300">
-            No credits yet — buy a package below to run your first scan.
-          </p>
-          {{end}}
-        </div>
-      </section>
+// navItem is one sidebar entry. Key matches the active page passed to shell().
+type navItem struct {
+	Key, Href, Label, Icon string
+}
 
-      <section class="min-w-0 w-full rounded border border-white/10 bg-[#04060c]">
-        <div class="flex items-center gap-1.5 border-b border-white/10 px-3 py-2">
-          <span class="h-2.5 w-2.5 rounded-full bg-red-500/70"></span>
-          <span class="ml-1 font-mono text-[11px] text-gray-500">$ topup</span>
-        </div>
-        <div class="p-3">
-          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {{range .Packages}}
-            <div class="rounded border border-white/15 bg-ink p-3 hover:border-emerald-500/40">
-              <div class="flex items-baseline justify-between">
-                <span class="font-mono text-sm text-white">{{.Name}}</span>
-                <span class="font-mono text-sm text-emerald-400">${{printf "%.0f" .USD}}</span>
-              </div>
-              <div class="font-mono text-[11px] text-gray-500">{{printf "%.0f" .Credits}} credits</div>
-              <a href="/checkout?package={{.ID}}"
-                class="mt-2 block w-full rounded border border-emerald-400 bg-emerald-500/10 px-2 py-1.5 text-center font-mono text-xs font-bold text-emerald-300 hover:bg-emerald-500/20">buy</a>
-            </div>
-            {{end}}
-          </div>
-          <p class="mt-2 font-mono text-[11px] text-gray-600">All prices in USD. You will see the total before paying.</p>
-          <div id="topup-result" class="mt-2"></div>
-        </div>
-      </section>
+var dashboardNav = []navItem{
+	{"home", "/dashboard", "Home", "home"},
+	{"sites", "/dashboard/websites", "My websites", "globe"},
+	{"scans", "/dashboard/scans", "Security scans", "shield"},
+	{"credits", "/dashboard/credits", "Credits & payments", "card"},
+	{"auto", "/dashboard/automation", "Automation", "zap"},
+}
 
-      <section class="rounded border border-white/10 bg-[#04060c]">
-        <div class="flex items-center gap-1.5 border-b border-white/10 px-3 py-2">
-          <span class="h-2.5 w-2.5 rounded-full bg-yellow-500/70"></span>
-          <span class="ml-1 font-mono text-[11px] text-gray-500">$ history</span>
-        </div>
-        <div class="p-3">
-          {{if .Transactions}}
-          <div class="overflow-x-auto">
-          <table class="w-full min-w-[320px] font-mono text-xs">
-            <thead><tr class="text-left text-gray-500"><th class="py-1">type</th><th>desc</th><th class="text-right">amt</th></tr></thead>
-            <tbody>
-            {{range .Transactions}}
-            <tr class="border-t border-white/10">
-              <td class="py-1 {{if eq .Type "topup"}}text-emerald-300{{else}}text-yellow-300{{end}}">{{.Type}}</td>
-              <td class="text-gray-500">{{.Description}}</td>
-              <td class="text-right font-mono {{if eq .Type "topup"}}text-emerald-400{{else}}text-gray-300{{end}}">{{if eq .Type "topup"}}+{{end}}{{printf "%.1f" .Amount}}</td>
-            </tr>
-            {{end}}
-            </tbody>
-          </table>
-          </div>
-          {{else}}
-          <p class="font-mono text-xs text-gray-600"># no transactions yet</p>
-          {{end}}
+// shellData is what the page shell needs: the page's own data plus which sidebar
+// entry is current and what the browser tab should say.
+type shellData struct {
+	dashboardData
+	Active, Title string
+}
 
-          {{if .Payments}}
-          <div class="mt-4 border-t border-white/10 pt-2">
-            <div class="mb-1 font-mono text-[11px] text-gray-500"># invoices</div>
-            <div class="overflow-x-auto">
-            <table class="w-full min-w-[320px] font-mono text-xs">
-              <thead><tr class="text-left text-gray-500"><th class="py-1">invoice</th><th>status</th><th class="text-right">credits</th></tr></thead>
-              <tbody>
-              {{range .Payments}}
-              <tr class="border-t border-white/10">
-                <td class="py-1" title="{{.ExternalID}}">
-                  <span class="text-gray-200">{{if .Package}}{{.Package}}{{else}}top-up{{end}}</span>
-                  <span class="text-gray-500"> · ${{printf "%.0f" .AmountUSD}}</span>
-                  <span class="block text-[10px] text-gray-600">{{.CreatedAt}}</span>
-                </td>
-                <td class="py-1"><span class="rounded px-1.5 py-0.5 text-[10px] font-bold {{if eq .Status "paid"}}bg-emerald-500/20 text-emerald-300{{else}}bg-yellow-500/20 text-yellow-300{{end}}">{{.Status}}</span>{{if eq .Status "pending"}}{{if .URL}}&nbsp;<a href="{{.URL}}" target="_blank" rel="noopener" class="rounded border border-emerald-400 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-300 hover:bg-emerald-500/20">pay →</a>{{end}}{{end}}</td>
-                <td class="text-right font-mono text-emerald-400">{{printf "%.0f" .Credits}}</td>
-              </tr>
-              {{end}}
-              </tbody>
-            </table>
-            </div>
-          </div>
-          {{end}}
+// txnLabel names a credit movement in words a customer uses.
+func txnLabel(kind string) string {
+	switch kind {
+	case "topup":
+		return "Credits added"
+	case "spend":
+		return "Scan"
+	case "admin_credit":
+		return "Credit adjustment"
+	}
+	return kind
+}
 
-          {{if .Expired}}
-          <details class="mt-3 border-t border-white/10 pt-2">
-            <summary class="cursor-pointer font-mono text-[11px] text-gray-600 hover:text-gray-400">
-              # {{len .Expired}} expired invoice(s) — unpaid within 24h
-            </summary>
-            <div class="mt-1 overflow-x-auto">
-            <table class="w-full min-w-[320px] font-mono text-xs">
-              <tbody>
-              {{range .Expired}}
-              <tr class="border-t border-white/10 text-gray-600">
-                <td class="py-1" title="{{.ExternalID}}">{{if .Package}}{{.Package}}{{else}}top-up{{end}} · ${{printf "%.0f" .AmountUSD}}</td>
-                <td class="py-1 text-[10px]">{{.CreatedAt}}</td>
-                <td class="text-right">{{printf "%.0f" .Credits}}</td>
-              </tr>
-              {{end}}
-              </tbody>
-            </table>
-            </div>
-          </details>
-          {{end}}
-        </div>
-      </section>
-
-      <section class="rounded border border-white/10 bg-[#04060c]">
-        <div class="flex items-center gap-1.5 border-b border-white/10 px-3 py-2">
-          <span class="h-2.5 w-2.5 rounded-full bg-cyan-500/70"></span>
-          <span class="ml-1 font-mono text-[11px] text-gray-500">$ api tokens (CI/CD)</span>
-        </div>
-        <div class="p-3">
-          <p class="font-mono text-[11px] text-gray-500">Generate a token for your CI/CD pipeline. On every
-            deploy, your pipeline calls <code class="text-cyan-300">POST /api/v1/pentests</code> with
-            <code class="text-cyan-300">X-API-Token</code> to start a pentest automatically.</p>
-          <div class="mt-2 flex items-end gap-2">
-            <div class="flex-1">
-              <label class="font-mono text-[10px] text-gray-500">expiry</label>
-              <select id="token-expiry" class="w-full rounded border border-white/15 bg-ink px-2 py-1.5 font-mono text-xs text-white focus:border-cyan-400 focus:outline-none">
-                <option value="7">7 days</option>
-                <option value="14">14 days</option>
-                <option value="30" selected>30 days</option>
-                <option value="60">60 days</option>
-                <option value="90">90 days</option>
-              </select>
-            </div>
-            <div class="flex-1">
-              <label class="font-mono text-[10px] text-gray-500">name</label>
-              <input id="token-name" type="text" value="CI/CD" class="w-full rounded border border-white/15 bg-ink px-2 py-1.5 font-mono text-xs text-white focus:border-cyan-400 focus:outline-none"/>
-            </div>
-            <button
-              hx-post="/api/tokens/create"
-              hx-vals='js:{"name": document.getElementById("token-name").value, "expiry_days": document.getElementById("token-expiry").value}'
-              hx-target="#token-result" hx-swap="innerHTML"
-              class="rounded border border-cyan-400 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs font-bold text-cyan-300 hover:bg-cyan-500/20">generate</button>
-          </div>
-          <div id="token-result" class="mt-2"></div>
-          <div id="token-list">
-            <div hx-get="/api/tokens" hx-trigger="load, every 15s" hx-swap="innerHTML"></div>
-          </div>
-        </div>
-      </section>
-    </div>
-
-    <!-- Right: scans first (what the customer paid for), then domains -->
-    <div class="min-w-0 w-full space-y-4">
-
-      <section class="min-w-0 w-full rounded border border-emerald-500/30 bg-[#04060c]">
-        <div class="flex items-center gap-1.5 border-b border-emerald-500/20 px-3 py-2">
-          <span class="h-2.5 w-2.5 rounded-full bg-emerald-500/70"></span>
-          <span class="ml-1 font-mono text-[11px] text-gray-500">$ scans</span>
-        </div>
-        <div class="p-3">
-          <div id="pentest-result"></div>
-          <div id="pentest-list" hx-get="/api/pentests/list" hx-trigger="load, every 10s, refresh" hx-swap="innerHTML">
-            <p class="font-mono text-xs text-gray-600"># loading…</p>
-          </div>
-        </div>
-      </section>
-
-      <section class="min-w-0 w-full rounded border border-cyan-500/30 bg-[#04060c] h-fit">
-        <div class="flex items-center gap-1.5 border-b border-cyan-500/20 px-3 py-2">
-          <span class="h-2.5 w-2.5 rounded-full bg-cyan-500/70"></span>
-          <span class="ml-1 font-mono text-[11px] text-gray-500">$ domains</span>
-        </div>
-        <div class="p-3">
-          <form class="flex min-w-0 gap-2" hx-post="/api/domains" hx-target="#domain-result" hx-swap="innerHTML">
-            <input name="domain" required placeholder="app.example.com" aria-label="Domain to verify"
-              pattern="[A-Za-z0-9]([A-Za-z0-9\-]*[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9\-]*[A-Za-z0-9])?)+"
-              title="Hostname only — no https:// and no trailing slash"
-              class="flex-1 rounded border border-white/15 bg-ink px-2 py-1.5 font-mono text-xs text-white focus:border-cyan-400 focus:outline-none"/>
-            <button class="rounded border border-cyan-400 bg-cyan-500/10 px-3 py-1.5 font-mono text-xs font-bold text-cyan-300 hover:bg-cyan-500/20">add</button>
-          </form>
-          <p class="mt-1 font-mono text-[10px] text-gray-600">hostname only — <span class="text-gray-500">app.example.com</span>, not https://app.example.com/</p>
-          <div id="domain-result" class="mt-2"></div>
-          {{template "domainlist" .}}
-        </div>
-      </section>
-
-    </div>
-  </div>
-</main>
-
-</body>
-</html>{{end}}
-
-{{define "domainlist"}}<div id="domain-list">
-{{if .Domains}}
-<ul class="mt-2 space-y-1.5">
-  {{range .Domains}}
-  <li class="rounded border border-white/10 bg-ink px-2.5 py-1.5 font-mono text-xs">
-    <div class="flex items-center justify-between gap-2">
-      <span class="truncate text-white">{{.Domain}}</span>
-      <span class="flex items-center gap-1.5">
-        {{if ne .Status "verified"}}
-        <button hx-post="/api/domains/verify" hx-vals='{"domain":"{{.Domain}}"}'
-          hx-target="#domain-result" hx-swap="innerHTML"
-          class="rounded border border-emerald-400/60 px-2 py-0.5 text-[11px] font-bold text-emerald-300 hover:bg-emerald-500/15">verify</button>
-        <button hx-post="/api/domains/delete" hx-vals='{"domain":"{{.Domain}}"}'
-          hx-target="#domain-result" hx-swap="innerHTML"
-          hx-confirm="Remove {{.Domain}}?"
-          class="rounded border border-red-400/50 px-2 py-0.5 text-[11px] font-bold text-red-300 hover:bg-red-500/15">del</button>
-        {{else}}
-        <span class="rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300">[verified]</span>
-        {{if le $.Balance 0.0}}
-        <button type="button" disabled title="No credits — buy a package to run a scan."
-          class="cursor-not-allowed rounded border border-white/15 px-2 py-0.5 text-[11px] font-bold text-gray-600">scan</button>
-        {{else}}
-        <button hx-post="/api/pentests/start" hx-vals='{"domain":"{{.Domain}}","mode":"standard"}'
-          hx-target="#pentest-result" hx-swap="innerHTML"
-          title="External assessment — 1 credit (read-only, non-destructive)"
-          class="rounded border border-cyan-400/60 px-2 py-0.5 text-[11px] font-bold text-cyan-300 hover:bg-cyan-500/15">scan</button>
-        {{end}}
-        {{end}}
-      </span>
-    </div>
-    <div class="mt-1 flex items-center gap-1 text-[11px] text-gray-500">
-      <span class="text-cyan-400">_netsekurity</span>
-      <span class="text-gray-600">TXT</span>
-      <span class="truncate">{{.TXT}}</span>
-      <button type="button" class="shrink-0 text-cyan-400 hover:underline"
-        onclick="navigator.clipboard.writeText('{{.TXT}}');this.textContent='copied';setTimeout(()=>this.textContent='copy',1200)">copy</button>
-    </div>
-  </li>
-  {{end}}
-</ul>
-{{else}}
-<p class="mt-2 font-mono text-xs text-gray-600"># no domains — add one to start a scan</p>
-{{end}}
-</div>{{end}}`
+// txnAmount signs a credit movement: scans take credits away, top-ups and
+// adjustments add them (an adjustment can also be negative).
+func txnAmount(kind string, amount float64) string {
+	neg := kind == "spend" || amount < 0
+	if amount < 0 {
+		amount = -amount
+	}
+	if neg {
+		return "−" + fmtCredits(amount)
+	}
+	return "+" + fmtCredits(amount)
+}
 
 var tmpl = template.Must(template.New("dashboard").Funcs(template.FuncMap{
 	"cssHash": func() string { return cssHash },
 	// template.HTML, not string: html/template escapes a plain string in an
 	// element context and the pixel would render as literal &lt;script&gt; text.
 	"fbpixel": func() template.HTML { return template.HTML(consentGate(true)) },
+
+	"shell": func(d dashboardData, active, title string) shellData {
+		return shellData{dashboardData: d, Active: active, Title: title}
+	},
+	"nav":          func() []navItem { return dashboardNav },
+	"icon":         icon,
+	"credits":      fmtCredits,
+	"creditsLabel": creditsLabel,
+	"usd":          trimUSD,
+	"perScan":      perScan,
+	"timeTag":      timeTag,
+	"txnLabel":     txnLabel,
+	"txnAmount":    txnAmount,
 }).Parse(dashboardHTML))

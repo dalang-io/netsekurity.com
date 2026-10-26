@@ -112,19 +112,24 @@ func TestNoConvertedCurrencyReachesCustomers(t *testing.T) {
 		Balance:  0,
 		Packages: []pkg{{ID: "starter", Name: "Starter", USD: 50, Credits: 1}},
 		Domains:  []dom{{Domain: "example.com", Status: "verified", TXT: "x"}},
+		Payments: []pymt{{ExternalID: "NSK-3", Package: "Starter", Status: "pending", URL: "https://pay", Credits: 1, AmountUSD: 50}},
 	}
-	var b strings.Builder
-	if err := tmpl.ExecuteTemplate(&b, "dashboard", data); err != nil {
-		t.Fatal(err)
-	}
-	out := b.String()
-	for _, banned := range []string{"Rp ", "IDR", "you pay", "825.000"} {
-		if strings.Contains(out, banned) {
-			t.Errorf("dashboard leaks converted currency: %q", banned)
+	// Every page of the dashboard, not just the first: prices moved to the
+	// Credits page when the dashboard was split into pages.
+	for _, page := range dashboardPages {
+		var b strings.Builder
+		if err := tmpl.ExecuteTemplate(&b, page, data); err != nil {
+			t.Fatalf("%s: %v", page, err)
 		}
-	}
-	if !strings.Contains(out, "$50") {
-		t.Error("dashboard should quote the USD price")
+		out := b.String()
+		for _, banned := range []string{"Rp ", "IDR", "you pay", "825.000"} {
+			if strings.Contains(out, banned) {
+				t.Errorf("%s leaks converted currency: %q", page, banned)
+			}
+		}
+		if page == "dashboard_credits" && !strings.Contains(out, "$50") {
+			t.Error("the Credits page should quote the USD price")
+		}
 	}
 }
 

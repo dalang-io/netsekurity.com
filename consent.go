@@ -146,17 +146,33 @@ const consentGateHTML = `<script>
     el.hidden = true;
     el.setAttribute('role', 'region');
     el.setAttribute('aria-label', 'cookie and tracking consent');
-    el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:2147483000;padding:12px;font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12px';
+    // The signed-in app (body.nsk-app) is a light theme; everything else keeps
+    // the terminal look. Same words, same two choices, in both.
+    var light = !!(document.body && document.body.classList.contains('nsk-app'));
+    var FONT = light ? '"Plus Jakarta Sans",ui-sans-serif,system-ui,sans-serif' : 'ui-monospace,SFMono-Regular,Menlo,Consolas,monospace';
+    el.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:2147483000;padding:12px;font-family:' + FONT + ';font-size:' + (light ? '14px' : '12px');
+    var box = light
+      ? 'max-width:56rem;margin:0 auto;border:2px solid #000;background:#fff;color:#374151;padding:16px;box-shadow:4px 4px 0 0 #000'
+      : 'max-width:56rem;margin:0 auto;border:1px solid rgba(16,185,129,.55);background:#0b0f14;color:#9ca3af;padding:16px;box-shadow:0 12px 40px rgba(0,0,0,.65)';
+    var head = light ? 'margin:0 0 8px;color:#111827;font-weight:800;font-size:16px' : 'margin:0 0 8px;color:#fff;font-weight:700;font-size:13px';
+    // In the light theme the two buttons carry equal weight: refusing must be as
+    // easy to see and press as accepting.
+    var btnNo = light
+      ? 'cursor:pointer;border:2px solid #1c1a17;background:#fff;color:#111827;padding:10px 20px;font:inherit;font-weight:800;box-shadow:3px 3px 0 0 #1c1a17'
+      : 'cursor:pointer;border:1px solid rgba(255,255,255,.25);background:transparent;color:#d1d5db;padding:8px 16px;font:inherit';
+    var btnYes = light
+      ? 'cursor:pointer;border:2px solid #1c1a17;background:#facc15;color:#000;padding:10px 20px;font:inherit;font-weight:800;box-shadow:3px 3px 0 0 #1c1a17'
+      : 'cursor:pointer;border:1px solid #34d399;background:rgba(16,185,129,.15);color:#6ee7b7;padding:8px 16px;font:inherit;font-weight:700';
     el.innerHTML =
-      '<div style="max-width:56rem;margin:0 auto;border:1px solid rgba(16,185,129,.55);background:#0b0f14;color:#9ca3af;padding:16px;box-shadow:0 12px 40px rgba(0,0,0,.65)">' +
-        '<p style="margin:0 0 8px;color:#fff;font-weight:700;font-size:13px">cookies &amp; tracking</p>' +
+      '<div style="' + box + '">' +
+        '<p style="' + head + '">' + (light ? 'Cookies &amp; tracking' : 'cookies &amp; tracking') + '</p>' +
         '<p style="margin:0 0 12px;line-height:1.65">' +
           'The Meta (Facebook) pixel measures which ads bring customers. It is not loaded, and nothing is sent to Meta, until you agree here. ' +
           'Our own analytics (Umami) is cookieless and stores nothing about you, so it stays on either way.' +
         '</p>' +
-        '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
-          '<button type="button" data-nsk-consent="decline" style="cursor:pointer;border:1px solid rgba(255,255,255,.25);background:transparent;color:#d1d5db;padding:8px 16px;font:inherit">decline</button>' +
-          '<button type="button" data-nsk-consent="grant" style="cursor:pointer;border:1px solid #34d399;background:rgba(16,185,129,.15);color:#6ee7b7;padding:8px 16px;font:inherit;font-weight:700">accept</button>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
+          '<button type="button" data-nsk-consent="decline" style="' + btnNo + '">' + (light ? 'Decline' : 'decline') + '</button>' +
+          '<button type="button" data-nsk-consent="grant" style="' + btnYes + '">' + (light ? 'Accept' : 'accept') + '</button>' +
         '</div>' +
       '</div>';
     (document.body || document.documentElement).appendChild(el);

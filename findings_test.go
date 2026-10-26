@@ -43,8 +43,8 @@ func TestParseFindingsRejectsUnusable(t *testing.T) {
 func TestSeverityChipsDistinguishCleanFromUnknown(t *testing.T) {
 	// A scan that genuinely found nothing risk-bearing says so.
 	clean := severityChips(map[string]int{"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 4})
-	if !strings.Contains(clean, "no findings") {
-		t.Error("a zero-risk scan should say 'no findings'")
+	if !strings.Contains(clean, "no issues found") {
+		t.Error("a zero-risk scan should say 'no issues found'")
 	}
 	if !strings.Contains(clean, "4 info") {
 		t.Error("info count should still show")
@@ -52,8 +52,8 @@ func TestSeverityChipsDistinguishCleanFromUnknown(t *testing.T) {
 
 	// Findings render most severe first, and zero rows are omitted.
 	out := severityChips(map[string]int{"critical": 1, "high": 2, "medium": 0, "low": 3, "info": 0})
-	if strings.Contains(out, "no findings") {
-		t.Error("a scan with findings must not claim 'no findings'")
+	if strings.Contains(out, "no issues found") {
+		t.Error("a scan with findings must not claim 'no issues found'")
 	}
 	if strings.Contains(out, "medium") || strings.Contains(out, "info") {
 		t.Error("zero-count severities should be omitted")
@@ -138,7 +138,7 @@ func TestWorkerReportToDashboardCard(t *testing.T) {
 			t.Errorf("card missing %q", want)
 		}
 	}
-	if strings.Contains(out, "severity breakdown is in the report") {
+	if strings.Contains(out, "full breakdown is in the report") {
 		t.Error("card claims the breakdown is unavailable despite counts being stored")
 	}
 
@@ -147,10 +147,10 @@ func TestWorkerReportToDashboardCard(t *testing.T) {
 	lrec2 := httptest.NewRecorder()
 	handlePentestList(lrec2, lreq)
 	out2 := lrec2.Body.String()
-	if strings.Contains(out2, "no findings") {
-		t.Error("an unreported breakdown renders as 'no findings'")
+	if strings.Contains(out2, "no issues found") {
+		t.Error("an unreported breakdown renders as 'no issues found'")
 	}
-	if !strings.Contains(out2, "severity breakdown is in the report") {
+	if !strings.Contains(out2, "full breakdown is in the report") {
 		t.Error("expected the fallback note when no counts were reported")
 	}
 }
