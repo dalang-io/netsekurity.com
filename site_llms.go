@@ -14,7 +14,7 @@ import (
 
 func llmsView() *siteView {
 	home, _ := pageByKey("home")
-	return buildSiteView(home, siteLangs[0], false, loadSitePricing())
+	return buildSiteView(home, siteLangs[0], false, loadSitePricing("en"))
 }
 
 func mdLine(b *strings.Builder, format string, a ...any) { fmt.Fprintf(b, format+"\n", a...) }
@@ -38,7 +38,7 @@ func llmsText(full bool) string {
 	mdLine(&b, "")
 	mdLine(&b, "%s", h.Definition)
 	mdLine(&b, "")
-	mdLine(&b, "**This is an external security assessment, not a full penetration test.** It does not test authenticated areas, authorization (IDOR), business logic or injection flaws. See \"What is not covered\" below. Operator: Dalang Pte. Ltd., Singapore (UEN 202622331M).")
+	mdLine(&b, "**This is an external security assessment, not a full penetration test.** It does not test authenticated areas, authorisation (IDOR), business logic or injection flaws. See \"What is not covered\" below. Operator: Dalang Pte. Ltd., Singapore (UEN 202622331M).")
 	mdLine(&b, "")
 	mdLine(&b, "## Key pages")
 	mdLine(&b, "")
@@ -46,11 +46,12 @@ func llmsText(full bool) string {
 	mdLine(&b, "- [Enterprise](%s%s): answers for boards, engineering leads and procurement, including a procurement fact sheet.", siteBase, pathFor("enterprise", "en"))
 	mdLine(&b, "- [Trust and security](%s%s): how scans stay read-only, what data is kept, who can see reports, vulnerability disclosure, operator facts.", siteBase, pathFor("trust", "en"))
 	mdLine(&b, "- [External assessment vs penetration test](%s%s): the difference, what each finds and misses, how to choose, glossary.", siteBase, pathFor("compare", "en"))
-	mdLine(&b, "- [Sample report](%s/sample-report): a worked example of the PDF report.", siteBase)
-	mdLine(&b, "- [Product scope and methodology](%s/product-scope): the exact checks, exclusions and deliverables.", siteBase)
-	mdLine(&b, "- [CI/CD docs and API](%s/docs): start assessments from a pipeline; examples for %d CI systems.", siteBase, len(ciExamples))
-	mdLine(&b, "- Indonesian: [Beranda](%s%s), [Enterprise](%s%s), [Kepercayaan](%s%s), [Asesmen eksternal vs uji penetrasi](%s%s).",
-		siteBase, pathFor("home", "id"), siteBase, pathFor("enterprise", "id"), siteBase, pathFor("trust", "id"), siteBase, pathFor("compare", "id"))
+	mdLine(&b, "- [Sample report](%s%s): a worked example of the PDF report.", siteBase, pathFor("sample", "en"))
+	mdLine(&b, "- [Product scope and methodology](%s%s): the exact checks, exclusions and deliverables.", siteBase, pathFor("scope", "en"))
+	mdLine(&b, "- [CI/CD docs and API](%s%s): start assessments from a pipeline and read their status; examples for %d CI systems.", siteBase, pathFor("docs", "en"), len(ciExamples))
+	mdLine(&b, "- Indonesian: [Beranda](%s%s), [Enterprise](%s%s), [Kepercayaan](%s%s), [Asesmen eksternal vs uji penetrasi](%s%s), [Contoh laporan](%s%s), [Cakupan produk](%s%s), [Dokumentasi](%s%s).",
+		siteBase, pathFor("home", "id"), siteBase, pathFor("enterprise", "id"), siteBase, pathFor("trust", "id"), siteBase, pathFor("compare", "id"),
+		siteBase, pathFor("sample", "id"), siteBase, pathFor("scope", "id"), siteBase, pathFor("docs", "id"))
 	if !full {
 		mdLine(&b, "- [Full text for LLMs](%s/llms-full.txt): everything on this page and more, in one file.", siteBase)
 	}
@@ -62,7 +63,7 @@ func llmsText(full bool) string {
 	mdLine(&b, "| Pack | Credits | Price | Per assessment |")
 	mdLine(&b, "|------|---------|-------|----------------|")
 	for _, r := range v.Pricing.Rows {
-		mdLine(&b, "| %s | %s | %s | %s |", r.Name, r.Credits, r.Price, r.PerScan)
+		mdLine(&b, "| %s | %s | %s | %s |", r.Label, r.Credits, r.Price, r.PerScan)
 	}
 	mdLine(&b, "")
 	mdLine(&b, "Expert review add-on: priced on request. Whitebox assessment: %s per app or domain.", v.Pricing.Whitebox)
@@ -165,10 +166,22 @@ func llmsText(full bool) string {
 			mdLine(&b, "- **%s.** %s", k.Title, k.Body)
 		}
 		mdLine(&b, "")
+		mdLine(&b, "Where the data goes:")
+		mdLine(&b, "")
+		for i, k := range trust.Flow {
+			mdLine(&b, "%d. **%s.** %s", i+1, k.Title, k.Body)
+		}
+		mdLine(&b, "")
 		mdLine(&b, "What is kept:")
 		mdLine(&b, "")
 		for _, d := range trust.Data {
 			mdLine(&b, "- **%s:** %s", d.Item, d.Detail)
+		}
+		mdLine(&b, "")
+		mdLine(&b, "Third parties that handle data. %s", trust.SubIntro)
+		mdLine(&b, "")
+		for _, sr := range trust.Subs {
+			mdLine(&b, "- **%s** (%s): %s", sr.Name, sr.Purpose, sr.Receives)
 		}
 		mdLine(&b, "")
 		for _, k := range trust.Access {

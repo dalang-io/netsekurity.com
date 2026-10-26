@@ -52,9 +52,10 @@ Browser (HTTPS) → Cloudflare (flexible) → Pingora :80
    Host: netsekurity.com → 127.0.0.1:8094 → netsekurity (Go)
      ├── / and /id/           home (English / Indonesian), rendered from site_copy_*.go
      ├── /enterprise, /trust, /external-assessment-vs-penetration-test  (+ /id/… twins)
-     ├── /sample-report       public example of what one credit delivers
-     ├── /product-scope       PRODUCT_SCOPE.md rendered to semantic HTML (md.go)
-     ├── /docs                CI/CD + API reference
+     ├── /sample-report       public example of what one credit delivers (+ /id/contoh-laporan,
+     │                        and a printable PDF of each: /netsekurity-sample-report-{en,id}.pdf)
+     ├── /product-scope       PRODUCT_SCOPE[.id].md rendered to semantic HTML (md.go) (+ /id/cakupan-produk)
+     ├── /docs                CI/CD + API reference (+ /id/dokumentasi)
      ├── /sitemap.xml, /llms.txt, /llms-full.txt   generated from the same copy and prices
      ├── /css/*, /og.png, /og-id.png, /robots.txt, /security.txt   static
      ├── /auth/*              Google OAuth
@@ -62,6 +63,8 @@ Browser (HTTPS) → Cloudflare (flexible) → Pingora :80
      │   /dashboard/websites | /scans | /credits | /automation
      ├── /checkout, /su       order confirmation; super-admin panel
      ├── /api/*               top-up, domains/verify, pentests, api-tokens
+     ├── /api/v1/assessments  CI/CD API (X-API-Token): POST starts one, GET /{id} reads status and
+     │                        finding counts; /api/v1/pentests is the original name for the POST
      ├── /reports/*           pentest PDFs (owner/admin only, no-store)
      └── SQLite (data/netsekurity.db) + data/reports/
 ```
@@ -85,21 +88,23 @@ netsekurity.com/
 ├── payment.go         # Xendit top-up, webhook, auto-credit poller (syncPendingPayments)
 ├── domains.go         # domain add / TXT verify (authoritative NS) / delete
 ├── pentests.go        # pentest start/list + worker claim/report (queue)
-├── apitokens.go       # CI/CD API tokens (expiry 7/14/30/60/90d)
+├── apitokens.go       # CI/CD API tokens (expiry 7/14/30/60/90d) and the /api/v1 endpoints
+├── security.go        # security headers on every response; strict nonce CSP for public pages
 ├── site.go            # public site engine: page registry, view model, SEO head, JSON-LD, sitemap
 ├── site_copy.go       # copy types + helpers (token expansion, completeness checks)
 ├── site_copy_en.go    # English copy (all pages)         ┐ same structure, enforced
 ├── site_copy_id.go    # Indonesian copy (all pages)      ┘ by TestSiteCopyIsComplete
 ├── site_html.go       # layout, shared partials, home / enterprise / trust / guide templates
+├── site_evidence_html.go # sample report, docs and product scope templates
+├── site_svg.go        # GENERATED isometric illustrations (tools/svg/iso.py); never edit by hand
 ├── site_llms.go       # /llms.txt and /llms-full.txt, generated from the copy and prices
 ├── md.go              # tiny Markdown renderer (for PRODUCT_SCOPE.md)
-├── marketing.go       # contact form (→ contact_messages, localised), scan-count proof, /product-scope
-├── sample_report.go   # /sample-report — fictional domain, real report structure
+├── marketing.go       # contact form (→ contact_messages, localised), scan-count proof
 ├── analytics.go       # optional Plausible / GA4 tag for public pages
 ├── consent.go         # consent gate: Meta Pixel loads only after Accept (nsk_consent cookie)
 ├── fbevents.go        # Meta Pixel base code + Conversions API (server-side Lead/Purchase)
 ├── ratelimit.go       # per-IP fixed-window limiter on write endpoints
-├── docs.go            # /docs page (CI/CD + API reference; examples are data)
+├── docs.go            # the CI examples (data, shared by both languages; notes are copy)
 ├── *_test.go          # unit tests (JWT, credit idempotency, topup amount, domain, index, auth)
 ├── deploy.sh          # test → build → commit+push → deploy (scp + systemd stop/start, PID check)
 ├── nsec_scan.py       # scanning agent scanner (enterprise-grade, produces PDF)
@@ -111,14 +116,20 @@ netsekurity.com/
 ├── CLAIMS.md          # every public claim with its source, and what is deliberately not claimed
 ├── marketing-copy.md  # older social/ads copy (vibe-coder angle; not used by the site)
 ├── tools/og/          # Open Graph card sources + render.sh (headless Chrome → static/og*.png)
+├── tools/pdf/         # render.sh: the printable sample reports (static/netsekurity-sample-report-*.pdf)
+├── tools/svg/         # iso.py: generates site_svg.go (isometric, three tones + ink outline)
 ├── env.example        # environment template
 ├── README.md          # this doc
 └── static/
     ├── css/styles.css             # built Tailwind output (embedded)
     ├── og.png, og-id.png          # OG/Twitter share cards, 1200x630 (tools/og/render.sh)
+    ├── fonts/, js/                # Plus Jakarta Sans (latin, variable) and htmx 1.9.12, self-hosted;
+    │                              #   immutable cache; the htmx file's sha256 is pinned by a test
+    ├── netsekurity-sample-report-{en,id}.pdf   # price-free printable sample (tools/pdf/render.sh)
+    ├── sample-report.sources      # hash of the copy the PDFs were made from (TestSamplePDFsMatchTheirSource)
     ├── robots.txt                 # one shared rule set for search and AI crawlers
     ├── security.txt               # + .well-known/security.txt (RFC 9116); Policy → /trust#disclosure
-    └── PRODUCT_SCOPE.md           # client-facing scope & methodology
+    └── PRODUCT_SCOPE.md, PRODUCT_SCOPE.id.md   # client-facing scope & methodology, one per language
 ```
 
 Build everything: `./deploy.sh`.
@@ -299,7 +310,8 @@ Full template: [`env.example`](env.example). Key vars:
 
 Light theme that mirrors `dalang.io/dashboard`: white surfaces, yellow `#facc15` primary,
 near-black `#1c1a17` borders with hard offset shadows, Plus Jakarta Sans, a left sidebar.
-The landing page, `/docs`, `/sample-report` and `/su` keep the dark terminal look.
+The public pages (home, enterprise, trust, guide, sample report, docs, scope) use the same
+light theme since 2026-10-26; only `/su` keeps its own look.
 
 - **Scope.** Everything is under `.nsk-app` (a class on `<body>`); the component classes
   (`nsk-card`, `nsk-btn`, `nsk-badge-*`, `nsk-alert-*`, `nsk-nav-link`, `nsk-input`, …) live in
@@ -321,7 +333,8 @@ The landing page, `/docs`, `/sample-report` and `/su` keep the dark terminal loo
 - **Times** are stored in UTC and rendered by `timeTag` as `<time datetime=…>`; the shell
   script localises them in the browser. SQLite writes `YYYY-MM-DD HH:MM:SS`, Go writes RFC3339 —
   `parseStoredTime` accepts both.
-- **Fonts.** Plus Jakarta Sans loads from Google Fonts (as on dalang.io), with system fallbacks.
+- **Fonts.** Plus Jakarta Sans is self-hosted (`static/fonts/`, one variable latin file), so no
+  visitor IP goes to Google for a typeface. htmx is vendored the same way (`static/js/`).
 - After changing any template or class, run `npm run build:css` and commit `static/css/styles.css`
   (it is embedded in the binary).
 
@@ -344,11 +357,44 @@ copy: every statement has a source, and the tests refuse the ones that do not.
 - **Adding a page:** add a `sitePage`, a copy struct per language, a template body, and a
   line in `buildSiteView`. The tests then cover metadata, hreflang, headings, links,
   anchors, sitemap, banned claims and structured data automatically.
-- **English-only pages** (`/sample-report`, `/docs`, `/product-scope`) use the same layout
-  through `serveRawPage` and declare no hreflang.
+- **Every page is bilingual**, the evidence pages included (`/sample-report`, `/docs`,
+  `/product-scope` and their `/id/…` twins). The sample report and the docs have copy structs
+  (`sampleCopy`, `docsCopy`); the scope is one Markdown file per language, kept the same shape by
+  `TestScopeMarkdownTranslationsHaveTheSameShape`. Code, evidence strings and API names are the
+  same in both languages. The product itself is still English-only: the report PDF, and the
+  dashboard, which the docs name by its English menu labels.
+- **Security headers and CSP** (`security.go`): HSTS, nosniff, X-Frame-Options, Referrer-Policy,
+  Permissions-Policy and COOP on every response. Public pages get a strict nonce CSP
+  (`script-src 'nonce-…' 'strict-dynamic'`), so they must contain no inline handler and no
+  `style="…"`; `security_test.go` enforces that. Everything else (dashboard, checkout, `/su`)
+  still has inline handlers and gets a baseline CSP. **Because of the nonce, public pages are
+  `private, no-store` with no ETag** (a 304 would pair a cached body with a new nonce).
+- **Illustrations** are generated: `python3 tools/svg/iso.py` rewrites `site_svg.go`
+  (`--preview <file>` writes a contact sheet). Edit the Python, not the Go. They are decoration
+  (`aria-hidden`), contain no words except the digits 1-5, and each idea in them is also in text.
+- **Print.** The sample report and the procurement fact sheet have print buttons; the print
+  rules are at the end of `assets/input.css`. The sample is also offered as a PDF: run
+  `tools/pdf/render.sh` after changing the sample copy, its template or the print rules, and
+  commit the PDFs and `static/sample-report.sources`. The test fails on a stale copy.
+- **The CI/CD API.** `POST /api/v1/assessments` (alias `/api/v1/pentests`) starts one, `GET
+  /api/v1/assessments/{id}` reads status and finding counts for the token's own account (another
+  account's id is a 404). A second start while one runs is a 409. `findings` is `null`, never
+  zeros, until the report was delivered with a breakdown. The docs' CI gate script is executed
+  by `TestDocsGateScriptRunsInAllFourOutcomes` (needs `sh`, `curl`, `jq`; skipped without them).
+- **Spelling.** English is British, Indonesian terms are fixed (`TestSpellingIsBritish`,
+  `TestIndonesianTermsAreConsistent`). The brand is "Netsekurity"; only the scanner's
+  User-Agent is "NetSekurity Scanner".
 - **After a content change:** bump `siteModified` in `site.go` (it is the sitemap
-  `lastmod`, every `dateModified` and the `?v=` on the share images), run the tests, and
-  run `tools/og/render.sh` if the headline or sample card changed.
+  `lastmod` and every `dateModified`), run the tests, and run `tools/og/render.sh` if the
+  headline or sample card changed.
+- **Assets never need purging.** Every static file a page loads is addressed as
+  `/file?v=<12 hex of its sha256>` (`assets.go`, template func `asset`): the stylesheet, favicons,
+  share cards and sample PDFs. The hash is the file's content, so a release that changes a file
+  changes its URL, and one that does not leaves it (and its year-long `immutable` cache) alone.
+  The web font and htmx cannot carry a query (the preload must match the `@font-face` URL), so
+  they are versioned by file name and their sha256 is pinned by a test: change the bytes, rename
+  the file. `TestEveryStaticAssetIsAddressedByItsContentHash` fails on any raw `/favicon…`,
+  `/css/…` or `/og…` URL. Pages themselves are `no-store`, so HTML is always fresh.
 - **Policies** are Dalang's own, at dalang.io/privacy, /terms-of-use and /security, linked from
   every footer and from the trust page. They do not name Netsekurity. Nothing states a data
   retention period, a DPA, an SLA or the VAT treatment for Netsekurity: `CLAIMS.md` lists these gaps.
@@ -445,6 +491,6 @@ systemctl status proxy.service              # Pingora
 
 1. `README.md` — this document.
 2. `AGENT_WORKER.md` — scanning agent behavior.
-3. `static/PRODUCT_SCOPE.md` — client-facing scope & methodology.
-4. `docs.go` → `/docs` — CI/CD integration + HTTP API reference.
+3. `static/PRODUCT_SCOPE.md` (+ `.id.md`) — client-facing scope & methodology.
+4. `/docs` (`docsEN` / `docsID` in `site_copy_*.go`, examples in `docs.go`) — CI/CD integration + HTTP API reference.
 5. `env.example` — all environment variables.

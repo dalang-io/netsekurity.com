@@ -5,7 +5,7 @@ verified domain / credit. 1 credit = 1 external assessment · 1 domain.
 
 > **Plainly stated:** this is an **automated, external, blackbox, unauthenticated, read-only
 > assessment** with agent-reviewed findings — **not a full penetration test**. It does not
-> test authenticated application logic, authorization (IDOR), or business logic. For that,
+> test authenticated application logic, authorisation (IDOR), or business logic. For that,
 > see the **Whitebox** tier below.
 
 ---
@@ -46,7 +46,7 @@ CWE mapping, reproduction steps, and remediation guidance.
 
 ## Coverage note (be precise)
 
-- **"OWASP-mapped"** means findings are *categorized* per OWASP Top 10. It is **not** a claim
+- **"OWASP-mapped"** means findings are *categorised* per OWASP Top 10. It is **not** a claim
   that every OWASP category is exhaustively tested — some (e.g. broken access control)
   require authentication and multiple identities that an external scan cannot reach.
 - **Not claimed:** SSRF, GraphQL, WebSocket, request-smuggling, web-cache-poisoning, and other
@@ -57,7 +57,7 @@ CWE mapping, reproduction steps, and remediation guidance.
 ## Out of Scope (not included — clearly stated)
 
 1. **Authenticated testing.** Scans are unauthenticated; logic behind a login/session is not exercised.
-2. **Authorization / IDOR / privilege escalation.** Requires multiple identities; not tested.
+2. **Authorisation / IDOR / privilege escalation.** Requires multiple identities; not tested.
 3. **Injection payload testing.** The standard scan sends no SQLi, XSS, LFI/RFI or path-traversal
    payloads. It finds exposure and misconfiguration, not exploitable input bugs.
 4. **Business-logic, workflow, payment, or race-condition testing.** Not included.
@@ -78,11 +78,11 @@ CWE mapping, reproduction steps, and remediation guidance.
 
 ## Whitebox (deeper assurance — separate offering)
 
-For authenticated testing, authorization/business-logic analysis, and exploit-path validation:
+For authenticated testing, authorisation/business-logic analysis, and exploit-path validation:
 
 | Tier | What's included | Price |
 |------|-----------------|-------|
-| **Blackbox (automated)** | External, unauthenticated assessment — this product | **Included in credits** ($50/credit) |
+| **Blackbox (automated)** | External, unauthenticated assessment — this product | **Included in credits** (prices are on the pricing page) |
 | **Expert review (add-on)** | A security engineer re-tests every finding in one completed report, removes false positives, and writes a fix plan for your stack | **Priced on request** |
 | **Whitebox (agent + expert)** | Source review, authenticated testing, business-logic & exploit-chain analysis, agent-written report | **$10,000 USD per app / per domain** |
 

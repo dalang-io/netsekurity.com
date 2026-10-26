@@ -23,6 +23,30 @@ func fmtCredits(v float64) string {
 	return strconv.FormatFloat(v, 'f', 1, 64)
 }
 
+// formatUSD writes a dollar amount the way the reader's language writes it, with
+// thousands separators ("$1,000", "US$1.000") — the site used to print "$1000"
+// next to "$10,000". Whole amounts drop the cents; anything else keeps two.
+func formatUSD(v float64, lang string) string {
+	neg := v < 0
+	if neg {
+		v = -v
+	}
+	cents := int64(v*100 + 0.5)
+	whole, frac := cents/100, cents%100
+	thousands, decimal, prefix := ",", ".", "$"
+	if lang == "id" {
+		thousands, decimal, prefix = ".", ",", "US$"
+	}
+	s := groupDigits(whole, thousands)
+	if frac != 0 {
+		s += decimal + fmt.Sprintf("%02d", frac)
+	}
+	if neg {
+		s = "-" + s
+	}
+	return prefix + s
+}
+
 // creditsLabel is fmtCredits plus the noun, with the singular handled: the old
 // dashboard printed "1 credits".
 func creditsLabel(v float64) string {
@@ -84,11 +108,35 @@ func initial(name, email string) string {
 
 // perScan is the price of one scan inside a package, so the packages can be
 // compared without arithmetic. Derived from the stored price and credits only.
-func perScan(usd, credits float64) string {
+func perScan(usd, credits float64) string { return perScanLang(usd, credits, "en") }
+
+func perScanLang(usd, credits float64, lang string) string {
 	if credits <= 0 {
 		return ""
 	}
-	return "$" + trimUSD(float64(int64(usd/credits*100+0.5))/100)
+	return formatUSD(float64(int64(usd/credits*100+0.5))/100, lang)
+}
+
+// assessmentsLabel names a pack by what it buys, which is how the public pricing
+// table is written: the pack names ("Starter" … "Enterprise") are checkout labels,
+// and "Enterprise" beside an Enterprise page read as a product line it is not.
+func assessmentsLabel(credits float64, lang string) string {
+	n := fmtCredits(credits)
+	if lang == "id" {
+		return n + " asesmen"
+	}
+	if n == "1" {
+		return "1 assessment"
+	}
+	return n + " assessments"
+}
+
+// creditsLabelLang is creditsLabel for a language ("kredit" has no plural).
+func creditsLabelLang(v float64, lang string) string {
+	if lang == "id" {
+		return fmtCredits(v) + " kredit"
+	}
+	return creditsLabel(v)
 }
 
 // iconPaths are Lucide-style 24px stroke icons. Only the inner paths are stored.
@@ -109,6 +157,40 @@ var iconPaths = map[string]string{
 	"arrow":   `<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>`,
 	"scan":    `<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><path d="M7 12h10"/>`,
 	"shield2": `<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>`,
+	// Public-site icons: one per idea, so a row of cards is not a row of padlocks.
+	"key":       `<path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4"/>`,
+	"eye":       `<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/>`,
+	"checklist": `<path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/>`,
+	"tag":       `<path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/>`,
+	"timer":     `<line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/>`,
+	"undo":      `<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5 5.5 5.5 0 0 1-5.5 5.5H11"/>`,
+	"users":     `<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>`,
+	"terminal":  `<polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/>`,
+	"clipboard": `<rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>`,
+	"printer":   `<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/>`,
+	"download":  `<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>`,
+	"filter":    `<polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>`,
+	"database":  `<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/>`,
+	"mail":      `<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>`,
+}
+
+// iconSets name the icons of a repeated card row. The copy lives in slices of
+// kv, which have no room for an icon, so the template picks one by position;
+// TestIconSetsCoverTheCopy fails when a list grows past its icons.
+var iconSets = map[string][]string{
+	"home-trust":  {"key", "eye", "filter", "lock"},
+	"trust-resp":  {"key", "eye", "checklist", "tag", "timer", "undo"},
+	"audiences":   {"users", "terminal", "clipboard"},
+	"enterprise":  {"users", "terminal", "clipboard"},
+	"trust-third": {"globe", "card", "shield", "scan", "eye", "zap"},
+}
+
+// pickIcon returns the i-th icon of a set, or "" when the set or index is unknown.
+func pickIcon(set string, i int) string {
+	if names := iconSets[set]; i >= 0 && i < len(names) {
+		return names[i]
+	}
+	return ""
 }
 
 // icon returns an inline SVG. size is in pixels; an unknown name yields nothing

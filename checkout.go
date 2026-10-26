@@ -49,7 +49,7 @@ func handleCheckout(w http.ResponseWriter, r *http.Request) {
 	data := checkoutData{Package: p, Mismatch: currencyMismatch()}
 	db.QueryRow(`SELECT name, email FROM users WHERE id=?`, claims.Sub).Scan(&data.Name, &data.Email)
 	db.QueryRow(`SELECT balance FROM credit_balance WHERE user_id=?`, claims.Sub).Scan(&data.Balance)
-	data.Total = "$" + trimUSD(p.USD)
+	data.Total = formatUSD(p.USD, "en")
 
 	// The footnote states the charge currency plainly. When it matches the
 	// quoted USD that is a one-line reassurance; when it does not, the customer
@@ -80,6 +80,7 @@ func trimUSD(v float64) string {
 
 var checkoutTpl = template.Must(template.New("checkout").Funcs(template.FuncMap{
 	"cssHash":      func() string { return cssHash },
+	"asset":        assetURL,
 	"fbpixel":      func() template.HTML { return template.HTML(consentGate(true)) },
 	"icon":         icon,
 	"credits":      fmtCredits,
@@ -93,18 +94,17 @@ const checkoutHTML = `{{define "checkout"}}<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Confirm your order — Netsekurity</title>
 <meta name="robots" content="noindex, nofollow"/>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"/>
+<link rel="preload" href="/fonts/PlusJakartaSans-latin-v1.woff2" as="font" type="font/woff2" crossorigin/>
 <link rel="stylesheet" href="/css/styles.css?v={{cssHash}}"/>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />{{fbpixel}}
-<script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
+<link rel="icon" type="image/svg+xml" href="{{asset "/favicon.svg"}}" />{{fbpixel}}
+<meta name="htmx-config" content='{"includeIndicatorStyles":false}'/>
+<script src="/js/htmx-1.9.12.min.js" defer></script>
 </head>
 <body class="nsk-app min-h-screen overflow-x-hidden">
 <header class="fixed inset-x-0 top-0 z-40 h-16 border-b-2 border-black bg-white">
   <div class="mx-auto flex h-full max-w-5xl items-center justify-between gap-3 px-4">
     <a href="/dashboard" class="flex items-center gap-2.5" aria-label="Netsekurity home">
-      <img src="/favicon.svg" width="34" height="34" alt="" class="h-[34px] w-[34px]"/>
+      <img src="{{asset "/favicon.svg"}}" width="34" height="34" alt="" class="h-[34px] w-[34px]"/>
       <span class="text-xl font-extrabold tracking-tight">Netsekurity</span>
     </a>
     <a href="/dashboard/credits" class="nsk-btn nsk-btn-ghost nsk-btn-sm">Back to credits</a>

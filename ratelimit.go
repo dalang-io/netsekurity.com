@@ -72,3 +72,19 @@ func rateLimit(rl *rateLimiter, next http.HandlerFunc) http.HandlerFunc {
 		next(w, r)
 	}
 }
+
+// rateLimitAll is rateLimit for a read endpoint that scripts poll (the CI/CD API's
+// assessment status). It counts GETs too, against one bucket per client address
+// rather than per URL, so a loop over many ids cannot dodge the limit.
+func rateLimitAll(rl *rateLimiter, bucket string, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if !rl.allow(clientIP(r) + "|" + bucket) {
+			w.Header().Set("Retry-After", "60")
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusTooManyRequests)
+			w.Write([]byte(`{"error":"too many requests; try again in a minute"}` + "\n"))
+			return
+		}
+		next(w, r)
+	}
+}

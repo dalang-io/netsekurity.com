@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"strings"
@@ -89,24 +88,6 @@ func renderScansProof() string {
 		return ""
 	}
 	return fmt.Sprintf(`<p class="mt-3 text-sm text-gray-700"><strong class="font-extrabold text-gray-900">%d</strong> assessments delivered so far</p>`, n)
-}
-
-// handleProductScope renders PRODUCT_SCOPE.md as a real page inside the site
-// layout: headings, lists and tables as semantic HTML that search engines and
-// language models can read, instead of the preformatted text it used to be.
-func handleProductScope(w http.ResponseWriter, r *http.Request) {
-	md, err := staticFS.ReadFile("static/PRODUCT_SCOPE.md")
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-	body := template.HTML(`<article class="nsk-doc mx-auto max-w-4xl px-4 py-12 sm:px-6">` +
-		string(renderMarkdown(string(md))) + `</article>`)
-	serveRawPage(w, r, rawPage{
-		Key: "scope", Path: "/product-scope", Crumb: "Product scope", Body: body,
-		Title:       "Product Scope and Methodology: What Netsekurity Checks",
-		Description: "Exactly what a Netsekurity external web security assessment checks, what it does not, how findings are scored, and the deliverables, with the whitebox escalation tier.",
-	})
 }
 
 var _ = strings.TrimSpace

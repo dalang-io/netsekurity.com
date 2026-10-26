@@ -236,16 +236,11 @@ func TestAnalyticsSnippet(t *testing.T) {
 
 // Public pages must carry the claims the scanner can back, and none it cannot.
 func TestPublicPagesClaims(t *testing.T) {
-	pages := map[string]func(http.ResponseWriter, *http.Request){
-		"/":              handleIndex,
-		"/sample-report": handleSampleReport,
-		"/docs":          handleDocs,
-		"/product-scope": handleProductScope,
-	}
+	pages := []string{"/", "/sample-report", "/docs", "/product-scope", "/id/contoh-laporan", "/id/dokumentasi", "/id/cakupan-produk"}
 	banned := []string{"Pentest as a Service", "PTaaS", "destructive mode", "60+", "SQL injection on search", "anyone = admin"}
-	for path, h := range pages {
+	for _, path := range pages {
 		rr := httptest.NewRecorder()
-		h(rr, httptest.NewRequest("GET", path, nil))
+		handleIndex(rr, httptest.NewRequest("GET", path, nil))
 		if rr.Code != 200 {
 			t.Errorf("%s: status %d", path, rr.Code)
 		}

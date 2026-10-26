@@ -1,3 +1,14 @@
+/* Plus Jakarta Sans, self-hosted: no request to Google Fonts, so no visitor IP leaves
+   the site for a typeface. One variable-weight latin file; the filename is versioned,
+   which is what lets the server cache it for a year. */
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  src: url("/fonts/PlusJakartaSans-latin-v1.woff2") format("woff2");
+  font-weight: 200 800;
+  font-style: normal;
+  font-display: swap;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -235,6 +246,10 @@ input:focus, select:focus, textarea:focus {
   .nsk-btn-danger { background: #fff; color: #b91c1c; border-color: #b91c1c; box-shadow: 2px 2px 0 0 #b91c1c; }
   .nsk-btn-danger:hover { background: #fef2f2; box-shadow: 1px 1px 0 0 #b91c1c; }
   .nsk-btn-sm { min-height: 38px; padding: 0.25rem 0.875rem; font-size: 0.8125rem; box-shadow: 2px 2px 0 0 #1c1a17; }
+  /* On a touch screen the small button is still a 44px target. */
+  @media (pointer: coarse) {
+    .nsk-btn-sm { min-height: 44px; }
+  }
   .nsk-btn-block { display: flex; width: 100%; }
 
   /* HTMX in flight: a visible spinner so a slow DNS check never looks frozen. */
@@ -312,7 +327,7 @@ input:focus, select:focus, textarea:focus {
     display: inline-block;
     padding: 0.125rem 0.5rem;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    font-size: 10px;
+    font-size: 0.75rem;
     font-weight: 700;
     letter-spacing: 0.05em;
     text-transform: uppercase;
@@ -396,8 +411,204 @@ input:focus, select:focus, textarea:focus {
   }
   .nsk-doc blockquote p:first-child { margin-top: 0; }
   .nsk-doc .nsk-table-wrap { margin-top: 1.25rem; overflow-x: auto; border: 2px solid #000; box-shadow: 3px 3px 0 0 #000; background: #fff; }
-  .nsk-doc table { width: 100%; min-width: 520px; border-collapse: collapse; font-size: 0.9375rem; }
+  .nsk-doc { overflow-wrap: anywhere; }
+  .nsk-doc table { width: 100%; border-collapse: collapse; font-size: 0.9375rem; }
   .nsk-doc th { padding: 0.65rem 0.9rem; text-align: left; font-weight: 800; background: #fffbeb; border-bottom: 2px solid #000; }
   .nsk-doc td { padding: 0.65rem 0.9rem; vertical-align: top; border-bottom: 2px solid #e5e7eb; }
+  @media (max-width: 639px) {
+    .nsk-doc th, .nsk-doc td { padding: 0.55rem 0.6rem; font-size: 0.875rem; }
+  }
   .nsk-doc tr:last-child td { border-bottom: 0; }
+
+  /* ======================================================================
+     Public site (netsekurity.com marketing and evidence pages)
+     ====================================================================== */
+
+  /* A section is a band; the tint alternates so a divider is rarely needed, and
+     the divider that remains is a hairline, not a 2px black rule. */
+  .nsk-section { padding-block: 3.5rem; border-top: 1px solid #e5e7eb; }
+  .nsk-section-tint { background: #fffbeb; }
+  @media (min-width: 640px) {
+    .nsk-section { padding-block: 4.5rem; }
+  }
+
+  /* Secondary content: bordered but flat, so the few cards that matter keep
+     their hard shadow and the rest stop competing with them. */
+  .nsk-card-flat { background: #fff; border: 2px solid #d1d5db; }
+  .nsk-card-flat-tint { background: #fffbeb; border: 2px solid #e5d9a8; }
+
+  /* A neutral disclaimer. Amber stays for things that need attention. */
+  .nsk-note {
+    padding: 0.75rem 1rem;
+    font-size: 0.9375rem;
+    color: #374151;
+    background: #f9fafb;
+    border: 2px solid #d1d5db;
+    border-left: 6px solid #6b7280;
+  }
+
+  /* A link that stands on its own line is a tap target, not a word. */
+  .nsk-textlink {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 44px;
+    font-weight: 800;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+  .nsk-footlink {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* Role and trust icons sit in a yellow tile. */
+  .nsk-icon-tile {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    flex: none;
+    background: #facc15;
+    border: 2px solid #1c1a17;
+  }
+
+  /* Legend swatches for the scope diagram: yellow is scanned, hatched is not. */
+  .nsk-swatch {
+    display: inline-block;
+    width: 1.1rem;
+    height: 1.1rem;
+    flex: none;
+    margin-top: 0.2rem;
+    border: 2px solid #1c1a17;
+  }
+  .nsk-swatch-scanned { background: #facc15; }
+  .nsk-swatch-hatch {
+    background: repeating-linear-gradient(135deg, #e5e7eb 0 3px, #9ca3af 3px 4px);
+  }
+
+  /* Code on the public pages: wraps instead of overflowing, and the whole box
+     is relative so the copy button can sit in its corner. */
+  .nsk-codebox { position: relative; }
+  .nsk-pre {
+    display: block;
+    margin: 0;
+    padding: 1rem;
+    padding-right: 5.5rem;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    color: #111827;
+    background: #f3f4f6;
+    border: 2px solid #1c1a17;
+  }
+  .nsk-copy {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    min-height: 36px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    color: #111827;
+    background: #fff;
+    border: 2px solid #1c1a17;
+    cursor: pointer;
+  }
+  .nsk-copy:hover { background: #facc15; }
+  @media (pointer: coarse) {
+    .nsk-copy { min-height: 44px; min-width: 44px; }
+  }
+
+  /* A grid or flex child may shrink below its content; without this a long
+     unbreakable string (a URL in a code block) widens the whole page on a phone. */
+  .nsk-fit > * { min-width: 0; }
+
+  /* Comparison table: below md each row becomes a card, the column headings
+     coming back as labels in front of each cell. Explicit roles in the markup keep
+     the table semantics that display:block would otherwise drop. */
+  @media (max-width: 767px) {
+    .nsk-stack thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+    }
+    .nsk-stack, .nsk-stack tbody, .nsk-stack tr, .nsk-stack th, .nsk-stack td { display: block; width: 100%; }
+    .nsk-stack tr { padding: 1rem; border-bottom: 2px solid #e5e7eb; }
+    .nsk-stack tr:last-child { border-bottom: 0; }
+    .nsk-stack th[scope="row"] { width: 100% !important; padding: 0 0 0.5rem; font-size: 1.0625rem; }
+    .nsk-stack td { padding: 0.5rem 0 0; }
+    .nsk-stack td[data-label]::before {
+      content: attr(data-label);
+      display: block;
+      margin-bottom: 0.15rem;
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #4b5563;
+    }
+  }
+
+  /* A numbered list that reads as steps. */
+  .nsk-steps { counter-reset: nsk-step; }
+  .nsk-steps > li { counter-increment: nsk-step; display: flex; gap: 0.9rem; }
+  .nsk-steps > li::before {
+    content: counter(nsk-step);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 2rem;
+    height: 2rem;
+    font-weight: 800;
+    background: #facc15;
+    border: 2px solid #1c1a17;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  .nsk-btn { transition: none; }
+  .nsk-btn.htmx-request::after,
+  form.htmx-request .nsk-btn::after { animation: none; }
+}
+
+/* ==========================================================================
+   Print. The sample report and the procurement fact sheet are things people
+   print or save as PDF: no site chrome, no shadows, no consent banner.
+   ========================================================================== */
+@page { size: A4; margin: 14mm; }
+@media print {
+  .nsk-app { background: #fff; font-size: 11pt; }
+  .nsk-app header,
+  .nsk-app footer,
+  #nsk-consent,
+  .nsk-noprint,
+  .nsk-copy { display: none !important; }
+  .nsk-app .nsk-card,
+  .nsk-app .nsk-card-flat { box-shadow: none; }
+  /* A long card may break between its parts, but never inside a finding or a row. */
+  .nsk-app article,
+  .nsk-app tr,
+  .nsk-app dl > div { break-inside: avoid; }
+  .nsk-app .nsk-card-head { break-after: avoid; }
+  /* Page bands lose their padding and tint; cards (which are sections too) keep their border. */
+  .nsk-app section:not(.nsk-card):not(.nsk-note) { padding-block: 1rem !important; border-top: 0 !important; background: #fff !important; }
+  .nsk-app a { color: #000; text-decoration: none; }
+  /* The fact sheet: only the procurement section prints. */
+  body.nsk-print-procurement main > section:not(#procurement) { display: none !important; }
+  body.nsk-print-procurement #procurement { display: block !important; }
 }

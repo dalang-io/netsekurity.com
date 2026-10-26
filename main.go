@@ -1,9 +1,7 @@
 package main
 
 import (
-	"crypto/sha256"
 	"embed"
-	"encoding/hex"
 	"io/fs"
 	"log"
 	"net/http"
@@ -17,16 +15,9 @@ var staticFS embed.FS
 
 var staticSub fs.FS
 
-// cssHash is a short sha256 of the built stylesheet, used to cache-bust the CSS
-// URL on every deploy (?v=<hash>) so Cloudflare/browsers never serve stale CSS.
-var cssHash = func() string {
-	b, err := staticFS.ReadFile("static/css/styles.css")
-	if err != nil {
-		return "0"
-	}
-	h := sha256.Sum256(b)
-	return hex.EncodeToString(h[:])[:12]
-}()
+// cssHash is the content hash of the built stylesheet (see assets.go): the CSS URL
+// changes whenever the CSS does, so no cache ever serves a stale stylesheet.
+var cssHash = assetHash("/css/styles.css")
 
 func init() { _ = cssHash }
 
@@ -73,6 +64,7 @@ func main() {
 	// Per-IP ceilings on everything that creates rows or calls a third party.
 	// Generous for a person, tight for a loop.
 	writeLimit := newRateLimiter(30, time.Minute)  // domains, scans, tokens
+	readLimit := newRateLimiter(300, time.Minute)  // API result polling, per client address
 	payLimit := newRateLimiter(10, 10*time.Minute) // Xendit invoices
 	leadLimit := newRateLimiter(5, 10*time.Minute) // contact form
 	authLimit := newRateLimiter(20, time.Minute)   // One Tap token verification
@@ -130,16 +122,13 @@ func main() {
 
 	// Marketing pages / HTMX fragments
 	mux.HandleFunc("/contact", rateLimit(leadLimit, handleContact))
-	mux.HandleFunc("/docs", handleDocs)
-	mux.HandleFunc("/product-scope", handleProductScope)
-	mux.HandleFunc("/sample-report", handleSampleReport)
 
 	// CI/CD integration (authenticated by X-API-Token)
-	mux.HandleFunc("/api/v1/pentests", rateLimit(writeLimit, handleAPICreatePentest))
+	registerAPIv1(mux, writeLimit, readLimit)
 
 	addr := ":" + port
 	log.Printf("netsekurity.com listening on %s", addr)
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := http.ListenAndServe(addr, securityHeaders(mux)); err != nil {
 		log.Fatal(err)
 	}
 }

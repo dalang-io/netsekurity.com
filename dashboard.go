@@ -331,6 +331,7 @@ func txnAmount(kind string, amount float64) string {
 
 var tmpl = template.Must(template.New("dashboard").Funcs(template.FuncMap{
 	"cssHash": func() string { return cssHash },
+	"asset":   assetURL,
 	// template.HTML, not string: html/template escapes a plain string in an
 	// element context and the pixel would render as literal &lt;script&gt; text.
 	"fbpixel": func() template.HTML { return template.HTML(consentGate(true)) },
@@ -342,7 +343,7 @@ var tmpl = template.Must(template.New("dashboard").Funcs(template.FuncMap{
 	"icon":         icon,
 	"credits":      fmtCredits,
 	"creditsLabel": creditsLabel,
-	"usd":          trimUSD,
+	"usd":          func(v float64) string { return formatUSD(v, "en") },
 	"perScan":      perScan,
 	"timeTag":      timeTag,
 	"txnLabel":     txnLabel,

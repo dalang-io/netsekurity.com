@@ -23,21 +23,13 @@ var publicPagePaths = []string{
 	"/trust", "/id/trust",
 	"/external-assessment-vs-penetration-test", "/id/asesmen-eksternal-vs-uji-penetrasi",
 	"/sample-report", "/docs", "/product-scope",
+	"/id/contoh-laporan", "/id/dokumentasi", "/id/cakupan-produk",
 }
 
 func renderPublic(t *testing.T, path string) string {
 	t.Helper()
-	h := http.HandlerFunc(handleIndex)
-	switch path {
-	case "/sample-report":
-		h = handleSampleReport
-	case "/docs":
-		h = handleDocs
-	case "/product-scope":
-		h = handleProductScope
-	}
 	rr := httptest.NewRecorder()
-	h(rr, httptest.NewRequest("GET", path, nil))
+	handleIndex(rr, httptest.NewRequest("GET", path, nil))
 	if rr.Code != http.StatusOK {
 		t.Fatalf("%s: status %d", path, rr.Code)
 	}
@@ -49,15 +41,30 @@ var (
 	reDesc   = regexp.MustCompile(`<meta name="description" content="([^"]*)"`)
 	reCanon  = regexp.MustCompile(`<link rel="canonical" href="([^"]*)"`)
 	reAlt    = regexp.MustCompile(`<link rel="alternate" hreflang="([^"]*)" href="([^"]*)"`)
-	reLD     = regexp.MustCompile(`(?s)<script type="application/ld\+json">(.*?)</script>`)
+	reLD     = regexp.MustCompile(`(?s)<script type="application/ld\+json"[^>]*>(.*?)</script>`)
 	reH      = regexp.MustCompile(`<h([1-6])[\s>]`)
 	reID     = regexp.MustCompile(`\sid="([^"]+)"`)
 	reImg    = regexp.MustCompile(`<img\b[^>]*>`)
 	reHref   = regexp.MustCompile(`href="(/[^"]*)"`)
 	reScript = regexp.MustCompile(`(?s)<(script|style)\b.*?</(script|style)>`)
 	reTag    = regexp.MustCompile(`<[^>]+>`)
-	reToken  = regexp.MustCompile(`\{[A-Za-z]+\}`)
+	reToken  = regexp.MustCompile(`\{[A-Za-z_]+\}`)
 )
+
+// apiParams are path parameters in API documentation ("GET /api/v1/assessments/{id}"),
+// which look like copy tokens and are not.
+var apiParams = map[string]bool{"{id}": true, "{assessment_id}": true}
+
+// unfilled lists the {tokens} in s that are neither filled prices nor API path parameters.
+func unfilled(s string) []string {
+	var out []string
+	for _, tok := range reToken.FindAllString(s, -1) {
+		if !apiParams[tok] {
+			out = append(out, tok)
+		}
+	}
+	return out
+}
 
 func firstMatch(re *regexp.Regexp, s string) string {
 	m := re.FindStringSubmatch(s)
@@ -129,7 +136,10 @@ func TestSiteCopyIsComplete(t *testing.T) {
 
 // Only the tokens site.go fills may appear in copy; a typo would ship as literal text.
 func TestSiteCopyTokensAreKnown(t *testing.T) {
-	known := map[string]bool{"{single}": true, "{volume}": true, "{volumeCredits}": true, "{whitebox}": true, "{packs}": true}
+	known := map[string]bool{"{single}": true, "{volume}": true, "{volumeCredits}": true, "{whitebox}": true, "{packs}": true, "{ci}": true}
+	for k := range apiParams {
+		known[k] = true
+	}
 	for _, p := range copyPairs() {
 		for lang, v := range map[string]any{"en": p.en, "id": p.id} {
 			val := addressable(v)
@@ -177,8 +187,8 @@ func TestPublicPagesRenderWithSoundMetadata(t *testing.T) {
 				t.Errorf("%s: missing %q", path, want)
 			}
 		}
-		if reToken.MatchString(visibleText(page)) {
-			t.Errorf("%s: an unfilled {token} is visible: %v", path, reToken.FindAllString(visibleText(page), 3))
+		if u := unfilled(visibleText(page)); len(u) > 0 {
+			t.Errorf("%s: an unfilled {token} is visible: %v", path, u)
 		}
 
 		// One h1, and no skipped heading levels.
@@ -239,12 +249,6 @@ func TestLanguagesAreMarkedAndCrossLinked(t *testing.T) {
 			}
 		}
 	}
-	// English-only pages must not pretend to have a translation.
-	for _, path := range []string{"/sample-report", "/docs", "/product-scope"} {
-		if reAlt.MatchString(renderPublic(t, path)) {
-			t.Errorf("%s declares hreflang alternates but exists in English only", path)
-		}
-	}
 }
 
 func jsonLD(t *testing.T, page string) map[string][]map[string]any {
@@ -271,7 +275,7 @@ func jsonLD(t *testing.T, page string) map[string][]map[string]any {
 }
 
 func TestStructuredDataIsPresentAndTruthful(t *testing.T) {
-	pr := loadSitePricing()
+	pr := loadSitePricing("en")
 	for _, path := range publicPagePaths {
 		g := jsonLD(t, renderPublic(t, path))
 		for _, typ := range []string{"Organization", "WebSite", "WebPage"} {
@@ -308,8 +312,8 @@ func TestStructuredDataIsPresentAndTruthful(t *testing.T) {
 	}
 	for i, r := range pr.Rows {
 		o := cat[i].(map[string]any)
-		if o["price"] != strings.TrimPrefix(r.Price, "$") || o["priceCurrency"] != "USD" {
-			t.Errorf("offer %d = %v, want %s USD", i, o, r.Price)
+		if o["price"] != r.PriceNum || o["priceCurrency"] != "USD" || o["name"] != r.Label {
+			t.Errorf("offer %d = %v, want %s (%s) USD", i, o, r.Label, r.PriceNum)
 		}
 	}
 	if len(g["Article"]) != 0 {
@@ -325,7 +329,7 @@ func TestStructuredDataIsPresentAndTruthful(t *testing.T) {
 func TestFAQMarkupMatchesVisibleFAQ(t *testing.T) {
 	for _, p := range sitePages {
 		for code, path := range p.Paths {
-			v := buildSiteView(p, langByCode(code), false, loadSitePricing())
+			v := buildSiteView(p, langByCode(code), false, loadSitePricing(code))
 			faq := pageFAQ(v)
 			page := renderPublic(t, path)
 			g := jsonLD(t, page)
@@ -381,21 +385,35 @@ func TestPagesFollowTheDatabasePrices(t *testing.T) {
 	}
 	rr := httptest.NewRecorder()
 	handleLLMS(false)(rr, httptest.NewRequest("GET", "/llms.txt", nil))
-	if !strings.Contains(rr.Body.String(), "| Starter | 1 | $60 |") {
+	if !strings.Contains(rr.Body.String(), "| 1 assessment | 1 | $60 |") {
 		t.Errorf("llms.txt does not follow the database price:\n%s", rr.Body.String())
 	}
 }
 
 func TestPricingFrom(t *testing.T) {
-	sp := pricingFrom(defaultPacks)
+	sp := pricingFrom(defaultPacks, "en")
 	if sp.From != "$50" || sp.Volume != "$20" || sp.VolumeCredits != "50" || sp.Whitebox != "$10,000" {
 		t.Errorf("pricing = %+v", sp)
 	}
-	if !strings.Contains(sp.PacksLine, "Standard $100 (3 credits)") || !strings.Contains(sp.PacksLine, "Starter $50 (1 credit)") {
+	if !strings.Contains(sp.PacksLine, "Standard $100 (3 credits)") || !strings.Contains(sp.PacksLine, "Starter $50 (1 credit)") || !strings.Contains(sp.PacksLine, "Enterprise $1,000 (50 credits)") {
 		t.Errorf("packs line = %q", sp.PacksLine)
 	}
-	if len(sp.Rows) != 4 || sp.Rows[1].PerScan != "$33.33" {
+	if len(sp.Rows) != 4 || sp.Rows[1].PerScan != "$33.33" || sp.Rows[3].Price != "$1,000" || sp.Rows[3].PriceNum != "1000" {
 		t.Errorf("rows = %+v", sp.Rows)
+	}
+	// Labels say what the pack buys, never "Enterprise".
+	if sp.Rows[0].Label != "1 assessment" || sp.Rows[3].Label != "50 assessments" {
+		t.Errorf("labels = %q, %q", sp.Rows[0].Label, sp.Rows[3].Label)
+	}
+	// Only the pack with the lowest price per assessment is marked as such.
+	for i, r := range sp.Rows {
+		if r.Best != (i == 3) {
+			t.Errorf("row %d Best = %v", i, r.Best)
+		}
+	}
+	id := pricingFrom(defaultPacks, "id")
+	if id.Whitebox != "US$10.000" || id.Rows[3].Price != "US$1.000" || id.Rows[1].PerScan != "US$33,33" || id.Rows[3].Label != "50 asesmen" || !strings.Contains(id.PacksLine, "Enterprise US$1.000 (50 kredit)") {
+		t.Errorf("Indonesian pricing = %+v", id)
 	}
 }
 
@@ -559,24 +577,28 @@ func TestCanonicalPathsRedirect(t *testing.T) {
 	}
 }
 
-func TestPagesAreRevalidatableAndVaryOnSignIn(t *testing.T) {
-	rr := httptest.NewRecorder()
-	handleIndex(rr, httptest.NewRequest("GET", "/enterprise", nil))
-	etag := rr.Header().Get("ETag")
-	if etag == "" || rr.Header().Get("Vary") != "Cookie" || rr.Header().Get("Content-Language") != "en" {
-		t.Errorf("headers = %v", rr.Header())
+func TestPagesAreNeverCachedBecauseOfTheNonce(t *testing.T) {
+	get := func(path string) *httptest.ResponseRecorder {
+		rr := httptest.NewRecorder()
+		securityHeaders(http.HandlerFunc(handleIndex)).ServeHTTP(rr, httptest.NewRequest("GET", path, nil))
+		return rr
 	}
-	req := httptest.NewRequest("GET", "/enterprise", nil)
-	req.Header.Set("If-None-Match", etag)
-	rr2 := httptest.NewRecorder()
-	handleIndex(rr2, req)
-	if rr2.Code != http.StatusNotModified || rr2.Body.Len() != 0 {
-		t.Errorf("revalidation = %d with %d bytes", rr2.Code, rr2.Body.Len())
+	a, b := get("/enterprise"), get("/enterprise")
+	if cc := a.Header().Get("Cache-Control"); !strings.Contains(cc, "private") || !strings.Contains(cc, "no-store") {
+		t.Errorf("Cache-Control = %q, want private, no-store", cc)
 	}
-	idr := httptest.NewRecorder()
-	handleIndex(idr, httptest.NewRequest("GET", "/id/", nil))
-	if idr.Header().Get("Content-Language") != "id" {
-		t.Errorf("Indonesian page Content-Language = %q", idr.Header().Get("Content-Language"))
+	if a.Header().Get("ETag") != "" {
+		t.Error("an ETag would let a 304 pair a cached body with a new nonce")
+	}
+	if a.Header().Get("Vary") != "Cookie" || a.Header().Get("Content-Language") != "en" {
+		t.Errorf("headers = %v", a.Header())
+	}
+	na, nb := nonceOf(t, a), nonceOf(t, b)
+	if na == "" || na == nb {
+		t.Errorf("the nonce must be fresh per response: %q then %q", na, nb)
+	}
+	if id := get("/id/"); id.Header().Get("Content-Language") != "id" {
+		t.Errorf("Indonesian page Content-Language = %q", id.Header().Get("Content-Language"))
 	}
 }
 
@@ -655,13 +677,13 @@ func TestLLMSFilesAreGeneratedAndCoherent(t *testing.T) {
 	short := llmsText(false)
 	full := llmsText(true)
 	for name, txt := range map[string]string{"llms.txt": short, "llms-full.txt": full} {
-		for _, want := range []string{"# Netsekurity", "not a full penetration test", "Dalang Pte. Ltd.", "| Starter | 1 | $50 | $50 |", "| Enterprise | 50 | $1000 | $20 |", "$10,000", "sales@dalang.io", "security@dalang.io", "What is not covered", "Network port scanning"} {
+		for _, want := range []string{"# Netsekurity", "not a full penetration test", "Dalang Pte. Ltd.", "| 1 assessment | 1 | $50 | $50 |", "| 50 assessments | 50 | $1,000 | $20 |", "$10,000", "sales@dalang.io", "security@dalang.io", "What is not covered", "Network port scanning"} {
 			if !strings.Contains(txt, want) {
 				t.Errorf("%s missing %q", name, want)
 			}
 		}
-		if reToken.MatchString(txt) {
-			t.Errorf("%s has an unfilled token %v", name, reToken.FindAllString(txt, 3))
+		if u := unfilled(txt); len(u) > 0 {
+			t.Errorf("%s has an unfilled token %v", name, u)
 		}
 	}
 	for _, want := range []string{"## For procurement and risk", "## Trust and security", "## Product scope (verbatim)", "Network port scanning"} {
@@ -713,7 +735,7 @@ func TestOpenGraphImages(t *testing.T) {
 		}
 		path := map[string]string{"en": "/enterprise", "id": "/id/enterprise"}[want]
 		page := renderPublic(t, path)
-		if !strings.Contains(page, `property="og:image" content="`+siteBase+name+"?v="+siteModified+`"`) {
+		if !strings.Contains(page, `property="og:image" content="`+siteBase+name+"?v="+assetHash(name)+`"`) {
 			t.Errorf("%s does not use %s", path, name)
 		}
 		if !strings.Contains(page, `property="og:image:alt"`) || !strings.Contains(page, `name="twitter:image:alt"`) {
@@ -766,5 +788,46 @@ func TestPolicyLinksAreOnEveryPublicPage(t *testing.T) {
 		if strings.Count(renderPublic(t, path), `href="https://dalang.io/privacy"`) < 2 {
 			t.Errorf("%s: the operator section does not repeat the policy links", path)
 		}
+	}
+}
+
+var reNonce = regexp.MustCompile(`script-src 'nonce-([^']+)'`)
+
+func nonceOf(t *testing.T, rr *httptest.ResponseRecorder) string {
+	t.Helper()
+	m := reNonce.FindStringSubmatch(rr.Header().Get("Content-Security-Policy"))
+	if m == nil {
+		return ""
+	}
+	return m[1]
+}
+
+// Money is written the way the reader writes it, and consistently: the site once
+// printed "$1000" next to "$10,000". Thousands get a separator in every language.
+func TestMoneyIsFormattedConsistently(t *testing.T) {
+	for _, tc := range []struct {
+		v    float64
+		lang string
+		want string
+	}{
+		{50, "en", "$50"}, {1000, "en", "$1,000"}, {10000, "en", "$10,000"}, {33.33, "en", "$33.33"}, {49.5, "en", "$49.50"}, {0, "en", "$0"},
+		{50, "id", "US$50"}, {1000, "id", "US$1.000"}, {10000, "id", "US$10.000"}, {33.33, "id", "US$33,33"},
+	} {
+		if got := formatUSD(tc.v, tc.lang); got != tc.want {
+			t.Errorf("formatUSD(%v,%q) = %q, want %q", tc.v, tc.lang, got, tc.want)
+		}
+	}
+	bare := regexp.MustCompile(`\$\d{4,}`) // a dollar amount of 1000 or more with no separator
+	for _, path := range publicPagePaths {
+		page := visibleText(renderPublic(t, path))
+		if m := bare.FindString(page); m != "" {
+			t.Errorf("%s prints %q without a thousands separator", path, m)
+		}
+	}
+	if !strings.Contains(visibleText(renderPublic(t, "/")), "$1,000") || !strings.Contains(visibleText(renderPublic(t, "/")), "$10,000") {
+		t.Error("English home does not show $1,000 and $10,000")
+	}
+	if id := visibleText(renderPublic(t, "/id/")); !strings.Contains(id, "US$1.000") || !strings.Contains(id, "US$10.000") || strings.Contains(id, "$1,000") {
+		t.Error("Indonesian home does not use Indonesian money formatting")
 	}
 }

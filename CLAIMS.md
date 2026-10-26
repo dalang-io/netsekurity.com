@@ -12,7 +12,10 @@ claims. A claim that fails a test costs more trust than the page ever earned. So
    `static/PRODUCT_SCOPE.md`. Where the two disagreed on 2026-10-26, the code won
    and the scope document was corrected.
 4. **Both languages move together.** Copy lives in `site_copy_en.go` and
-   `site_copy_id.go`; `TestSiteCopyIsComplete` fails if they differ in shape.
+   `site_copy_id.go`; `TestSiteCopyIsComplete` fails if they differ in shape. That
+   includes the evidence pages (sample report, docs, product scope), which exist in
+   both languages since 2026-10-26. English is British (`TestSpellingIsBritish`);
+   the Indonesian terms are fixed in `site_copy_id.go` (`TestIndonesianTermsAreConsistent`).
 5. **Prices are never typed.** Pages use `{single}`, `{volume}`, `{volumeCredits}`,
    `{whitebox}` and `{packs}`, filled from `credit_packages` at request time. The
    same goes for `/llms.txt` and `/llms-full.txt`, which are generated.
@@ -40,6 +43,7 @@ claims. A claim that fails a test costs more trust than the page ever earned. So
 | Exposure and redirect probes are spaced 0.3 seconds apart | `nsec_scan.py` `time.sleep(0.3)` in `exposed()` and `open_redirect()` | |
 | Exposure probes record status code and size and discard the body | `nsec_scan.py`: `curl -o /dev/null -w "%{http_code} %{size_download}"` | Exception: robots.txt, whose disallowed paths are summarised (first 200 characters). The body is transferred, then discarded, so the sample report says "did not keep", never "did not download". |
 | Standard report is agent-triaged and no human reads it before delivery | `PRODUCT_SCOPE.md` methodology step 7 | |
+| The analysis agent is an AI agent; it operates the assessment and sees the scanner's output (findings, status codes, header values, short evidence strings) | `AGENT_WORKER.md`: the Hermes agent runs `nsec_scan.py`, and "suppresses the LLM entirely" when idle | The pages say "AI analysis agent". **Which model provider, and in which region, is not published**: no source in this repo says. The trust page and the FAQ say so and send the reader to security@dalang.io. Do not name a provider until the owner supplies it. |
 | Report: PDF, English only, one per domain | `AGENT_WORKER.md` § Report | The full PDF also has a methodology section and an evidence appendix. |
 | Findings carry severity, CVSS v3.1 score where one applies, CWE and CVE references, OWASP category, a proof of concept (the request that shows the issue), impact, fix | `nsec_scan.py` (`cvss`, `cwe`); sample report; **owner statement 2026-10-26** for CWE/CVE and PoC | The scanner itself assigns only CWE and records the request as evidence. CVE references, the PoC text and the OWASP mapping are produced by `report_auto.py`, which is not in this repo. This replaces "Compliance & control mapping" in `PRODUCT_SCOPE.md`. |
 | 30/60/90-day plan; executive summary; risk register; scope statement | Sample report | |
@@ -60,6 +64,9 @@ claims. A claim that fails a test costs more trust than the page ever earned. So
 | Disclosure: security@dalang.io, acknowledged within 2 business days, good-faith researchers not pursued, credit on request | `PRODUCT_SCOPE.md` § Vulnerability disclosure | |
 | Sales replies within 1 business day | Owner copy (contact form, earlier `llms.txt`) | |
 | Accounts are individual; sign-in is with Google | `auth.go`; no organisation model in `db.go` | |
+| Third parties that handle data: Google (sign-in), Xendit (payments), Cloudflare (network proxy), Umami at umami.dalang.io (cookieless analytics), Meta (only after consent), the AI model provider | `auth.go`; `checkout.go`; Cloudflare observed in front of the site on 2026-10-26 (its managed `robots.txt` is served); `consent.go` | Listed on `/trust#third-parties` with what each receives. The Cloudflare row says "as any reverse proxy sees them" and nothing about its SSL mode (README says "flexible"; unverified). |
+| CI/CD API: `POST /api/v1/assessments` starts an assessment (the original `/api/v1/pentests` still works); `GET /api/v1/assessments/{id}` returns status and finding counts by severity for the token's own account; one start at a time answers 409; polling is rate-limited per client | `apitokens.go`; `api_v1_test.go` | `findings` is `null` until the report was delivered with a breakdown: `null` is never zeros. The PDF is not served by the API. The docs' CI gate script is run against a local server by `TestDocsGateScriptRunsInAllFourOutcomes`. |
+| Dalang Company Profile 2026 PDFs are public at dalang.io/docs/dalang-company-profile-{en,id}.pdf | HTTP 200 `application/pdf` checked 2026-10-26 | The repo path `dalang.io/static/docs/` serves at `/docs/`, not `/static/docs/`. |
 | Dalang's privacy policy, terms of use and security and trust center are at dalang.io/privacy, /terms-of-use and /security | **Owner statement 2026-10-26**; all three return HTTP 200 | They are Dalang's documents. As of 2026-10-26 none of them names Netsekurity, so the site links them as Dalang's and does not say they cover anything in particular. |
 
 ## What the site deliberately does not claim
@@ -76,6 +83,18 @@ claims. A claim that fails a test costs more trust than the page ever earned. So
 | SSO, teams, roles | Accounts are individual. |
 | Tax (VAT/PPN) treatment, tax invoices | Not stated for Netsekurity; the site tells buyers to ask before purchase. |
 | Which languages sales or support answer in | No source (virus.ai.id applies the same rule). |
+
+## Layout and accessibility rules the site keeps
+
+| Rule | Why | Test |
+|---|---|---|
+| Public pages run a strict nonce CSP; no inline handler or `style="…"` in markup | A security vendor's own site is judged first on its headers | `security_test.go` |
+| Pages are `private, no-store`, with no ETag | A 304 would pair a cached body with a new nonce and block every script | `TestPagesAreNeverCachedBecauseOfTheNonce` |
+| Decorative illustrations are `aria-hidden` and carry no words except the digits 1-5; the idea each carries is also in text | Words baked into a drawing cannot be translated or read | `TestIllustrationsAreDecorativeAndAccompaniedByText` |
+| The pricing table and the sample risk register fold their secondary columns on a phone instead of scrolling; tables that become cards keep their ARIA roles | The Buy column sat off-screen at 390px | `TestWideTablesFoldInsteadOfScrolling` |
+| One filled button in the hero, a text link for the third action | Three equal CTAs competed | `TestHomeCallsToActionHaveAHierarchy` |
+| Each idea lives on one page: the coverage list on the enterprise page, the tiers (cards) on the home page, a compact escalation list on the enterprise page | The same blocks were repeated on three pages | `TestSectionsAreNotRepeatedAcrossPages` |
+| The language switch has full accessible names ("English (EN)"); the Indonesian pages link only Indonesian pages | The visible "EN/ID" says nothing to a screen reader, and the language flipped mid-journey | `TestLanguageSwitchHasAccessibleNames`, `TestEvidencePagesExistInBothLanguagesAndStayInTheirs` |
 
 ## Enforced by tests
 

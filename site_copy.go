@@ -24,6 +24,10 @@ import (
 // kv is a titled paragraph.
 type kv struct{ Title, Body string }
 
+// jump is one in-page navigation chip: its label in the page's language and the
+// fragment it targets, so the template cannot pair the wrong two.
+type jump struct{ Label, Anchor string }
+
 // qa is one FAQ entry. A is trusted HTML written in this repository (strong,
 // em, code, a); the JSON-LD copy is the same text with the tags removed.
 type qa struct {
@@ -72,6 +76,7 @@ type commonCopy struct {
 	LinkDalang, LinkContact, LinkProcurement                        string
 	LinkPrivacy, LinkTerms, LinkTrustCenter                         string
 	Breadcrumb                                                      string
+	CopyLabel, CopiedLabel, PrintLabel                              string
 	Form                                                            formCopy
 	Coverage                                                        coverageCopy
 	TiersH2, TiersLead                                              string
@@ -82,19 +87,28 @@ type homeCopy struct {
 	Title, Description                    string
 	Eyebrow, H1, Lead, SubLead            string
 	CTAPrimary, CTASecondary, CTATertiary string
+	SignInNote                            string
 	Assurances                            []string
 	Card                                  sampleCard
 	DefinitionH2, Definition              string
+	ScopeLegend                           []kv // scanned, behind a login, data and logic
+	TypicalH3                             string
+	Typical                               []string
 	AudiencesH2                           string
 	Audiences                             []audience
 	ReportH2, ReportLead, ReportLink      string
 	Report                                []kv
+	PlainH3, PlainLink                    string
+	Plain                                 []kv
 	HowH2                                 string
 	Steps                                 []kv
+	BandH2, BandBody                      string
 	CICDH2, CICDLead, CICDNote, CICDLink  string
 	CICD                                  []string
 	PricingH2, PricingLead, PricingNote   string
 	PricingCols                           []string
+	PricingBest                           string
+	PricingTalk, PricingTalkBtn           string
 	TrustH2, TrustLead, TrustLink         string
 	Trust                                 []kv
 	FAQH2                                 string
@@ -110,7 +124,8 @@ type engBlock struct {
 
 type enterpriseCopy struct {
 	Title, Description, Eyebrow, H1, Lead string
-	Jump                                  []string // five labels: board, engineering, procurement, escalation, contact
+	HeroCTA                               string
+	Jump                                  []jump // board, engineering, procurement, escalation, contact
 	BoardH2, BoardIntro                   string
 	Board                                 []kv
 	BoardCallout                          string
@@ -119,20 +134,30 @@ type enterpriseCopy struct {
 	ProcH2, ProcIntro                     string
 	ProcFacts                             []kv
 	ProcNote                              string
+	ProfileLead, ProfileLink              string
+	EscLink                               string
 	FAQH2                                 string
 	FAQ                                   []qa
 }
 
 type dataRow struct{ Item, Detail string }
 
+// subRow is one row of the third-party list: who, for what, and what it receives.
+type subRow struct{ Name, Purpose, Receives string }
+
 type trustCopy struct {
 	Title, Description, Eyebrow, H1, Lead string
-	Jump                                  []string // responsible, data, access, disclosure, operator
+	Jump                                  []jump // responsible, flow, data, third parties, access, disclosure, operator
 	RespH2, RespIntro                     string
 	Resp                                  []kv
+	FlowH2, FlowLead                      string
+	Flow                                  []kv // five steps, numbered to match the diagram
 	DataH2, DataIntro                     string
 	DataCols                              []string
 	Data                                  []dataRow
+	SubH2, SubIntro                       string
+	SubCols                               []string
+	Subs                                  []subRow
 	AccessH2                              string
 	Access                                []kv
 	DiscH2, DiscBody                      string
@@ -141,6 +166,7 @@ type trustCopy struct {
 	OpBody                                []string
 	OpFacts                               []kv
 	OpSource, PolicyLead                  string
+	ProfileLead, ProfileLink              string
 	LimitsH2, LimitsBody                  string
 }
 
@@ -257,4 +283,83 @@ func itoa(i int) string {
 		b[n] = '-'
 	}
 	return string(b[n:])
+}
+
+// ---- evidence pages: sample report, docs, product scope ---------------------
+//
+// These used to be English-only HTML in Go strings. They are registry pages now,
+// one copy struct per language, so an Indonesian reader who follows a link from
+// an Indonesian page stays in Indonesian. Code, evidence strings and API names
+// are the same in both languages and live in the template or in shared data.
+
+type sevBadge struct{ Label, Class string }
+
+// riskRow is one line of the sample risk register. Class is the badge colour
+// (bad, warn, blue, muted), which is the same in every language.
+type riskRow struct{ ID, Finding, Class, Severity, CVSS, CWE, OWASP string }
+
+// frow is one labelled line of a sample finding. Mono marks evidence strings.
+type frow struct {
+	Label string
+	Body  template.HTML
+	Mono  bool
+}
+
+type finding struct {
+	Title, Badge, Class string
+	Rows                []frow
+}
+
+type sampleCopy struct {
+	Title, Description, Eyebrow, H1, Lead string
+	CTA, CTAAll, PrintLabel, PDFLabel     string
+	DocH2                                 string
+	Doc                                   []kv
+	SumH2                                 string
+	Badges                                []sevBadge
+	Posture, PostureBody                  string
+	RiskH2                                string
+	RiskCols                              []string
+	Risks                                 []riskRow
+	FindH2                                string
+	Findings                              []finding
+	MoreSummary                           string
+	More                                  []template.HTML
+	PlanH2                                string
+	Plan                                  []kv
+	LimitsH2                              string
+	LimitsBody                            template.HTML
+}
+
+type paramRow struct {
+	Name, Type string
+	Desc       template.HTML
+}
+
+type docsCopy struct {
+	Title, Description, Eyebrow, H1, Lead string
+	Jump                                  []jump
+	QuickH2                               string
+	Quick                                 []template.HTML
+	QuickNote                             string
+	APIH2                                 string
+	StartH3, StartLead                    string
+	ParamCols                             []string
+	Params                                []paramRow
+	StartResp                             string
+	ResultH3, ResultLead                  string
+	ResultParam, ResultResp               string
+	ResultNote                            template.HTML
+	Statuses                              []kv
+	GateH3, GateLead                      string
+	GateCode                              string
+	GateNote                              string
+	CIH2, CILead                          string
+	CINotes                               []template.HTML // one per entry of ciExamples
+	NotesH2                               string
+	Notes                                 []template.HTML
+}
+
+type scopeCopy struct {
+	Title, Description, Crumb string
 }

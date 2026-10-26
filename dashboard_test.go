@@ -41,7 +41,7 @@ func TestDashboardPagesRenderInTheShell(t *testing.T) {
 			t.Fatalf("%s: %v", page, err)
 		}
 		out := b.String()
-		for _, want := range []string{`id="nsk-sidebar"`, `id="flash"`, `id="credit-balance"`, `class="nsk-app`, "Plus+Jakarta+Sans", "siti@example.com", `href="/su"`} {
+		for _, want := range []string{`id="nsk-sidebar"`, `id="flash"`, `id="credit-balance"`, `class="nsk-app`, "PlusJakartaSans-latin-v1.woff2", "siti@example.com", `href="/su"`} {
 			if !strings.Contains(out, want) {
 				t.Errorf("%s: missing %q", page, want)
 			}
@@ -52,6 +52,12 @@ func TestDashboardPagesRenderInTheShell(t *testing.T) {
 		want := `<a href="` + wantNav[page] + `" class="nsk-nav-link" aria-current="page">`
 		if !strings.Contains(out, want) {
 			t.Errorf("%s: sidebar does not mark %s current", page, wantNav[page])
+		}
+		// Nothing is loaded from a third party for fonts or scripts.
+		for _, banned := range []string{"googleapis.com", "gstatic.com", "unpkg.com"} {
+			if strings.Contains(out, banned) {
+				t.Errorf("%s loads from %s", page, banned)
+			}
 		}
 		// The terminal look is gone from the customer app.
 		for _, banned := range []string{"scanlines", "bg-ink", "$ balance", "$ topup", "# loading"} {
@@ -374,7 +380,7 @@ func TestScanDurationIsAlwaysTheStatedRange(t *testing.T) {
 	// 24 hours also appears as an invoice expiry and a session lifetime; neither is a scan time.
 	other := regexp.MustCompile(`(?i)(expired after|valid for|berlaku|kedaluwarsa setelah)\s+24\s+(hours|jam)`)
 	any24 := regexp.MustCompile(`(?i)24 hours|24 jam`)
-	for _, f := range []string{"dashboard.go", "dashboard_html.go", "pentests.go", "site_copy_en.go", "site_copy_id.go", "sample_report.go"} {
+	for _, f := range []string{"dashboard.go", "dashboard_html.go", "pentests.go", "site_copy_en.go", "site_copy_id.go", "site_evidence_html.go"} {
 		b, err := os.ReadFile(f)
 		if err != nil {
 			t.Fatal(err)

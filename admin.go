@@ -439,6 +439,7 @@ func handleReport(w http.ResponseWriter, r *http.Request) {
 
 var suTpl = template.Must(template.New("su").Funcs(template.FuncMap{
 	"cssHash": func() string { return cssHash },
+	"asset":   assetURL,
 	"shortID": shortID,
 }).Parse(suHTML))
 

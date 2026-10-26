@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Renders the Open Graph cards (1200x630) from tools/og/og-*.html with headless
 # Chrome. Run after changing the headline, the sample card or the brand, then
-# commit static/og.png and static/og-id.png and bump siteModified in site.go
-# (the pages append ?v=<siteModified> so crawlers refetch the image).
+# commit static/og.png and static/og-id.png. The pages append ?v=<content hash of the
+# file> (assets.go), so crawlers refetch the image exactly when it changes.
 set -euo pipefail
 cd "$(dirname "$0")/../.."
 CHROME="${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"

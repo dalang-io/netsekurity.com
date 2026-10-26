@@ -87,6 +87,9 @@ func metaTrackJS(event string, params string) string {
 const consentGateHTML = `<script>
 (function () {
   var KEY = 'nsk_consent';
+  // Under a nonce-based CSP the pixel base code is injected as a script of our own,
+  // so it must carry this script's nonce (strict-dynamic then trusts what it loads).
+  var NONCE = (document.currentScript && document.currentScript.nonce) || '';
   // The Meta Pixel base code. A string until consent, never a script tag in the
   // document — see consent.go for why that distinction is the whole point.
   var BASE = __PIXEL_BASE_JSON__;
@@ -112,6 +115,7 @@ const consentGateHTML = `<script>
     loaded = true;
     var s = document.createElement('script');
     s.textContent = BASE;
+    if (NONCE) s.setAttribute('nonce', NONCE);
     (document.head || document.documentElement).appendChild(s);
     if (PAGEVIEW && typeof window.fbq === 'function') window.fbq('track', 'PageView');
   }
@@ -145,7 +149,10 @@ const consentGateHTML = `<script>
     el.id = 'nsk-consent';
     el.hidden = true;
     el.setAttribute('role', 'region');
-    el.setAttribute('aria-label', 'cookie and tracking consent');
+    // The banner speaks the page's language: an Indonesian page with an English
+    // consent question was one of the places the site flipped language on a visitor.
+    var ID = (document.documentElement.lang || '').toLowerCase() === 'id';
+    el.setAttribute('aria-label', ID ? 'persetujuan cookie dan pelacakan' : 'cookie and tracking consent');
     // The signed-in app (body.nsk-app) is a light theme; everything else keeps
     // the terminal look. Same words, same two choices, in both.
     var light = !!(document.body && document.body.classList.contains('nsk-app'));
@@ -163,19 +170,28 @@ const consentGateHTML = `<script>
     var btnYes = light
       ? 'cursor:pointer;border:2px solid #1c1a17;background:#facc15;color:#000;padding:10px 20px;font:inherit;font-weight:800;box-shadow:3px 3px 0 0 #1c1a17'
       : 'cursor:pointer;border:1px solid #34d399;background:rgba(16,185,129,.15);color:#6ee7b7;padding:8px 16px;font:inherit;font-weight:700';
+    var T = ID
+      ? { head: 'Cookie &amp; pelacakan',
+          body: 'Pixel Meta (Facebook) mengukur iklan mana yang membawa pelanggan. Pixel ini tidak dimuat, dan tidak ada yang dikirim ke Meta, sampai Anda setuju di sini. ' +
+                'Analitik kami sendiri (Umami) tanpa cookie dan tidak menyimpan apa pun tentang Anda, jadi tetap aktif apa pun pilihan Anda.',
+          no: 'Tolak', yes: 'Terima' }
+      : { head: 'Cookies &amp; tracking',
+          body: 'The Meta (Facebook) pixel measures which ads bring customers. It is not loaded, and nothing is sent to Meta, until you agree here. ' +
+                'Our own analytics (Umami) is cookieless and stores nothing about you, so it stays on either way.',
+          no: 'Decline', yes: 'Accept' };
     el.innerHTML =
       '<div style="' + box + '">' +
-        '<p style="' + head + '">' + (light ? 'Cookies &amp; tracking' : 'cookies &amp; tracking') + '</p>' +
-        '<p style="margin:0 0 12px;line-height:1.65">' +
-          'The Meta (Facebook) pixel measures which ads bring customers. It is not loaded, and nothing is sent to Meta, until you agree here. ' +
-          'Our own analytics (Umami) is cookieless and stores nothing about you, so it stays on either way.' +
-        '</p>' +
+        '<p style="' + head + '">' + (light ? T.head : T.head.toLowerCase()) + '</p>' +
+        '<p style="margin:0 0 12px;line-height:1.65">' + T.body + '</p>' +
         '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
-          '<button type="button" data-nsk-consent="decline" style="' + btnNo + '">' + (light ? 'Decline' : 'decline') + '</button>' +
-          '<button type="button" data-nsk-consent="grant" style="' + btnYes + '">' + (light ? 'Accept' : 'accept') + '</button>' +
+          '<button type="button" data-nsk-consent="decline" style="' + btnNo + '">' + (light ? T.no : T.no.toLowerCase()) + '</button>' +
+          '<button type="button" data-nsk-consent="grant" style="' + btnYes + '">' + (light ? T.yes : T.yes.toLowerCase()) + '</button>' +
         '</div>' +
       '</div>';
-    (document.body || document.documentElement).appendChild(el);
+    // First in the DOM, so a keyboard or screen-reader user meets the choice before
+    // the page, not after the footer. It is position:fixed, so nothing moves.
+    if (document.body && document.body.firstChild) document.body.insertBefore(el, document.body.firstChild);
+    else (document.body || document.documentElement).appendChild(el);
     el.addEventListener('click', function (ev) {
       var b = ev.target.closest ? ev.target.closest('[data-nsk-consent]') : null;
       if (!b) return;

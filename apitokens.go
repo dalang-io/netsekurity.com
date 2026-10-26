@@ -179,8 +179,10 @@ func handleTokensDelete(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleAPICreatePentest is the CI/CD entrypoint. Authenticated by X-API-Token.
-// POST /api/v1/pentests  JSON/Form: domain, mode (optional, "standard" is the only value)
-// Returns JSON {pentest_id, domain, mode, status}.
+// POST /api/v1/assessments (alias: /api/v1/pentests, the original name)
+// JSON/Form: domain, mode (optional, "standard" is the only value)
+// Returns JSON {assessment_id, pentest_id, domain, mode, status}; the two ids are the
+// same value, and the second is kept so existing pipelines keep working.
 func handleAPICreatePentest(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
@@ -229,8 +231,10 @@ func handleAPICreatePentest(w http.ResponseWriter, r *http.Request) {
 	var inflight int
 	db.QueryRow(`SELECT COUNT(*) FROM pentests WHERE user_id=? AND status IN ('queued','running')`, userID).Scan(&inflight)
 	if inflight > 0 {
-		w.Header().Set("Content-Type", "application/json")
-		fmt.Fprint(w, `{"error":"a pentest is already queued or running; wait for it to finish"}`)
+		// 409, not 200: a pipeline that checks the status code (curl -f) must see that
+		// nothing was started. This used to answer 200 with an error body, which the
+		// docs described as 400.
+		apiJSON(w, http.StatusConflict, map[string]string{"error": "an assessment is already queued or running; wait for it to finish"})
 		return
 	}
 	if !consumeCredit(userID, "Assessment scheduled (CI/CD)", fmt.Sprintf("pentest-api-%d", domainID), cost) {
@@ -239,8 +243,74 @@ func handleAPICreatePentest(w http.ResponseWriter, r *http.Request) {
 	}
 	pid := "pt_" + randomHex(8)
 	db.Exec(`INSERT INTO pentests (id, user_id, domain_id, mode, status) VALUES (?,?,?,?,'queued')`, pid, userID, domainID, mode)
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(map[string]string{
-		"pentest_id": pid, "domain": domain, "mode": mode, "status": "queued",
+	apiJSON(w, http.StatusOK, map[string]string{
+		"assessment_id": pid, "pentest_id": pid, "domain": domain, "mode": mode, "status": "queued",
 	})
+}
+
+// apiJSON writes one JSON response with its status code.
+func apiJSON(w http.ResponseWriter, code int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(code)
+	json.NewEncoder(w).Encode(v)
+}
+
+// handleAPIAssessment is the read side of the CI/CD API.
+// GET /api/v1/assessments/{id}, authenticated by X-API-Token.
+//
+// It answers only for the token's own account: an id that belongs to someone else
+// is a 404, the same as an id that does not exist, so ids cannot be probed. The
+// finding counts appear once the report has been delivered with a breakdown; until
+// then "findings" is null, never zeros, because zero would read as a clean result.
+// The PDF itself is not served here: it stays in the signed-in dashboard.
+func handleAPIAssessment(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+	userID, ok := requireAPIToken(w, r)
+	if !ok {
+		return
+	}
+	id := strings.Trim(strings.TrimPrefix(r.URL.Path, "/api/v1/assessments/"), "/")
+	if id == "" || strings.Contains(id, "/") {
+		apiJSON(w, http.StatusNotFound, map[string]string{"error": "assessment not found"})
+		return
+	}
+	var domain, status, started, completed string
+	var reported, crit, high, med, low, info int
+	err := db.QueryRow(`SELECT COALESCE(d.domain,''), p.status, COALESCE(p.started_at,''), COALESCE(p.completed_at,''),
+			p.findings_reported, p.findings_critical, p.findings_high, p.findings_medium, p.findings_low, p.findings_info
+		FROM pentests p LEFT JOIN domains d ON d.id=p.domain_id
+		WHERE p.id=? AND p.user_id=?`, id, userID).Scan(&domain, &status, &started, &completed, &reported, &crit, &high, &med, &low, &info)
+	if err != nil {
+		apiJSON(w, http.StatusNotFound, map[string]string{"error": "assessment not found"})
+		return
+	}
+	out := map[string]any{
+		"assessment_id": id, "domain": domain, "status": status,
+		"started_at": isoTime(started), "completed_at": isoTime(completed), "findings": nil,
+	}
+	if status == "completed" && reported == 1 {
+		out["findings"] = map[string]int{"critical": crit, "high": high, "medium": med, "low": low, "info": info}
+	}
+	apiJSON(w, http.StatusOK, out)
+}
+
+// isoTime normalises a stored timestamp (RFC3339 from Go, "YYYY-MM-DD HH:MM:SS" from
+// SQLite) to RFC3339, or nil when there is none, so the JSON has one format.
+func isoTime(s string) any {
+	if t, ok := parseStoredTime(s); ok {
+		return t.Format(time.RFC3339)
+	}
+	return nil
+}
+
+// registerAPIv1 mounts the CI/CD API. "assessments" is the public name; "pentests"
+// is the original one, kept so pipelines written against it do not break.
+func registerAPIv1(mux *http.ServeMux, write, read *rateLimiter) {
+	mux.HandleFunc("/api/v1/assessments", rateLimit(write, handleAPICreatePentest))
+	mux.HandleFunc("/api/v1/pentests", rateLimit(write, handleAPICreatePentest))
+	mux.HandleFunc("/api/v1/assessments/", rateLimitAll(read, "api-v1-read", handleAPIAssessment))
 }

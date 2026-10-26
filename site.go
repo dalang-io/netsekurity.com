@@ -2,14 +2,13 @@ package main
 
 import (
 	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 )
 
@@ -26,11 +25,14 @@ const (
 
 type siteLang struct {
 	Code, HTMLLang, OGLocale, Label, Prefix string
+	// Name is what a screen reader announces for the language switch: the visible
+	// text is only "EN" or "ID", which says nothing to someone who cannot see the page.
+	Name string
 }
 
 var siteLangs = []siteLang{
-	{"en", "en", "en_US", "English", ""},
-	{"id", "id", "id_ID", "Bahasa Indonesia", "/id"},
+	{"en", "en", "en_US", "English", "", "English (EN)"},
+	{"id", "id", "id_ID", "Bahasa Indonesia", "/id", "Bahasa Indonesia (ID)"},
 }
 
 func langByCode(code string) siteLang {
@@ -57,14 +59,11 @@ var sitePages = []sitePage{
 	{Key: "enterprise", Paths: map[string]string{"en": "/enterprise", "id": "/id/enterprise"}, Priority: "0.9", Change: "monthly", HTMX: true},
 	{Key: "trust", Paths: map[string]string{"en": "/trust", "id": "/id/trust"}, Priority: "0.8", Change: "monthly"},
 	{Key: "compare", Paths: map[string]string{"en": "/external-assessment-vs-penetration-test", "id": "/id/asesmen-eksternal-vs-uji-penetrasi"}, Priority: "0.8", Change: "monthly", Schema: "article"},
-}
-
-// englishOnlyPages are public pages that exist in English only, listed in the
-// sitemap beside the bilingual ones.
-var englishOnlyPages = []struct{ Path, Priority, Change string }{
-	{"/sample-report", "0.9", "monthly"},
-	{"/product-scope", "0.8", "monthly"},
-	{"/docs", "0.7", "weekly"},
+	// The evidence pages. They used to be English-only, which flipped an Indonesian
+	// reader's language mid-journey the moment they followed a link to proof.
+	{Key: "sample", Paths: map[string]string{"en": "/sample-report", "id": "/id/contoh-laporan"}, Priority: "0.9", Change: "monthly"},
+	{Key: "scope", Paths: map[string]string{"en": "/product-scope", "id": "/id/cakupan-produk"}, Priority: "0.8", Change: "monthly"},
+	{Key: "docs", Paths: map[string]string{"en": "/docs", "id": "/id/dokumentasi"}, Priority: "0.7", Change: "weekly"},
 }
 
 func pageByKey(key string) (sitePage, bool) {
@@ -105,10 +104,12 @@ func canonicalSitePath(path string) string {
 // ---- pricing ---------------------------------------------------------------
 
 type packRow struct {
-	ID, Name, Credits, Price, PerScan string
+	ID, Name, Label, Credits, Price, PriceNum, PerScan string
+	Best                                               bool // the lowest price per assessment
 }
 
 type sitePricing struct {
+	Lang          string
 	Rows          []packRow
 	From          string // cheapest pack, e.g. "$50"
 	Volume        string // best per-assessment price, e.g. "$20"
@@ -126,7 +127,7 @@ var defaultPacks = []pkg{
 	{ID: "enterprise", Name: "Enterprise", USD: 1000, Credits: 50},
 }
 
-func loadSitePricing() sitePricing {
+func loadSitePricing(lang string) sitePricing {
 	var packs []pkg
 	if rows, err := db.Query(`SELECT id, name, usd_price, credits FROM credit_packages WHERE is_active=1 ORDER BY usd_price`); err == nil {
 		for rows.Next() {
@@ -139,11 +140,13 @@ func loadSitePricing() sitePricing {
 	if len(packs) == 0 {
 		packs = defaultPacks
 	}
-	return pricingFrom(packs)
+	return pricingFrom(packs, lang)
 }
 
-func pricingFrom(packs []pkg) sitePricing {
-	sp := sitePricing{Whitebox: "$" + groupDigits(whiteboxUSD, ",")}
+// pricingFrom formats the packs for one language. PriceNum is the plain number the
+// structured data needs; every visible price goes through formatUSD.
+func pricingFrom(packs []pkg, lang string) sitePricing {
+	sp := sitePricing{Lang: lang, Whitebox: formatUSD(whiteboxUSD, lang)}
 	best := -1.0
 	bestIdx := 0
 	from := packs[0].USD
@@ -160,22 +163,34 @@ func pricingFrom(packs []pkg) sitePricing {
 			best, bestIdx = per, i
 		}
 		sp.Rows = append(sp.Rows, packRow{
-			ID: p.ID, Name: p.Name, Credits: fmtCredits(p.Credits),
-			Price: "$" + trimUSD(p.USD), PerScan: perScan(p.USD, p.Credits),
+			ID: p.ID, Name: p.Name, Label: assessmentsLabel(p.Credits, lang), Credits: fmtCredits(p.Credits),
+			Price: formatUSD(p.USD, lang), PriceNum: trimUSD(p.USD), PerScan: perScanLang(p.USD, p.Credits, lang),
 		})
-		line = append(line, fmt.Sprintf("%s $%s (%s)", p.Name, trimUSD(p.USD), creditsLabel(p.Credits)))
+		line = append(line, fmt.Sprintf("%s %s (%s)", p.Name, formatUSD(p.USD, lang), creditsLabelLang(p.Credits, lang)))
 	}
-	sp.From = "$" + trimUSD(from)
-	sp.Volume = perScan(packs[bestIdx].USD, packs[bestIdx].Credits)
+	// Only a real difference earns the "lowest price" mark.
+	if len(packs) > 1 && best < packs[0].USD/maxf(packs[0].Credits, 1) {
+		sp.Rows[bestIdx].Best = true
+	}
+	sp.From = formatUSD(from, lang)
+	sp.Volume = perScanLang(packs[bestIdx].USD, packs[bestIdx].Credits, lang)
 	sp.VolumeCredits = fmtCredits(packs[bestIdx].Credits)
 	sp.PacksLine = strings.Join(line, "; ")
 	return sp
+}
+
+func maxf(a, b float64) float64 {
+	if a > b {
+		return a
+	}
+	return b
 }
 
 func (sp sitePricing) replacer() *strings.Replacer {
 	return strings.NewReplacer(
 		"{single}", sp.From, "{volume}", sp.Volume, "{volumeCredits}", sp.VolumeCredits,
 		"{whitebox}", sp.Whitebox, "{packs}", sp.PacksLine,
+		"{ci}", strconv.Itoa(len(ciExamples)),
 	)
 }
 
@@ -186,8 +201,8 @@ type siteAlt struct{ Lang, Href, OG string }
 type siteNav struct{ Key, Label, Href, Event string }
 
 type siteLangLink struct {
-	Code, Label, Href string
-	Current           bool
+	Code, Label, Name, Href string
+	Current                 bool
 }
 
 type siteView struct {
@@ -214,18 +229,35 @@ type siteView struct {
 	ViewContent template.HTML
 	HTMX        bool
 	Modified    string
-	Raw         template.HTML // body of an English-only page (docs, sample report, scope)
 	ScansProof  template.HTML // "N assessments delivered", only above scansProofMin
+	Nonce       string        // per-response CSP nonce; every inline script carries it
 	Home        *homeCopy
 	Ent         *enterpriseCopy
 	Trust       *trustCopy
 	Cmp         *compareCopy
+	Sample      *sampleCopy
+	Docs        *docsCopy
+	Doc         template.HTML // the product scope, rendered from its Markdown
+	SamplePDF   string        // the printable copy of the sample report, in this page's language
+	Examples    []ciView      // the CI examples, with notes in this page's language
+	APIExample  string
+	DocsStart   string
 	Crumb       string
 	HomeHref    string
 	EntHref     string
 	TrustHref   string
 	GuideHref   string
 	ContactHref string
+	SampleHref  string
+	DocsHref    string
+	ScopeHref   string
+	ProfileHref string // Dalang's Company Profile PDF, in this page's language
+}
+
+// ciView is one CI example as the docs page shows it.
+type ciView struct {
+	Title, Code string
+	Note        template.HTML
 }
 
 func pathFor(key, lang string) string {
@@ -233,20 +265,19 @@ func pathFor(key, lang string) string {
 	return p.Paths[lang]
 }
 
-// ogImageFor is the share card for a language. The version query changes with
-// siteModified so a crawler that cached the old card fetches the new one.
+// ogImageFor is the share card for a language. The version query is the file's content
+// hash, so a crawler that cached the old card fetches the new one exactly when the card
+// changes (tools/og/render.sh), and not on every unrelated release.
 func ogImageFor(lang siteLang) string {
 	name := "/og.png"
 	if lang.Code == "id" {
 		name = "/og-id.png"
 	}
-	return siteBase + name + "?v=" + siteModified
+	return siteBase + assetURL(name)
 }
 
 // baseView builds the parts every page shares: head metadata, navigation,
-// language links and the auth-aware buttons. paths is the page's path per
-// language, or nil for an English-only page (which then has no hreflang set and
-// no language switch).
+// language links and the auth-aware buttons. paths is the page's path per language.
 func baseView(key, path string, lang siteLang, paths map[string]string, htmx, authed bool, pr sitePricing) *siteView {
 	rep := pr.replacer()
 	expand := func(s string) string { return rep.Replace(s) }
@@ -254,24 +285,27 @@ func baseView(key, path string, lang siteLang, paths map[string]string, htmx, au
 	c := commonFor(lang.Code)
 	walkStrings(reflect.ValueOf(&c).Elem(), expand)
 
+	nonce := newNonce()
 	v := &siteView{
-		Lang: lang, Key: key, Path: path, C: c, Pricing: pr,
+		Lang: lang, Key: key, Path: path, C: c, Pricing: pr, Nonce: nonce,
 		Robots: "index,follow,max-image-preview:large", OGImage: ogImageFor(lang),
 		CSSHash: cssHash, HTMX: htmx, Modified: siteModified,
-		FBPixel: template.HTML(consentGate(true)), Analytics: template.HTML(analyticsSnippet()),
-		HomeHref: pathFor("home", lang.Code), EntHref: pathFor("enterprise", lang.Code),
+		FBPixel:   template.HTML(withNonce(consentGate(true), nonce)),
+		Analytics: template.HTML(withNonce(analyticsSnippet(), nonce)),
+		HomeHref:  pathFor("home", lang.Code), EntHref: pathFor("enterprise", lang.Code),
 		TrustHref: pathFor("trust", lang.Code), GuideHref: pathFor("compare", lang.Code),
+		SampleHref: pathFor("sample", lang.Code), DocsHref: pathFor("docs", lang.Code), ScopeHref: pathFor("scope", lang.Code),
+		ProfileHref: "https://dalang.io/docs/dalang-company-profile-" + lang.Code + ".pdf",
+		APIExample:  apiExample, DocsStart: docsStartExample,
 	}
 	v.ContactHref = v.EntHref + "#contact"
 	v.Canonical = siteBase + path
 
-	if paths != nil {
-		for _, l := range siteLangs {
-			v.Alternates = append(v.Alternates, siteAlt{Lang: l.HTMLLang, Href: siteBase + paths[l.Code], OG: l.OGLocale})
-			v.LangLinks = append(v.LangLinks, siteLangLink{Code: l.Code, Label: strings.ToUpper(l.Code), Href: paths[l.Code], Current: l.Code == lang.Code})
-		}
-		v.Alternates = append(v.Alternates, siteAlt{Lang: "x-default", Href: siteBase + paths["en"]})
+	for _, l := range siteLangs {
+		v.Alternates = append(v.Alternates, siteAlt{Lang: l.HTMLLang, Href: siteBase + paths[l.Code], OG: l.OGLocale})
+		v.LangLinks = append(v.LangLinks, siteLangLink{Code: l.Code, Label: strings.ToUpper(l.Code), Name: l.Name, Href: paths[l.Code], Current: l.Code == lang.Code})
 	}
+	v.Alternates = append(v.Alternates, siteAlt{Lang: "x-default", Href: siteBase + paths["en"]})
 
 	home := v.HomeHref
 	v.Nav = []siteNav{
@@ -279,8 +313,8 @@ func baseView(key, path string, lang siteLang, paths map[string]string, htmx, au
 		{"enterprise", c.NavEnterprise, v.EntHref, "netsekurity_nav_enterprise"},
 		{"trust", c.NavTrust, v.TrustHref, "netsekurity_nav_trust"},
 		{"pricing", c.NavPricing, home + "#pricing", "netsekurity_nav_harga"},
-		{"sample", c.NavSample, "/sample-report", "netsekurity_nav_sample"},
-		{"docs", c.NavDocs, "/docs", "netsekurity_nav_docs"},
+		{"sample", c.NavSample, v.SampleHref, "netsekurity_nav_sample"},
+		{"docs", c.NavDocs, v.DocsHref, "netsekurity_nav_docs"},
 	}
 	if authed {
 		v.AuthHref, v.AuthLabel, v.StartHref = "/dashboard", c.Dashboard, "/dashboard"
@@ -303,7 +337,7 @@ func buildSiteView(p sitePage, lang siteLang, authed bool, pr sitePricing) *site
 		walkStrings(reflect.ValueOf(&h).Elem(), expand)
 		v.Home, v.Title, v.Description = &h, h.Title, h.Description
 		v.ScansProof = template.HTML(renderScansProof())
-		v.ViewContent = template.HTML(metaTrackJS("ViewContent", `{"content_name":"Pricing","content_type":"product","currency":"USD","value":0.0}`))
+		v.ViewContent = template.HTML(withNonce(metaTrackJS("ViewContent", `{"content_name":"Pricing","content_type":"product","currency":"USD","value":0.0}`), v.Nonce))
 	case "enterprise":
 		e := enterpriseFor(lang.Code)
 		walkStrings(reflect.ValueOf(&e).Elem(), expand)
@@ -316,35 +350,25 @@ func buildSiteView(p sitePage, lang siteLang, authed bool, pr sitePricing) *site
 		cm := compareFor(lang.Code)
 		walkStrings(reflect.ValueOf(&cm).Elem(), expand)
 		v.Cmp, v.Title, v.Description, v.Crumb = &cm, cm.Title, cm.Description, c.LinkGuide
+	case "sample":
+		sm := sampleFor(lang.Code)
+		walkStrings(reflect.ValueOf(&sm).Elem(), expand)
+		v.Sample, v.Title, v.Description, v.Crumb = &sm, sm.Title, sm.Description, c.NavSample
+		v.SamplePDF = assetURL(samplePDFPath(lang.Code))
+	case "docs":
+		d := docsFor(lang.Code)
+		walkStrings(reflect.ValueOf(&d).Elem(), expand)
+		v.Docs, v.Title, v.Description, v.Crumb = &d, d.Title, d.Description, c.NavDocs
+		for i, e := range ciExamples {
+			v.Examples = append(v.Examples, ciView{Title: e.Title, Code: e.Code, Note: d.CINotes[i]})
+		}
+	case "scope":
+		sc := scopeFor(lang.Code)
+		v.Title, v.Description, v.Crumb = sc.Title, sc.Description, sc.Crumb
+		v.Doc = scopeDocument(lang.Code)
 	}
 	v.JSONLD = template.JS(siteJSONLD(p, lang, v))
 	return v
-}
-
-// rawPage is an English-only page whose body is built elsewhere (docs, sample
-// report, product scope) and rendered inside the shared layout.
-type rawPage struct {
-	Key, Path, Title, Description, Crumb string
-	Body                                 template.HTML
-}
-
-func buildRawView(rp rawPage, authed bool, pr sitePricing) *siteView {
-	v := baseView(rp.Key, rp.Path, siteLangs[0], nil, false, authed, pr)
-	v.Title, v.Description, v.Crumb, v.Raw = rp.Title, rp.Description, rp.Crumb, rp.Body
-	v.JSONLD = template.JS(siteJSONLD(sitePage{Key: rp.Key}, siteLangs[0], v))
-	return v
-}
-
-// serveRawPage renders an English-only page inside the layout.
-func serveRawPage(w http.ResponseWriter, r *http.Request, rp rawPage) {
-	_, authErr := currentUser(r)
-	v := buildRawView(rp, authErr == nil, loadSitePricing())
-	var buf bytes.Buffer
-	if err := siteTemplates["raw"].ExecuteTemplate(&buf, "layout", v); err != nil {
-		http.Error(w, "render error", http.StatusInternalServerError)
-		return
-	}
-	writeSiteHTML(w, r, buf.Bytes(), "en")
 }
 
 func commonFor(code string) commonCopy {
@@ -380,6 +404,47 @@ func compareFor(code string) compareCopy {
 		return compareID()
 	}
 	return compareEN()
+}
+
+func sampleFor(code string) sampleCopy {
+	if code == "id" {
+		return sampleID()
+	}
+	return sampleEN()
+}
+
+func docsFor(code string) docsCopy {
+	if code == "id" {
+		return docsID()
+	}
+	return docsEN()
+}
+
+// samplePDFPath is the printable copy of the sample report. The files are rendered
+// from the page by tools/pdf/render.sh and carry no price; TestSamplePDFsMatchTheirSource
+// fails when the copy they were made from has changed.
+func samplePDFPath(code string) string { return "/netsekurity-sample-report-" + code + ".pdf" }
+
+func scopeFor(code string) scopeCopy {
+	if code == "id" {
+		return scopeID()
+	}
+	return scopeEN()
+}
+
+// scopeDocument renders the product scope from its Markdown source, one file per
+// language (static/PRODUCT_SCOPE.md and static/PRODUCT_SCOPE.id.md). A missing file
+// yields an empty document rather than a 500; the tests fail on that.
+func scopeDocument(code string) template.HTML {
+	name := "static/PRODUCT_SCOPE.md"
+	if code == "id" {
+		name = "static/PRODUCT_SCOPE.id.md"
+	}
+	md, err := staticFS.ReadFile(name)
+	if err != nil {
+		return ""
+	}
+	return renderMarkdown(string(md))
 }
 
 // ---- structured data -------------------------------------------------------
@@ -463,8 +528,8 @@ func siteJSONLD(p sitePage, lang siteLang, v *siteView) string {
 		var offers []any
 		for _, r := range v.Pricing.Rows {
 			offers = append(offers, map[string]any{
-				"@type": "Offer", "name": r.Name + " (" + r.Credits + " credits)",
-				"price": strings.TrimPrefix(r.Price, "$"), "priceCurrency": "USD",
+				"@type": "Offer", "name": r.Label,
+				"price": r.PriceNum, "priceCurrency": "USD",
 				"url": siteBase + pathFor("home", lang.Code) + "#pricing",
 			})
 		}
@@ -505,18 +570,25 @@ func siteJSONLD(p sitePage, lang siteLang, v *siteView) string {
 var siteTemplates = map[string]*template.Template{}
 
 var siteFuncs = template.FuncMap{
-	"icon": icon,
-	"join": strings.Join,
-	"inc":  func(i int) int { return i + 1 },
+	"icon":  icon,
+	"pick":  pickIcon,
+	"asset": assetURL,
+	"join":  strings.Join,
+	"inc":   func(i int) int { return i + 1 },
+	// codeArgs is the data the "codebox" template takes: the code and the two words
+	// on its copy button, in the page's language.
+	"codeArgs": func(c commonCopy, code string) map[string]string {
+		return map[string]string{"Code": code, "Copy": c.CopyLabel, "Copied": c.CopiedLabel}
+	},
 }
 
 func init() {
 	bodies := map[string]string{
 		"home": siteHomeHTML, "enterprise": siteEnterpriseHTML, "trust": siteTrustHTML, "compare": siteCompareHTML,
+		"sample": siteSampleHTML, "docs": siteDocsHTML, "scope": siteScopeHTML,
 	}
-	bodies["raw"] = `{{define "body"}}{{.Raw}}{{end}}`
 	for key, body := range bodies {
-		siteTemplates[key] = template.Must(template.New(key).Funcs(siteFuncs).Parse(siteLayoutHTML + siteSharedHTML + body))
+		siteTemplates[key] = template.Must(template.New(key).Funcs(siteFuncs).Parse(siteLayoutHTML + siteSharedHTML + siteSVGHTML + body))
 	}
 }
 
@@ -531,28 +603,25 @@ func renderSitePageHTML(p sitePage, lang siteLang, authed bool, pr sitePricing) 
 
 func serveSitePage(w http.ResponseWriter, r *http.Request, p sitePage, lang siteLang) {
 	_, authErr := currentUser(r)
-	body, _, err := renderSitePageHTML(p, lang, authErr == nil, loadSitePricing())
+	body, v, err := renderSitePageHTML(p, lang, authErr == nil, loadSitePricing(lang.Code))
 	if err != nil {
 		http.Error(w, "render error", http.StatusInternalServerError)
 		return
 	}
-	writeSiteHTML(w, r, body, lang.HTMLLang)
+	writeSiteHTML(w, r, body, lang.HTMLLang, v.Nonce)
 }
 
-// writeSiteHTML sends a rendered page with a validator, so a repeat visit is a
-// 304. The body varies with sign-in state (the header button), hence Vary.
-func writeSiteHTML(w http.ResponseWriter, r *http.Request, body []byte, htmlLang string) {
-	sum := sha256.Sum256(body)
-	etag := `W/"` + hex.EncodeToString(sum[:8]) + `"`
+// writeSiteHTML sends a rendered page. It deliberately sends no ETag and forbids
+// caching: every response carries its own CSP nonce, so a 304 would pair a cached
+// body (old nonce) with a fresh header (new nonce) and block every script, and a
+// shared cache that replayed one response would reuse a nonce across visitors. The
+// body also varies with sign-in state (the header button), hence Vary.
+func writeSiteHTML(w http.ResponseWriter, r *http.Request, body []byte, htmlLang, nonce string) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Cache-Control", "private, no-store")
 	w.Header().Set("Vary", "Cookie")
-	w.Header().Set("ETag", etag)
 	w.Header().Set("Content-Language", htmlLang)
-	if r.Header.Get("If-None-Match") == etag {
-		w.WriteHeader(http.StatusNotModified)
-		return
-	}
+	w.Header().Set("Content-Security-Policy", strictCSP(nonce))
 	w.Write(body)
 }
 
@@ -578,10 +647,6 @@ func handleSitemap(w http.ResponseWriter, r *http.Request) {
 			fmt.Fprintf(&b, `    <xhtml:link rel="alternate" hreflang="x-default" href="%s%s"/>`+"\n  </url>\n", siteBase, p.Paths["en"])
 			_ = l
 		}
-	}
-	for _, e := range englishOnlyPages {
-		fmt.Fprintf(&b, "  <url>\n    <loc>%s%s</loc>\n    <lastmod>%s</lastmod>\n    <changefreq>%s</changefreq>\n    <priority>%s</priority>\n  </url>\n",
-			siteBase, e.Path, siteModified, e.Change, e.Priority)
 	}
 	b.WriteString("</urlset>\n")
 	w.Header().Set("Content-Type", "application/xml; charset=utf-8")

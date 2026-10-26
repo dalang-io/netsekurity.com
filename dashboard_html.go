@@ -16,12 +16,11 @@ const dashShellHTML = `{{define "shell_open"}}<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>{{.Title}} — Netsekurity</title>
 <meta name="robots" content="noindex, nofollow"/>
-<link rel="preconnect" href="https://fonts.googleapis.com"/>
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"/>
+<link rel="preload" href="/fonts/PlusJakartaSans-latin-v1.woff2" as="font" type="font/woff2" crossorigin/>
 <link rel="stylesheet" href="/css/styles.css?v={{cssHash}}"/>
-<link rel="icon" type="image/svg+xml" href="/favicon.svg" />{{fbpixel}}
-<script src="https://unpkg.com/htmx.org@1.9.12/dist/htmx.min.js" defer></script>
+<link rel="icon" type="image/svg+xml" href="{{asset "/favicon.svg"}}" />{{fbpixel}}
+<meta name="htmx-config" content='{"includeIndicatorStyles":false}'/>
+<script src="/js/htmx-1.9.12.min.js" defer></script>
 </head>
 <body class="nsk-app min-h-screen overflow-x-hidden">
 <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-2 focus:top-2 focus:z-50 focus:bg-white focus:p-3 focus:font-bold">Skip to content</a>
@@ -31,7 +30,7 @@ const dashShellHTML = `{{define "shell_open"}}<!DOCTYPE html>
     <div class="flex items-center gap-2">
       <button type="button" id="nsk-menu-btn" class="nsk-btn nsk-btn-ghost nsk-btn-sm md:hidden" aria-label="Open menu" aria-controls="nsk-sidebar" aria-expanded="false" onclick="nskMenu()">{{icon "menu" 20}}</button>
       <a href="/dashboard" class="flex items-center gap-2.5" aria-label="Netsekurity home">
-        <img src="/favicon.svg" width="34" height="34" alt="" class="h-[34px] w-[34px]"/>
+        <img src="{{asset "/favicon.svg"}}" width="34" height="34" alt="" class="h-[34px] w-[34px]"/>
         <span class="text-xl font-extrabold tracking-tight">Netsekurity</span>
         <span class="hidden text-xs font-medium text-gray-600 sm:inline">by Dalang.io</span>
       </a>
@@ -524,10 +523,10 @@ const dashAutomationHTML = `{{define "dashboard_automation"}}{{template "shell_o
     <h2 class="nsk-card-head">How to use it</h2>
     <div class="space-y-3 p-4 text-sm text-gray-800">
       <p>On every deploy, have your pipeline send this request. Keep the token secret.</p>
-      <pre class="nsk-code block overflow-x-auto whitespace-pre-wrap">curl -s -X POST https://netsekurity.com/api/v1/pentests \
+      <pre class="nsk-code block overflow-x-auto whitespace-pre-wrap">curl -s -X POST https://netsekurity.com/api/v1/assessments \
   -H "X-API-Token: YOUR_TOKEN" \
-  -d "domain=www.mybusiness.com&amp;mode=standard"</pre>
-      <p>Each scan uses 1 credit. <a href="/docs" target="_blank" rel="noopener" class="font-bold underline">Read the full setup guide</a></p>
+  -d "domain=www.mybusiness.com"</pre>
+      <p>Each scan uses 1 credit. To read the result from your pipeline, call <span class="nsk-mono">GET /api/v1/assessments/&lt;id&gt;</span> with the same header. <a href="/docs" target="_blank" rel="noopener" class="font-bold underline">Read the full setup guide</a></p>
     </div>
   </section>
 {{template "shell_close"}}{{end}}
