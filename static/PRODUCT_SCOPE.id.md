@@ -10,6 +10,15 @@ domain terverifikasi / kredit. 1 kredit = 1 asesmen eksternal · 1 domain.
 
 ---
 
+## Persiapan dan pemeriksaan ulang
+
+Konfirmasi kendali hostname melalui DNS TXT, file verifikasi HTTPS, atau meta tag
+halaman utama. Biarkan bukti terpasang: bukti diperiksa sebelum setiap asesmen
+mandiri. Konfirmasi izin dan cakupan secara terpisah sebelum mulai. Verifikasi
+yang gagal tidak memakai kredit. Setiap asesmen baru atau ulang membutuhkan
+1 kredit per hostname. Subdomain lain memerlukan verifikasi dan kredit sendiri.
+Lihat [panduan memulai](/id/panduan-memulai).
+
 ## Metodologi (blackbox, eksternal)
 
 1. **Pengintaian dan pemetaan permukaan serangan** — resolusi DNS dan daftar subdomain pasif dari

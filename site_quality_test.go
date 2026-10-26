@@ -83,6 +83,7 @@ func TestBrandSpellingIsOneThing(t *testing.T) {
 	for _, path := range publicPagePaths {
 		text := visibleText(renderPublic(t, path))
 		text = strings.ReplaceAll(text, "NetSekurity Scanner", "")
+		text = strings.ReplaceAll(text, "NetSekurity Verification", "")
 		text = strings.ReplaceAll(text, "NETSEKURITY_API_TOKEN", "") // an environment variable name
 		if m := odd.FindString(text); m != "" {
 			t.Errorf("%s writes the brand as %q", path, m)
@@ -384,7 +385,7 @@ func TestProcurementFactSheetIsPrintable(t *testing.T) {
 func TestWideTablesFoldInsteadOfScrolling(t *testing.T) {
 	for _, path := range []string{"/", "/id/"} {
 		page := renderPublic(t, path)
-		i, j := strings.Index(page, `id="pricing"`), strings.Index(page, `id="trust"`)
+		i, j := strings.Index(page, `id="pricing"`), strings.Index(page, `id="tiers"`)
 		pricing := page[i:j]
 		if strings.Contains(pricing, "overflow-x-auto") || strings.Contains(pricing, "min-w-[") {
 			t.Errorf("%s: the pricing table can still scroll sideways", path)
@@ -455,7 +456,7 @@ func TestHomeCallsToActionHaveAHierarchy(t *testing.T) {
 		h := homeFor(lang)
 		path := map[string]string{"en": "/", "id": "/id/"}[lang]
 		vis := visibleText(renderPublic(t, path))
-		hero := vis[:strings.Index(vis, h.DefinitionH2)]
+		hero := vis[:strings.Index(vis, h.AudiencesH2)]
 		for _, want := range []string{h.CTAPrimary, h.CTASecondary, h.SignInNote} {
 			want = strings.ReplaceAll(want, "{single}", "$50")
 			if !strings.Contains(hero, want) {
@@ -463,13 +464,13 @@ func TestHomeCallsToActionHaveAHierarchy(t *testing.T) {
 			}
 		}
 		page := renderPublic(t, path)
-		// One filled button in the hero; the third action is a text link.
-		hs := page[strings.Index(page, "<main"):strings.Index(page, `id="what"`)]
+		// One filled start button, with sample evidence as the secondary action.
+		hs := page[strings.Index(page, "<main"):strings.Index(page, `id="audiences"`)]
 		if n := strings.Count(hs, `class="nsk-btn"`); n != 1 {
 			t.Errorf("%s: the hero has %d primary buttons, want 1", path, n)
 		}
-		if !strings.Contains(hs, `class="nsk-textlink"`) {
-			t.Errorf("%s: the hero has no text-link action", path)
+		if !strings.Contains(hs, `data-umami-event="netsekurity_hero_sample" class="nsk-btn nsk-btn-ghost"`) || !strings.Contains(hs, `data-umami-event="netsekurity_hero_cta" class="nsk-btn"`) {
+			t.Errorf("%s: start must be primary and example results secondary", path)
 		}
 		// The lowest-price pack is marked, and only it.
 		if strings.Count(page, "nsk-badge-ok") != 1 {
@@ -535,6 +536,7 @@ func TestTrustPageListsThirdPartiesAndTheAIQuestion(t *testing.T) {
 // The docs print a shell script that starts an assessment, waits for it and fails on
 // High or Critical. Run it, against a local server, in all four outcomes.
 func TestDocsGateScriptRunsInAllFourOutcomes(t *testing.T) {
+	stubControl(t, nil)
 	for _, tool := range []string{"sh", "curl", "jq"} {
 		if _, err := exec.LookPath(tool); err != nil {
 			t.Skipf("%s is not installed", tool)
@@ -604,7 +606,7 @@ func TestDocsGateScriptRunsInAllFourOutcomes(t *testing.T) {
 	token, mux := apiFixture(t, "u_gate_busy")
 	db.Exec(`INSERT OR REPLACE INTO credit_balance (user_id, balance) VALUES ('u_gate_busy', 5)`)
 	db.Exec(`INSERT INTO domains (user_id, domain, txt_verification_token, status) VALUES ('u_gate_busy', 'app.example.com', 'x', 'verified')`)
-	if rr := apiCall(mux, "POST", "/api/v1/assessments", token, "domain=app.example.com"); rr.Code != 200 {
+	if rr := apiCall(mux, "POST", "/api/v1/assessments", token, "domain=app.example.com&authorised=true"); rr.Code != 200 {
 		t.Fatalf("setup: %d %s", rr.Code, rr.Body)
 	}
 	srv := httptest.NewServer(mux)

@@ -55,12 +55,13 @@ func decode(t *testing.T, rr *httptest.ResponseRecorder) map[string]any {
 }
 
 func TestAssessmentsIsTheNameAndPentestsStillWorks(t *testing.T) {
+	stubControl(t, nil)
 	const uid = "u_api_alias"
 	token, mux := apiFixture(t, uid)
 	db.Exec(`INSERT OR REPLACE INTO credit_balance (user_id, balance) VALUES (?, 5)`, uid)
 	db.Exec(`INSERT INTO domains (user_id, domain, txt_verification_token, status) VALUES (?, 'alias.example.com', 'x', 'verified')`, uid)
 
-	rr := apiCall(mux, "POST", "/api/v1/assessments", token, "domain=alias.example.com")
+	rr := apiCall(mux, "POST", "/api/v1/assessments", token, "domain=alias.example.com&authorised=true")
 	if rr.Code != 200 {
 		t.Fatalf("assessments: %d %s", rr.Code, rr.Body)
 	}
@@ -71,7 +72,7 @@ func TestAssessmentsIsTheNameAndPentestsStillWorks(t *testing.T) {
 	}
 
 	// One at a time per account: the second start is a 409 JSON error, not a 200.
-	rr = apiCall(mux, "POST", "/api/v1/pentests", token, "domain=alias.example.com")
+	rr = apiCall(mux, "POST", "/api/v1/pentests", token, "domain=alias.example.com&authorised=true")
 	if rr.Code != http.StatusConflict {
 		t.Errorf("second start while queued: %d %s, want 409", rr.Code, rr.Body)
 	}

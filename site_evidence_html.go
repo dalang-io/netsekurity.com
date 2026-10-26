@@ -8,7 +8,7 @@ package main
 // it send the same request.
 const docsStartExample = "curl -s -X POST https://netsekurity.com/api/v1/assessments \\\n" +
 	"  -H \"X-API-Token: $NETSEKURITY_API_TOKEN\" \\\n" +
-	"  -d \"domain=app.example.com\""
+	"  -d \"domain=app.example.com&authorised=true\""
 
 const siteSampleHTML = `{{define "body"}}{{with .Sample}}
 <section class="border-b-2 border-black bg-[#fffbeb]">

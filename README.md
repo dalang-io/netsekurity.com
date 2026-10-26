@@ -5,7 +5,7 @@
 > (automated, blackbox, unauthenticated, read-only) with agent triage, **not a full
 > penetration test**. Deeper whitebox testing is a separate paid offering.
 
-1 credit = 1 external assessment · 1 domain. Verify ownership with an auto-generated TXT record;
+1 credit = 1 external assessment · 1 domain. Verify control with DNS TXT, an HTTPS file or a homepage meta tag;
 get a plain-language, agent-reviewed report. **Pricing:** $50 = 1 · $100 = 3 · $500 = 20 · $1000 = 50 credits.
 
 This README is the **handover/operations reference** for whoever takes over the project.
@@ -86,7 +86,7 @@ netsekurity.com/
 ├── ui.go              # shared UI helpers: credit/time formatting, icons, alertHTML()
 ├── admin.go           # super-admin panel (/su) + report serving + add-credit
 ├── payment.go         # Xendit top-up, webhook, auto-credit poller (syncPendingPayments)
-├── domains.go         # domain add / TXT verify (authoritative NS) / delete
+├── domains.go         # domain add / DNS, file or meta verification / delete
 ├── pentests.go        # pentest start/list + worker claim/report (queue)
 ├── apitokens.go       # CI/CD API tokens (expiry 7/14/30/60/90d) and the /api/v1 endpoints
 ├── security.go        # security headers on every response; strict nonce CSP for public pages
@@ -224,13 +224,24 @@ failed; see `AGENT_WORKER.md` and `PLAN-dalang-integration.md`.
 
 ---
 
-## Domain Verification (TXT)
+## Domain verification
 
-1. User adds a domain → server generates `ns-verify-<hex>` token.
-2. Dashboard shows the record: **`_netsekurity.<domain>` TXT `<token>`** — **always visible**
-   (pending & verified) so users can re-add/update DNS later.
-3. Verify checks **recursive resolvers AND authoritative nameservers** (raw DNS query) so a
-   fresh record verifies immediately. Verified domains can't be deleted.
+1. Add a hostname to generate an account-bound verification token.
+2. Choose DNS TXT, an HTTPS file at `/.well-known/netsekurity-verification.txt`, or a
+   `netsekurity-verification` meta tag in the public homepage head. The dashboard
+   provides a downloadable file and copyable instructions for the website manager.
+3. DNS checks recursive and authoritative resolvers. HTTPS checks validate certificates,
+   refuse redirects, limit response sizes and connect only to validated public IPs.
+4. Leave the proof in place: it is rechecked before every self-service scan. Failed
+   proof returns the hostname to pending without charging. Each hostname is separate.
+5. Dashboard and CI/CD starts require explicit permission (`authorised=true`). JSON
+   uses a boolean; form requests use the string `true`. The confirmation timestamp,
+   queued job, credit debit and ledger entry are recorded in one transaction.
+6. Partner scans retain their separate signed proof contract. Partner verification
+   cannot be used to bypass self-service DNS/file/meta proof requirements.
+
+Customer guides: `/getting-started` and `/id/panduan-memulai`. The downloadable
+report remains English; the dashboard explains next actions in English and Indonesian.
 
 ---
 
@@ -473,8 +484,8 @@ systemctl status proxy.service              # Pingora
 - **Credits auto-add:** poller every 30s + dashboard load; if a payment isn't credited, check
   `journalctl -u netsekurity.service` for `sync payments` lines and confirm the invoice is
   `PAID` in Xendit.
-- **Verify a domain:** TXT is checked via authoritative NS, so it should be instant once the
-  record is published; recursive resolvers may lag a few minutes.
+- **Verify a domain:** choose DNS, file or meta tag. DNS propagation may delay confirmation; HTTPS
+  requires a valid certificate and a direct response on the exact hostname.
 - **Reports:** stored in `data/reports/`; served at `/reports/<name>.pdf` (owner/admin only,
   `no-store`). Back up `data/` regularly.
 

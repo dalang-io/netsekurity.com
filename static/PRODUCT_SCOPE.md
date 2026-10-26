@@ -10,6 +10,15 @@ verified domain / credit. 1 credit = 1 external assessment · 1 domain.
 
 ---
 
+## Setup and repeat checks
+
+Confirm control of the exact hostname using DNS TXT, an HTTPS verification file,
+or a homepage meta tag. Leave the proof in place: it is checked before each
+self-service assessment. Confirm permission and scope separately before starting.
+A failed verification does not use credit. Each new or repeat assessment costs
+1 credit per hostname. Other subdomains require their own verification and credit.
+See the [getting started guide](/getting-started).
+
 ## Methodology (blackbox, external)
 
 1. **Recon & attack-surface mapping** — DNS resolution and passive subdomain listing from

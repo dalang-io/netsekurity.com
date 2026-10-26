@@ -117,6 +117,7 @@ func main() {
 
 	// Domains
 	mux.HandleFunc("/api/domains", rateLimit(writeLimit, handleAddDomain))
+	mux.HandleFunc("/api/domains/verification-file", rateLimit(writeLimit, handleVerificationFile))
 	mux.HandleFunc("/api/domains/verify", rateLimit(writeLimit, handleVerifyDomain))
 	mux.HandleFunc("/api/domains/delete", rateLimit(writeLimit, handleDeleteDomain))
 

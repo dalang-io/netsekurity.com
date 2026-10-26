@@ -147,7 +147,7 @@ func TestDomainCardsGuideTheCustomer(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := b.String()
-	for _, want := range []string{"Prove this website is yours", "ns-verify-bbb", "_netsekurity", "Check now", "Verified", "Remove"} {
+	for _, want := range []string{"Confirm access to your website", "ns-verify-bbb", "_netsekurity", "Check DNS record", "Check uploaded file", "Check website tag", "Copy instructions for my website manager", "Verified", "Remove"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("domain list missing %q", want)
 		}
@@ -340,7 +340,7 @@ func TestAddDomainFragments(t *testing.T) {
 			t.Errorf("add response does not refresh %s", id)
 		}
 	}
-	if !strings.Contains(out, "Prove this website is yours") {
+	if !strings.Contains(out, "Confirm access to your website") {
 		t.Error("the new card does not carry the verification steps")
 	}
 

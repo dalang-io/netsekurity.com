@@ -54,6 +54,8 @@ const dashShellHTML = `{{define "shell_open"}}<!DOCTYPE html>
 
     <p class="nsk-nav-group mt-6">Help</p>
     <ul class="space-y-1.5">
+      <li><a href="/getting-started" class="nsk-nav-link">{{icon "help" 18}}<span>Getting started</span></a></li>
+      <li><a href="/id/panduan-memulai" class="nsk-nav-link" lang="id">{{icon "help" 18}}<span>Panduan bahasa Indonesia</span></a></li>
       <li><a href="/sample-report" target="_blank" rel="noopener" class="nsk-nav-link">{{icon "file" 18}}<span>See a sample report</span></a></li>
       <li><a href="/product-scope" target="_blank" rel="noopener" class="nsk-nav-link">{{icon "help" 18}}<span>What we check</span></a></li>
       <li><a href="/#contact" class="nsk-nav-link">{{icon "help" 18}}<span>Contact us</span></a></li>
@@ -98,14 +100,17 @@ function nskCopy(btn) {
     setTimeout(function () { label.textContent = old; }, 1500);
   }
   if (navigator.clipboard && window.isSecureContext) {
-    navigator.clipboard.writeText(text).then(done, function () {});
+    navigator.clipboard.writeText(text).then(done, fallback);
     return;
   }
+  fallback();
+  function fallback() {
   var ta = document.createElement('textarea');
   ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
   document.body.appendChild(ta); ta.select();
-  try { document.execCommand('copy'); done(); } catch (e) {}
+  try { if (document.execCommand('copy')) done(); else if (label) label.textContent = 'Select and copy the instructions below'; } catch (e) { if (label) label.textContent = 'Select and copy the instructions below'; }
   document.body.removeChild(ta);
+  }
 }
 // Times are stored in UTC; show them in the viewer's own timezone.
 function nskLocalize() {
@@ -241,6 +246,16 @@ const dashHomeHTML = `{{define "dashboard"}}{{template "shell_open" shell . "hom
   {{end}}
 {{template "shell_close"}}{{end}}
 
+{{define "startcheck"}}
+<form hx-post="/api/pentests/start" hx-target="#flash" hx-swap="innerHTML" class="space-y-3">
+  <input type="hidden" name="domain" value="{{.Domain}}"/>
+  <input type="hidden" name="mode" value="standard"/>
+  <p class="text-sm text-gray-700">1 credit per check, including repeat checks. External, read-only; login areas and business logic are not tested. <a href="/product-scope" target="_blank" rel="noopener" class="font-bold underline">Full scope</a></p>
+  <label class="flex items-start gap-2 text-sm"><input type="checkbox" name="authorised" value="true" required class="mt-1"/><span>I am authorised to test <strong class="break-all">{{.Domain}}</strong> and agree to this scope.</span></label>
+  <button class="nsk-btn nsk-btn-sm" aria-label="Scan {{.Domain}} now, uses 1 credit" hx-disabled-elt="this">Scan now · 1 credit</button>
+</form>
+{{end}}
+
 {{define "scanpicker"}}<div id="scan-picker">
 {{with .Verified}}
 <ul class="space-y-2">
@@ -250,11 +265,7 @@ const dashHomeHTML = `{{define "dashboard"}}{{template "shell_open" shell . "hom
     {{if le $.Balance 0.0}}
     <a href="/dashboard/credits" class="nsk-btn nsk-btn-sm" aria-label="Buy a credit to scan {{.Domain}}">Buy a credit to scan</a>
     {{else}}
-    <button hx-post="/api/pentests/start" hx-vals='{"domain":"{{.Domain}}","mode":"standard"}'
-      hx-target="#flash" hx-swap="innerHTML"
-      title="Checks this website from the outside. Read-only, nothing on your site is changed."
-      aria-label="Scan {{.Domain}} now, uses 1 credit"
-      class="nsk-btn nsk-btn-sm">Scan now · 1 credit</button>
+    {{template "startcheck" .}}
     {{end}}
   </li>
   {{end}}
@@ -268,7 +279,7 @@ const dashHomeHTML = `{{define "dashboard"}}{{template "shell_open" shell . "hom
 const dashWebsitesHTML = `{{define "dashboard_websites"}}{{template "shell_open" shell . "sites" "My websites"}}
   <div class="mb-6">
     <h1 class="text-2xl font-extrabold sm:text-3xl">My websites</h1>
-    <p class="mt-1 max-w-2xl text-gray-700">Add the websites you own. We confirm ownership first, so nobody can scan a website that isn't theirs.</p>
+    <p class="mt-1 max-w-2xl text-gray-700">Add a website you are authorised to test. Confirm control using your website settings, a file or DNS; you can ask your website manager to help.</p>
   </div>
 
   <section class="nsk-card mb-6">
@@ -299,51 +310,48 @@ const dashWebsitesHTML = `{{define "dashboard_websites"}}{{template "shell_open"
     </div>
 
     {{if eq .Status "verified"}}
-    <p class="mt-2 text-sm text-gray-700">Ownership confirmed. This website is ready to scan.</p>
+    <p class="mt-2 text-sm text-gray-700">Website control confirmed. Leave your verification proof in place: we check it again before each scan.</p>
     <div class="mt-3 flex flex-wrap items-center gap-3">
       {{if le $.Balance 0.0}}
       <button type="button" disabled title="You have no credits. Buy a credit to run a scan." aria-label="Scan {{.Domain}} now (unavailable: you have no credits)" class="nsk-btn nsk-btn-sm">Scan now · 1 credit</button>
       <a href="/dashboard/credits" class="text-sm font-bold underline">Buy credits first</a>
       {{else}}
-      <button hx-post="/api/pentests/start" hx-vals='{"domain":"{{.Domain}}","mode":"standard"}'
-        hx-target="#flash" hx-swap="innerHTML"
-        title="Checks this website from the outside. Read-only, nothing on your site is changed."
-        aria-label="Scan {{.Domain}} now, uses 1 credit"
-        class="nsk-btn nsk-btn-sm">Scan now · 1 credit</button>
+      {{template "startcheck" .}}
       {{end}}
     </div>
     {{else}}
-    <div class="mt-3 border-2 border-black bg-[#fffbeb] p-3">
-      <p class="font-extrabold">Prove this website is yours <span class="font-medium text-gray-700">(about 2 minutes)</span></p>
-      <ol class="mt-2 list-decimal space-y-3 pl-5 text-sm text-gray-800">
-        <li>Open the <strong>DNS settings</strong> for <strong class="break-all">{{.Domain}}</strong>. They are at the company where you bought the domain.</li>
-        <li>Add a new record of type <strong>TXT</strong> with this name and value:
-          <div class="mt-2 space-y-2">
-            <div>
-              <span class="nsk-label">Name (sometimes called "Host")</span>
-              <div class="nsk-code"><span>_netsekurity</span>
-                <button type="button" data-copy="_netsekurity" onclick="nskCopy(this)" aria-label="Copy the record name" class="nsk-btn nsk-btn-ghost nsk-btn-sm">{{icon "copy" 14}}<span class="nsk-copy-label">Copy</span></button></div>
-            </div>
-            <div>
-              <span class="nsk-label">Value</span>
-              <div class="nsk-code"><span>{{.TXT}}</span>
-                <button type="button" data-copy="{{.TXT}}" onclick="nskCopy(this)" aria-label="Copy the record value" class="nsk-btn nsk-btn-ghost nsk-btn-sm">{{icon "copy" 14}}<span class="nsk-copy-label">Copy</span></button></div>
-            </div>
-          </div>
-          <p class="nsk-hint">Some providers want the full name instead: <code>_netsekurity.{{.Domain}}</code></p>
-        </li>
-        <li>Save it, wait a minute or two, then press <strong>Check now</strong>.</li>
-      </ol>
-      <p class="mt-3 text-sm text-gray-700">Not sure how? Send these steps to whoever looks after your website or domain.</p>
-    </div>
-    <div class="mt-3 flex flex-wrap gap-3">
-      <button hx-post="/api/domains/verify" hx-vals='{"domain":"{{.Domain}}"}'
-        hx-target="#flash" hx-swap="innerHTML" aria-label="Check the record for {{.Domain}} now" class="nsk-btn nsk-btn-sm">Check now</button>
-      <button hx-post="/api/domains/delete" hx-vals='{"domain":"{{.Domain}}"}'
-        hx-target="#flash" hx-swap="innerHTML"
-        hx-confirm="Remove {{.Domain}} from your account?"
-        aria-label="Remove {{.Domain}}"
-        class="nsk-btn nsk-btn-ghost nsk-btn-sm">Remove</button>
+    <div class="mt-3 space-y-3">
+      <p class="font-extrabold">Confirm access to your website</p>
+      <p class="text-sm text-gray-700">Choose one method below. No passwords are needed. Verification is free; a check uses 1 credit only when it starts.</p>
+      <details class="border-2 border-black p-3">
+        <summary class="cursor-pointer font-bold">I can change my website settings</summary>
+        <p class="mt-2 text-sm">Add this tag inside the &lt;head&gt; of your public homepage at https://{{.Domain}}/. The page must load directly over HTTPS without a redirect. This option is for websites with HTML pages.</p>
+        <div class="nsk-code mt-2"><span>{{.MetaTag}}</span><button type="button" data-copy="{{.MetaTag}}" onclick="nskCopy(this)" class="nsk-btn nsk-btn-ghost nsk-btn-sm"><span class="nsk-copy-label">Copy tag</span></button></div>
+        <button hx-post="/api/domains/verify" hx-vals='{"domain":"{{.Domain}}","method":"meta"}' hx-target="#flash" hx-swap="innerHTML" hx-disabled-elt="this" class="nsk-btn nsk-btn-sm mt-3">Check website tag</button>
+      </details>
+      <details class="border-2 border-black p-3">
+        <summary class="cursor-pointer font-bold">I can upload a file to my hosting</summary>
+        <p class="mt-2 text-sm">Download the file and place it at this exact address. It must be readable over HTTPS without a login or redirect. An API can return the file content at the same path.</p>
+        <p class="nsk-code mt-2 break-all">https://{{.Domain}}/.well-known/netsekurity-verification.txt</p>
+        <div class="mt-3 flex flex-wrap gap-3"><a href="/api/domains/verification-file?domain={{.Domain}}" class="nsk-btn nsk-btn-ghost nsk-btn-sm">Download verification file</a>
+        <button hx-post="/api/domains/verify" hx-vals='{"domain":"{{.Domain}}","method":"file"}' hx-target="#flash" hx-swap="innerHTML" hx-disabled-elt="this" class="nsk-btn nsk-btn-sm">Check uploaded file</button></div>
+      </details>
+      <details class="border-2 border-black p-3">
+        <summary class="cursor-pointer font-bold">I can manage my domain settings</summary>
+        <p class="mt-2 text-sm">In your DNS provider's settings, add a TXT record with the full name below. Some providers append the domain automatically: enter only the part before the zone they manage.</p>
+        <div class="nsk-code mt-2"><span>_netsekurity.{{.Domain}}</span><button type="button" data-copy="_netsekurity.{{.Domain}}" onclick="nskCopy(this)" class="nsk-btn nsk-btn-ghost nsk-btn-sm"><span class="nsk-copy-label">Copy record name</span></button></div>
+        <div class="nsk-code mt-2"><span>{{.TXT}}</span><button type="button" data-copy="{{.TXT}}" onclick="nskCopy(this)" class="nsk-btn nsk-btn-ghost nsk-btn-sm"><span class="nsk-copy-label">Copy record value</span></button></div>
+        <p class="mt-2 text-sm">Save the record, then check. DNS updates may take time to become visible.</p>
+        <button hx-post="/api/domains/verify" hx-vals='{"domain":"{{.Domain}}","method":"txt"}' hx-target="#flash" hx-swap="innerHTML" hx-disabled-elt="this" class="nsk-btn nsk-btn-sm mt-3">Check DNS record</button>
+      </details>
+      <details class="border-2 border-black p-3">
+        <summary class="cursor-pointer font-bold">Someone else manages my website</summary>
+        <p class="mt-2 text-sm">Copy these instructions and send them to your website manager. Ask which method they used, then check that method above. You do not need to share your Netsekurity login.</p>
+        <pre class="nsk-code mt-2 whitespace-pre-wrap break-words">{{.VerificationInstructions}}</pre>
+        <button type="button" data-copy="{{.VerificationInstructions}}" onclick="nskCopy(this)" class="nsk-btn nsk-btn-ghost nsk-btn-sm mt-3"><span class="nsk-copy-label">Copy instructions for my website manager</span></button>
+      </details>
+      <p class="text-sm text-gray-700">Leave the proof in place for repeat checks. It confirms this hostname only; other subdomains need their own verification.</p>
+      <button hx-post="/api/domains/delete" hx-vals='{"domain":"{{.Domain}}"}' hx-target="#flash" hx-swap="innerHTML" hx-confirm="Remove {{.Domain}} from your account?" aria-label="Remove {{.Domain}}" class="nsk-btn nsk-btn-ghost nsk-btn-sm">Remove</button>
     </div>
     {{end}}
   </li>
@@ -525,7 +533,7 @@ const dashAutomationHTML = `{{define "dashboard_automation"}}{{template "shell_o
       <p>On every deploy, have your pipeline send this request. Keep the token secret.</p>
       <pre class="nsk-code block overflow-x-auto whitespace-pre-wrap">curl -s -X POST https://netsekurity.com/api/v1/assessments \
   -H "X-API-Token: YOUR_TOKEN" \
-  -d "domain=www.mybusiness.com"</pre>
+  -d "domain=www.mybusiness.com&authorised=true"</pre>
       <p>Each scan uses 1 credit. To read the result from your pipeline, call <span class="nsk-mono">GET /api/v1/assessments/&lt;id&gt;</span> with the same header. <a href="/docs" target="_blank" rel="noopener" class="font-bold underline">Read the full setup guide</a></p>
     </div>
   </section>

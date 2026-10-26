@@ -1,8 +1,9 @@
 <!doctype html>
 <html lang="id"><head><meta charset="utf-8">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&display=swap">
+
+
 <style>
+@font-face{font-family:"Plus Jakarta Sans";font-style:normal;font-weight:200 800;src:url("../../static/fonts/PlusJakartaSans-latin-v1.woff2") format("woff2");font-display:swap}
   *{box-sizing:border-box;margin:0}
   html,body{width:1200px;height:630px;overflow:hidden}
   body{font-family:"Plus Jakarta Sans",system-ui,sans-serif;background:#fffbeb;color:#111827;position:relative}
@@ -20,7 +21,7 @@
   .card .hd i{font:700 13px/1 ui-monospace,Menlo,monospace;letter-spacing:.06em;text-transform:uppercase;background:#facc15;border:2px solid #000;padding:6px 9px;font-style:normal}
   .card .hd em{font:500 15px ui-monospace,Menlo,monospace;color:#4b5563;font-style:normal}
   .card .bd{padding:20px}
-  .sum{font-size:20px;font-weight:800;white-space:nowrap}
+  .sum{font-size:20px;font-weight:800;white-space:normal}
   .post{margin-top:6px;font-size:17px;font-weight:700;color:#713f12}
   .f{margin-top:12px;border:2px solid #d1d5db;padding:11px 13px;font-size:16px;line-height:1.35;color:#1f2937}
   .f:first-of-type{margin-top:18px}
@@ -28,18 +29,18 @@
 </style></head><body>
 <div class="bar"></div>
 <div class="left">
-  <span class="tag">Asesmen keamanan web eksternal</span>
-  <h1>Ketahui apa yang dilihat penyerang dari situs web Anda.</h1>
-  <p class="sub">Hanya-baca. Temuan berskor CVSS, bukti, dan rencana perbaikan 30/60/90 hari.</p>
+  <span class="tag">Pemeriksaan yang mudah diulang</span>
+  <h1>Website terus berubah. Periksa keamanannya secara berkala.</h1>
+  <p class="sub">Pahami temuan dan berikan panduan kepada developer. Ulangi setelah pembaruan atau perbaikan.</p>
 </div>
 <div class="brand"><img src="../../static/favicon.svg" alt=""><b>Netsekurity</b><span>oleh Dalang</span></div>
 <div class="card">
   <div class="hd"><i>Contoh laporan</i><em>shop.example.com</em></div>
   <div class="bd">
-    <p class="sum">1 High · 2 Medium · 2 Low · 4 Info</p>
-    <p class="post">Postur keseluruhan: perlu perhatian</p>
-    <div class="f">F-01 · File environment terbuka di /.env</div><div class="f">F-02 · Header keamanan hilang (4 dari 6)</div><div class="f">F-03 · Open redirect melalui ?next=</div>
-    <p class="foot">Domain fiktif, struktur laporan sebenarnya.</p>
+    <p class="sum">File konfigurasi perlu diperiksa</p>
+    <p class="post">Prioritas: segera telusuri</p>
+    <div class="f">Yang terlihat: respons berhasil.</div><div class="f">Potensi dampak: pengaturan sensitif terbuka.</div><div class="f">Langkah berikutnya: minta developer menelusuri.</div>
+    <p class="foot">Contoh ilustratif. Respons perlu divalidasi.</p>
   </div>
 </div>
 </body></html>

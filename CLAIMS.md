@@ -58,7 +58,12 @@ is not in this repository (T-18).
 | Credits do not expire | `checkout.go` copy ("never expire") | |
 | A failed scan is refunded automatically | `pentests.go` worker-fail path; `pentests_fail_test.go` | Self-serve scans only. |
 | A scan takes 10 minutes to 24 hours, depending on what it finds | **Owner statement, 2026-10-26** | Not measured by anything in this repo. Always quote the whole range; never a single figure or a narrower one (`TestScanDurationIsAlwaysTheStatedRange`). |
-| Ownership proven by a DNS TXT record at `_netsekurity.<domain>`, checked against public resolvers and authoritative name servers | `domains.go` `handleVerifyDomain` | |
+| Self-service hostname control proven by DNS TXT, an HTTPS file at `/.well-known/netsekurity-verification.txt`, or a homepage meta tag | `verification.go`; `domains.go`; `verification_test.go` | Account-bound token, exact hostname; HTTPS certificate validation, no redirects, public-IP-only connections. DNS uses recursive and authoritative resolvers. |
+| Proof is checked again before every self-service assessment; failed verification does not consume credit | `assessment_start.go`; `recheckDomainControl`; `verification_test.go` | Missing proof moves the hostname back to pending. Explicit `authorised=true` confirms permission and scope per start; timestamp is recorded. Partner API retains its separate authenticated proof contract. |
+| Verification requests use `NetSekurity Verification` | `verification.go`; `verification_test.go` | Distinct from the assessment scanner's User-Agent. |
+| Dashboard offers downloadable proof and copyable instructions for the website manager | `dashboard_html.go`; `handleVerificationFile` | Download is account-bound; copying instructions does not send them. |
+| Dashboard result guidance is available in English and Indonesian | `result_summary.go`; `pentests.go`; `content_redesign_test.go` | Derived only from reported severity counts; PDF report remains English. Missing counts are not zero. |
+| Credits, ledger entry and queued assessment are saved atomically after proof verification | `assessment_start.go`; `verification_test.go` | Concurrent starts queue only one job and spend only one credit. |
 | One assessment at a time per account | `pentests.go` in-flight cap | |
 | API tokens shown once, stored as SHA-256 hash, expire after 7–90 days | `apitokens.go` | |
 | Session cookie: signed, 24 h, HttpOnly, Secure, SameSite=Lax | `auth.go` | |
@@ -70,7 +75,7 @@ is not in this repository (T-18).
 | Sales replies within 1 business day | Owner copy (contact form, earlier `llms.txt`) | |
 | Accounts are individual; sign-in is with Google | `auth.go`; no organisation model in `db.go` | |
 | Third parties that handle data: Google (sign-in), Xendit (payments), Cloudflare (network proxy), Umami at umami.dalang.io (cookieless analytics), Meta (only after consent), the AI model provider | `auth.go`; `checkout.go`; Cloudflare observed in front of the site on 2026-10-26 (its managed `robots.txt` is served); `consent.go` | Listed on `/trust#third-parties` with what each receives. The Cloudflare row says "as any reverse proxy sees them" and nothing about its SSL mode (README says "flexible"; unverified). |
-| CI/CD API: `POST /api/v1/assessments` starts an assessment (the original `/api/v1/pentests` still works); `GET /api/v1/assessments/{id}` returns status and finding counts by severity for the token's own account; one start at a time answers 409; polling is rate-limited per client | `apitokens.go`; `api_v1_test.go` | `findings` is `null` until the report was delivered with a breakdown: `null` is never zeros. The PDF is not served by the API. The docs' CI gate script is run against a local server by `TestDocsGateScriptRunsInAllFourOutcomes`. |
+| CI/CD API: `POST /api/v1/assessments` starts an assessment (the original `/api/v1/pentests` still works); `GET /api/v1/assessments/{id}` returns status and finding counts by severity for the token's own account; starts require `authorised=true` and current hostname proof; one start at a time answers 409; polling is rate-limited per client | `apitokens.go`; `api_v1_test.go` | `findings` is `null` until the report was delivered with a breakdown: `null` is never zeros. The PDF is not served by the API. The docs' CI gate script is run against a local server by `TestDocsGateScriptRunsInAllFourOutcomes`. |
 | Dalang Company Profile 2026 PDFs are public at dalang.io/docs/dalang-company-profile-{en,id}.pdf | HTTP 200 `application/pdf` checked 2026-10-26 | The repo path `dalang.io/static/docs/` serves at `/docs/`, not `/static/docs/`. |
 | Dalang's privacy policy, terms of use and security and trust center are at dalang.io/privacy, /terms-of-use and /security | **Owner statement 2026-10-26**; all three return HTTP 200 | They are Dalang's documents. As of 2026-10-26 none of them names Netsekurity, so the site links them as Dalang's and does not say they cover anything in particular. |
 
@@ -97,8 +102,8 @@ is not in this repository (T-18).
 | Pages are `private, no-store`, with no ETag | A 304 would pair a cached body with a new nonce and block every script | `TestPagesAreNeverCachedBecauseOfTheNonce` |
 | Decorative illustrations are `aria-hidden` and carry no words except the digits 1-5; the idea each carries is also in text | Words baked into a drawing cannot be translated or read | `TestIllustrationsAreDecorativeAndAccompaniedByText` |
 | The pricing table and the sample risk register fold their secondary columns on a phone instead of scrolling; tables that become cards keep their ARIA roles | The Buy column sat off-screen at 390px | `TestWideTablesFoldInsteadOfScrolling` |
-| One filled button in the hero, a text link for the third action | Three equal CTAs competed | `TestHomeCallsToActionHaveAHierarchy` |
-| Each idea lives on one page: the coverage list on the enterprise page, the tiers (cards) on the home page, a compact escalation list on the enterprise page | The same blocks were repeated on three pages | `TestSectionsAreNotRepeatedAcrossPages` |
+| One filled start button in the hero, example results as the secondary action | Practical self-service checks are the primary offer | `TestHomeCallsToActionHaveAHierarchy` |
+| Each idea lives on one page: the coverage list on the enterprise page, a concise comprehensive-pentest invitation on the home page, a service comparison on the comprehensive-pentest page | The same blocks were repeated on three pages | `TestSectionsAreNotRepeatedAcrossPages` |
 | The language switch has full accessible names ("English (EN)"); the Indonesian pages link only Indonesian pages | The visible "EN/ID" says nothing to a screen reader, and the language flipped mid-journey | `TestLanguageSwitchHasAccessibleNames`, `TestEvidencePagesExistInBothLanguagesAndStayInTheirs` |
 
 ## Enforced by tests
@@ -108,3 +113,17 @@ an unfilled `{token}`, a title or description out of range, a missing canonical 
 hreflang, broken structured data, a visible FAQ that differs from its JSON-LD, a
 broken internal link or anchor, a sitemap that differs from the pages, a scan
 duration in customer copy, or an unmarked terminal-style class.
+
+## Content redesign implementation
+
+The homepage now leads with repeatable checks for website owners: update triggers,
+plain-language example findings, setup, scope, privacy, repeat pricing and deeper
+testing. The existing `/enterprise` URLs now introduce comprehensive pentesting;
+developer and purchasing details remain available there. `/getting-started` and
+`/id/panduan-memulai` explain setup and all three verification choices. Main navigation
+is how it works, example results, pricing and comprehensive pentesting.
+
+The standard scanner's scope has not expanded. No promise of authenticated standard
+pentesting, universal CVE detection, continuous monitoring, automatic repairs or
+Indonesian PDF reports was introduced. The owner-described broader harness remains
+unverified and is not represented as available functionality.

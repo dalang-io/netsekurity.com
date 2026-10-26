@@ -25,7 +25,7 @@ jobs:
         run: |
           curl -s -X POST https://netsekurity.com/api/v1/assessments \
             -H "X-API-Token: ${{ secrets.NETSEKURITY_API_TOKEN }}" \
-            -d "domain=app.example.com"`},
+            -d "domain=app.example.com&authorised=true"`},
 	{"GitLab CI", `# .gitlab-ci.yml
 nsk-assessment:
   stage: .post
@@ -34,7 +34,7 @@ nsk-assessment:
     - apk add --no-cache curl
     - curl -s -X POST https://netsekurity.com/api/v1/assessments \
         -H "X-API-Token: $NETSEKURITY_API_TOKEN" \
-        -d "domain=app.example.com"
+        -d "domain=app.example.com&authorised=true"
   only:
     - production
   environment: production`},
@@ -49,7 +49,7 @@ nsk-assessment:
       steps {
         sh "curl -s -X POST https://netsekurity.com/api/v1/assessments " +
            "-H 'X-API-Token: $NSK_TOKEN' " +
-           "-d 'domain=app.example.com'"
+           "-d 'domain=app.example.com&authorised=true'"
       }
     }
   }
@@ -65,7 +65,7 @@ jobs:
           command: |
             curl -s -X POST https://netsekurity.com/api/v1/assessments \
               -H "X-API-Token: $NETSEKURITY_API_TOKEN" \
-              -d "domain=app.example.com"
+              -d "domain=app.example.com&authorised=true"
 workflows:
   version: 2
   deploy-and-assess:
@@ -81,7 +81,7 @@ steps:
   - script: |
       curl -s -X POST https://netsekurity.com/api/v1/assessments \
         -H "X-API-Token: $(NETSEKURITY_API_TOKEN)" \
-        -d "domain=app.example.com"
+        -d "domain=app.example.com&authorised=true"
     displayName: "Netsekurity assessment"`},
 	{"Bitbucket Pipelines", `# bitbucket-pipelines.yml
 pipelines:
@@ -92,7 +92,7 @@ pipelines:
           script:
             - curl -s -X POST https://netsekurity.com/api/v1/assessments \
                 -H "X-API-Token: $NETSEKURITY_API_TOKEN" \
-                -d "domain=app.example.com"`},
+                -d "domain=app.example.com&authorised=true"`},
 	{"Travis CI", `# .travis.yml
 language: generic
 script:
@@ -100,19 +100,19 @@ script:
 after_deploy:
   - curl -s -X POST https://netsekurity.com/api/v1/assessments \
       -H "X-API-Token: $NETSEKURITY_API_TOKEN" \
-      -d "domain=app.example.com"
+      -d "domain=app.example.com&authorised=true"
 branches: { only: [ master ] }`},
 	{"TeamCity", `# Build step (Command Line): "Netsekurity assessment"
 curl -s -X POST https://netsekurity.com/api/v1/assessments \
   -H "X-API-Token: %env.NSK_API_TOKEN%" \
-  -d "domain=app.example.com"`},
+  -d "domain=app.example.com&authorised=true"`},
 	{"Buildkite", `# buildkite-agent pipeline
 steps:
   - label: "Netsekurity assessment"
     command: |
       curl -s -X POST https://netsekurity.com/api/v1/assessments \
         -H "X-API-Token: $NETSEKURITY_API_TOKEN" \
-        -d "domain=app.example.com"
+        -d "domain=app.example.com&authorised=true"
     agents: { queue: default }`},
 	{"Codefresh", `# codefresh.yml
 version: "1.0"
@@ -123,7 +123,7 @@ steps:
     commands:
       - curl -s -X POST https://netsekurity.com/api/v1/assessments \
           -H "X-API-Token: $NETSEKURITY_API_TOKEN" \
-          -d "domain=app.example.com"`},
+          -d "domain=app.example.com&authorised=true"`},
 	{"Semaphore", `# semaphore.yml
 blocks:
   - name: "Netsekurity assessment"
@@ -133,5 +133,5 @@ blocks:
           commands:
             - curl -s -X POST https://netsekurity.com/api/v1/assessments \
                 -H "X-API-Token: $NETSEKURITY_API_TOKEN" \
-                -d "domain=app.example.com"`},
+                -d "domain=app.example.com&authorised=true"`},
 }

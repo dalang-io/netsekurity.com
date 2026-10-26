@@ -67,20 +67,20 @@ type coverageCopy struct {
 }
 
 type commonCopy struct {
-	Skip, MenuOpen, MenuClose, LangLabel                            string
-	NavHow, NavEnterprise, NavTrust, NavPricing, NavSample, NavDocs string
-	LogIn, Dashboard, Start, Buy                                    string
-	Tagline, Operator, Rights                                       string
-	ColProduct, ColEnterprise, ColResources                         string
-	LinkScope, LinkGuide, LinkLLMS, LinkSecurityTxt, LinkSitemap    string
-	LinkDalang, LinkContact, LinkProcurement                        string
-	LinkPrivacy, LinkTerms, LinkTrustCenter                         string
-	Breadcrumb                                                      string
-	CopyLabel, CopiedLabel, PrintLabel                              string
-	Form                                                            formCopy
-	Coverage                                                        coverageCopy
-	TiersH2, TiersLead                                              string
-	Tiers                                                           []tier
+	Skip, MenuOpen, MenuClose, LangLabel                                         string
+	NavHow, NavEnterprise, NavTrust, NavPricing, NavSample, NavDocs              string
+	LogIn, Dashboard, Start, Buy                                                 string
+	Tagline, Operator, Rights                                                    string
+	ColProduct, ColEnterprise, ColResources                                      string
+	LinkStartGuide, LinkScope, LinkGuide, LinkLLMS, LinkSecurityTxt, LinkSitemap string
+	LinkDalang, LinkContact, LinkProcurement                                     string
+	LinkPrivacy, LinkTerms, LinkTrustCenter                                      string
+	Breadcrumb                                                                   string
+	CopyLabel, CopiedLabel, PrintLabel                                           string
+	Form                                                                         formCopy
+	Coverage                                                                     coverageCopy
+	TiersH2, TiersLead                                                           string
+	Tiers                                                                        []tier
 }
 
 type homeCopy struct {
@@ -103,8 +103,6 @@ type homeCopy struct {
 	HowH2                                 string
 	Steps                                 []kv
 	BandH2, BandBody                      string
-	CICDH2, CICDLead, CICDNote, CICDLink  string
-	CICD                                  []string
 	PricingH2, PricingLead, PricingNote   string
 	PricingCols                           []string
 	PricingBest                           string

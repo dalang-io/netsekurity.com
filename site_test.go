@@ -18,7 +18,7 @@ import (
 
 // publicPagePaths is every public page the site serves, bilingual and not.
 var publicPagePaths = []string{
-	"/", "/id/",
+	"/", "/id/", "/getting-started", "/id/panduan-memulai",
 	"/enterprise", "/id/enterprise",
 	"/trust", "/id/trust",
 	"/external-assessment-vs-penetration-test", "/id/asesmen-eksternal-vs-uji-penetrasi",

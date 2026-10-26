@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -194,17 +195,20 @@ func handleAPICreatePentest(w http.ResponseWriter, r *http.Request) {
 	}
 	// allow JSON or form body
 	domain := strings.TrimSpace(r.FormValue("domain"))
+	authorised := r.FormValue("authorised") == "true"
 	mode := strings.ToLower(strings.TrimSpace(r.FormValue("mode")))
 	if mode == "" {
 		mode = "standard"
 	}
 	if domain == "" {
 		var b struct {
-			Domain string `json:"domain"`
-			Mode   string `json:"mode"`
+			Domain     string `json:"domain"`
+			Mode       string `json:"mode"`
+			Authorised bool   `json:"authorised"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&b); err == nil {
 			domain = strings.TrimSpace(b.Domain)
+			authorised = b.Authorised
 			if b.Mode != "" {
 				mode = strings.ToLower(b.Mode)
 			}
@@ -219,30 +223,20 @@ func handleAPICreatePentest(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, `{"error":"invalid mode (standard only)"}`, http.StatusBadRequest)
 		return
 	}
-	// find a verified domain owned by this user
-	var domainID int64
-	var status string
-	err := db.QueryRow(`SELECT id, status FROM domains WHERE user_id=? AND domain=?`, userID, domain).Scan(&domainID, &status)
-	if err != nil || status != "verified" {
-		http.Error(w, `{"error":"domain not verified for this account"}`, http.StatusBadRequest)
+	if !authorised {
+		apiJSON(w, http.StatusBadRequest, map[string]string{"error": "authorised=true is required: confirm permission to test this hostname within the external, read-only scope"})
 		return
 	}
-	// in-flight cap
-	var inflight int
-	db.QueryRow(`SELECT COUNT(*) FROM pentests WHERE user_id=? AND status IN ('queued','running')`, userID).Scan(&inflight)
-	if inflight > 0 {
-		// 409, not 200: a pipeline that checks the status code (curl -f) must see that
-		// nothing was started. This used to answer 200 with an error body, which the
-		// docs described as 400.
-		apiJSON(w, http.StatusConflict, map[string]string{"error": "an assessment is already queued or running; wait for it to finish"})
+	pid, err := queueVerifiedAssessment(r.Context(), userID, domain, mode, cost)
+	if err != nil {
+		code := http.StatusConflict
+		if errors.Is(err, errAssessmentCredit) {
+			code = http.StatusPaymentRequired
+		}
+		apiJSON(w, code, map[string]string{"error": err.Error()})
 		return
 	}
-	if !consumeCredit(userID, "Assessment scheduled (CI/CD)", fmt.Sprintf("pentest-api-%d", domainID), cost) {
-		http.Error(w, `{"error":"insufficient credits"}`, http.StatusPaymentRequired)
-		return
-	}
-	pid := "pt_" + randomHex(8)
-	db.Exec(`INSERT INTO pentests (id, user_id, domain_id, mode, status) VALUES (?,?,?,?,'queued')`, pid, userID, domainID, mode)
+
 	apiJSON(w, http.StatusOK, map[string]string{
 		"assessment_id": pid, "pentest_id": pid, "domain": domain, "mode": mode, "status": "queued",
 	})

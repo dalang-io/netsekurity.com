@@ -42,8 +42,9 @@ func llmsText(full bool) string {
 	mdLine(&b, "")
 	mdLine(&b, "## Key pages")
 	mdLine(&b, "")
+	mdLine(&b, "- [Getting started](%s/getting-started): setup, three verification options and next steps for website owners.", siteBase)
 	mdLine(&b, "- [Home](%s/): what it is, how it works, pricing, FAQ.", siteBase)
-	mdLine(&b, "- [Enterprise](%s%s): answers for boards, engineering leads and procurement, including a procurement fact sheet.", siteBase, pathFor("enterprise", "en"))
+	mdLine(&b, "- [Comprehensive pentest](%s%s): deeper application testing, engagement process, developer details and purchasing information.", siteBase, pathFor("enterprise", "en"))
 	mdLine(&b, "- [Trust and security](%s%s): how scans stay read-only, what data is kept, who can see reports, vulnerability disclosure, operator facts.", siteBase, pathFor("trust", "en"))
 	mdLine(&b, "- [External assessment vs penetration test](%s%s): the difference, what each finds and misses, how to choose, glossary.", siteBase, pathFor("compare", "en"))
 	mdLine(&b, "- [Sample report](%s%s): a worked example of the PDF report.", siteBase, pathFor("sample", "en"))
@@ -104,7 +105,7 @@ func llmsText(full bool) string {
 	}
 
 	if full {
-		mdLine(&b, "## For boards and executives")
+		mdLine(&b, "## Comprehensive testing process")
 		mdLine(&b, "")
 		mdLine(&b, "%s", ent.BoardIntro)
 		mdLine(&b, "")

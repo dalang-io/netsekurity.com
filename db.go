@@ -221,6 +221,7 @@ func initDB() error {
 	// credit refund there would invent balance). `attempts`/`deadline_at` bound
 	// the retry loop, and `failure_reason` surfaces why a scan closed.
 	for _, c := range []struct{ name, ddl string }{
+		{"authorized_at", `ALTER TABLE pentests ADD COLUMN authorized_at TEXT`},
 		{"origin", `ALTER TABLE pentests ADD COLUMN origin TEXT NOT NULL DEFAULT 'self'`},
 		{"billing_source", `ALTER TABLE pentests ADD COLUMN billing_source TEXT NOT NULL DEFAULT 'credits'`},
 		{"external_order_id", `ALTER TABLE pentests ADD COLUMN external_order_id TEXT`},

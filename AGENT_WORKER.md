@@ -10,13 +10,12 @@ behavior is reproducible and auditable.
 User (web)                          Platform (Go)              Agent (Hermes)
 ─────────                          ─────────────             ──────────────
 add domain
-  → TXT token (ns-verify-xxx)
-verify (owner NS check)  ──────────> status='verified'
+  → account-bound token (ns-verify-xxx)
+verify (DNS/file/meta)  ──────────> status='verified'
 click "scan" (dashboard) ──────────> /api/pentests/start:
-                                        • verified? yes
+                                        • permission confirmed + proof checked again
                                         • in-flight cap (1/user)
-                                        • consume 1 credit (atomic)
-                                        • insert pentests(status='queued')
+                                        • transaction: credit + ledger + queued job
 then every minute ──────────────────> worker cron polls monitor:
                                         monitor: queued? → "JOB pid domain"
                                                            → scan + upload →

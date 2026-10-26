@@ -63,6 +63,7 @@ var sitePages = []sitePage{
 	// reader's language mid-journey the moment they followed a link to proof.
 	{Key: "sample", Paths: map[string]string{"en": "/sample-report", "id": "/id/contoh-laporan"}, Priority: "0.9", Change: "monthly"},
 	{Key: "scope", Paths: map[string]string{"en": "/product-scope", "id": "/id/cakupan-produk"}, Priority: "0.8", Change: "monthly"},
+	{Key: "start", Paths: map[string]string{"en": "/getting-started", "id": "/id/panduan-memulai"}, Priority: "0.8", Change: "monthly"},
 	{Key: "docs", Paths: map[string]string{"en": "/docs", "id": "/id/dokumentasi"}, Priority: "0.7", Change: "weekly"},
 }
 
@@ -250,6 +251,7 @@ type siteView struct {
 	ContactHref string
 	SampleHref  string
 	DocsHref    string
+	SetupHref   string
 	ScopeHref   string
 	ProfileHref string // Dalang's Company Profile PDF, in this page's language
 }
@@ -298,6 +300,7 @@ func baseView(key, path string, lang siteLang, paths map[string]string, htmx, au
 		ProfileHref: "https://dalang.io/docs/dalang-company-profile-" + lang.Code + ".pdf",
 		APIExample:  apiExample, DocsStart: docsStartExample,
 	}
+	v.SetupHref = pathFor("start", lang.Code)
 	v.ContactHref = v.EntHref + "#contact"
 	v.Canonical = siteBase + path
 
@@ -310,11 +313,9 @@ func baseView(key, path string, lang siteLang, paths map[string]string, htmx, au
 	home := v.HomeHref
 	v.Nav = []siteNav{
 		{"how", c.NavHow, home + "#how", "netsekurity_nav_cara_kerja"},
-		{"enterprise", c.NavEnterprise, v.EntHref, "netsekurity_nav_enterprise"},
-		{"trust", c.NavTrust, v.TrustHref, "netsekurity_nav_trust"},
-		{"pricing", c.NavPricing, home + "#pricing", "netsekurity_nav_harga"},
 		{"sample", c.NavSample, v.SampleHref, "netsekurity_nav_sample"},
-		{"docs", c.NavDocs, v.DocsHref, "netsekurity_nav_docs"},
+		{"pricing", c.NavPricing, home + "#pricing", "netsekurity_nav_harga"},
+		{"enterprise", c.NavEnterprise, v.EntHref, "netsekurity_nav_enterprise"},
 	}
 	if authed {
 		v.AuthHref, v.AuthLabel, v.StartHref = "/dashboard", c.Dashboard, "/dashboard"
@@ -361,6 +362,19 @@ func buildSiteView(p sitePage, lang siteLang, authed bool, pr sitePricing) *site
 		v.Docs, v.Title, v.Description, v.Crumb = &d, d.Title, d.Description, c.NavDocs
 		for i, e := range ciExamples {
 			v.Examples = append(v.Examples, ciView{Title: e.Title, Code: e.Code, Note: d.CINotes[i]})
+		}
+	case "start":
+		v.Crumb = c.LinkStartGuide
+		name := "static/GETTING_STARTED.md"
+		v.Title = "Netsekurity: Start Your First Website Security Check"
+		v.Description = "Prepare your website, choose DNS, file or tag verification, start a check and share the results with your developer. A practical guide for website owners."
+		if lang.Code == "id" {
+			name = "static/GETTING_STARTED.id.md"
+			v.Title = "Netsekurity: Panduan Memulai Pemeriksaan Website"
+			v.Description = "Siapkan website, pilih verifikasi DNS, file atau tag, mulai pemeriksaan, dan berikan hasil kepada developer. Panduan praktis untuk pemilik website."
+		}
+		if md, err := staticFS.ReadFile(name); err == nil {
+			v.Doc = renderMarkdown(string(md))
 		}
 	case "scope":
 		sc := scopeFor(lang.Code)
@@ -585,7 +599,7 @@ var siteFuncs = template.FuncMap{
 func init() {
 	bodies := map[string]string{
 		"home": siteHomeHTML, "enterprise": siteEnterpriseHTML, "trust": siteTrustHTML, "compare": siteCompareHTML,
-		"sample": siteSampleHTML, "docs": siteDocsHTML, "scope": siteScopeHTML,
+		"sample": siteSampleHTML, "docs": siteDocsHTML, "scope": siteScopeHTML, "start": siteScopeHTML,
 	}
 	for key, body := range bodies {
 		siteTemplates[key] = template.Must(template.New(key).Funcs(siteFuncs).Parse(siteLayoutHTML + siteSharedHTML + siteSVGHTML + body))

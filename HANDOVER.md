@@ -4,6 +4,28 @@ Catatan serah-terima untuk engineer / agen berikutnya. Daftar kerja yang belum s
 [`TODO.md`](TODO.md); isi README.md tidak diulang di sini. Urutan baca: `CLAUDE.md` →
 file ini → `TODO.md` → `README.md` → `CLAIMS.md` → `AGENT_WORKER.md` / `HERMES_UPDATE.md`.
 
+## Perubahan lokal sesudah rilis .2 — redesign konten dan verifikasi
+
+Belum commit/push/deploy. Lihat [rencana dan audit implementasi](PLAN-content-redesign.md)
+untuk cakupan serta bukti validasi. Homepage EN/ID sekarang mengutamakan pemilik
+website, pemeriksaan berulang, contoh hasil, harga, dan pentest menyeluruh.
+Panduan baru: `/getting-started` dan `/id/panduan-memulai`.
+
+- `verification.go`: DNS TXT, file HTTPS, meta tag; TLS valid, tanpa redirect,
+  pembatasan ukuran dan IP publik. `domains.go` menyediakan unduh bukti milik akun.
+- `assessment_start.go`: recheck bukti, debit/ledger/antrean atomik; worker memeriksa
+  lagi sebelum claim dan refund sekali bila bukti hilang. Kontrak partner terpisah.
+- **Migrasi integrasi:** start API (termasuk alias `/pentests`) kini wajib memakai
+  `authorised=true` atau boolean JSON `"authorised": true`. Perbarui klien sebelum
+  rilis; contoh repo sudah diperbarui. Migrasi DB menambah `pentests.authorized_at`.
+- `result_summary.go`: langkah berikutnya EN/ID dari counts aktual; PDF tetap Inggris.
+- Dependency baru: `golang.org/x/net v0.55.0` untuk parser HTML, Go tetap 1.25.
+- Suite Go, race detector, vet, build, CSS, dan diff check lulus. Audit browser:
+  63 kombinasi halaman/lebar layar tanpa overflow, 11 asersi interaksi lulus.
+- Scope scanner, kemampuan harness/CVE, dan status produksi tidak berubah oleh
+  perubahan lokal ini. Empat dependency frontend lama dengan temuan kerentanan tercatat dari
+  instalasi npm; pembaruan dependency tersebut di luar cakupan redesign.
+
 ## 1. Status
 
 Produksi menjalankan **`v2026.10.26.2`** (commit `b6f31ab`, `main`). Deploy lewat `./deploy.sh`

@@ -17,7 +17,7 @@ import "html/template"
 const apiExample = "# start an assessment\n" +
 	"curl -s -X POST https://netsekurity.com/api/v1/assessments \\\n" +
 	"  -H \"X-API-Token: $NETSEKURITY_API_TOKEN\" \\\n" +
-	"  -d \"domain=app.example.com\"\n\n" +
+	"  -d \"domain=app.example.com&authorised=true\"\n\n" +
 	"# read its status and the count of findings\n" +
 	"curl -s https://netsekurity.com/api/v1/assessments/$ASSESSMENT_ID \\\n" +
 	"  -H \"X-API-Token: $NETSEKURITY_API_TOKEN\""
@@ -25,14 +25,14 @@ const apiExample = "# start an assessment\n" +
 func commonEN() commonCopy {
 	return commonCopy{
 		Skip: "Skip to content", MenuOpen: "Open menu", MenuClose: "Close menu", LangLabel: "Language",
-		NavHow: "How it works", NavEnterprise: "Enterprise", NavTrust: "Trust", NavPricing: "Pricing",
-		NavSample: "Sample report", NavDocs: "Docs",
-		LogIn: "Log in", Dashboard: "Dashboard", Start: "Start an assessment", Buy: "Buy",
-		Tagline:    "Continuous external web security assessment.",
+		NavHow: "How it works", NavEnterprise: "Comprehensive pentest", NavTrust: "Security and privacy", NavPricing: "Pricing",
+		NavSample: "Example results", NavDocs: "Developer documentation",
+		LogIn: "Log in", Dashboard: "Dashboard", Start: "Start a check", Buy: "Buy",
+		Tagline:    "Practical website security checks you can repeat.",
 		Operator:   "Netsekurity is a product of Dalang Pte. Ltd. (UEN 202622331M), 160 Robinson Road, #14-04, Singapore 068914.",
 		Rights:     "© 2026 Dalang Pte. Ltd.",
 		ColProduct: "Product", ColEnterprise: "Enterprise", ColResources: "Resources",
-		LinkScope: "Product scope", LinkGuide: "Assessment vs penetration test", LinkLLMS: "llms.txt",
+		LinkStartGuide: "Getting started", LinkScope: "Product scope", LinkGuide: "Assessment vs penetration test", LinkLLMS: "llms.txt",
 		LinkSecurityTxt: "security.txt", LinkSitemap: "Sitemap", LinkDalang: "Dalang.io", LinkPrivacy: "Privacy policy", LinkTerms: "Terms of use", LinkTrustCenter: "Security and trust centre",
 		LinkContact: "Contact sales", LinkProcurement: "Procurement fact sheet",
 		Breadcrumb: "Home",
@@ -43,7 +43,7 @@ func commonEN() commonCopy {
 			Name:               "Name (optional)",
 			Email:              "Work email",
 			Message:            "Message",
-			MessagePlaceholder: "Which websites, how many, and what does your process need from a supplier?",
+			MessagePlaceholder: "What does your website or application do, and what would you like us to check?",
 			Send:               "Send message",
 			Reply:              "We reply within 1 business day.",
 		},
@@ -70,14 +70,14 @@ func commonEN() commonCopy {
 			},
 			Note: "A finding that does not appear means “not scanned for”, never “verified safe”. Requests are read-only: nothing is written, uploaded or exploited.",
 		},
-		TiersH2:   "Choose the assurance level that fits the risk",
-		TiersLead: "The standard assessment is the base layer. Deeper work is a separate, priced engagement, not a hidden upsell.",
+		TiersH2:   "Need a deeper examination?",
+		TiersLead: "For signed-in areas, access between user accounts and transaction workflows, discuss a comprehensive pentest. We agree the scope for your application before work begins.",
 		Tiers: []tier{
 			{Name: "Automated external assessment", Price: "From {single} per domain", Audience: "Keep checking what the public internet can see.",
 				Points: []string{"35+ read-only checks", "Severity, CVSS v3.1 score, CWE and OWASP category per finding", "Start from the dashboard or from CI/CD", "Credits do not expire"}},
 			{Name: "Expert review add-on", Price: "Priced on request", Audience: "Have an engineer confirm the findings.",
 				Points: []string{"A security engineer re-tests every finding in one completed report", "False positives removed", "A fix plan written for your stack"}},
-			{Name: "Whitebox assessment", Price: "{whitebox} per app or domain", Audience: "Test what only an authenticated, informed tester can reach.",
+			{Name: "Comprehensive pentest", Price: "{whitebox} per app or domain", Audience: "Test what only an authenticated, informed tester can reach.",
 				Points: []string{"Source review and authenticated testing", "Business-logic and exploit-chain analysis", "A dedicated security engineer with agent-assisted analysis", "Scoped per app or domain"}},
 		},
 	}
@@ -85,112 +85,62 @@ func commonEN() commonCopy {
 
 func homeEN() homeCopy {
 	return homeCopy{
-		Title:       "Netsekurity: Continuous External Web Security Assessment",
-		Description: "Continuous, read-only external web security assessment. CVSS-scored findings, evidence and a 30/60/90-day fix plan for each domain. From {single} per assessment.",
-		Eyebrow:     "External web security assessment",
-		H1:          "Know what attackers can see of your websites.",
-		Lead:        "Netsekurity examines the websites you own from the outside, the way an attacker would: read-only and without logging in. Each assessment ends in a prioritised report: every finding scored for severity, with the evidence and a 30/60/90-day fix plan.",
-		SubLead:     "Anyone on the internet can look for exposed files, missing security headers, expiring certificates and open redirects. Netsekurity looks the same way, with your permission.",
-		CTAPrimary:  "See a sample report", CTASecondary: "Talk to us about enterprise use", CTATertiary: "Start with one domain · {single}",
-		SignInNote: "Sign in with Google to start. You only pay when you buy credits.",
-		Assurances: []string{
-			"External, unauthenticated and read-only",
-			"AI-triaged, with optional expert review",
-			"Not a penetration test, and we say so up front",
-		},
-		Card: sampleCard{
-			Label: "Sample report", Domain: "shop.example.com",
-			Summary: "1 High · 2 Medium · 2 Low · 4 Info", Posture: "Overall posture: needs attention",
-			Findings: []string{
-				"F-01 · Environment file exposed at /.env — High · CVSS 7.5 · CWE-538",
-				"F-02 · Missing security headers (4 of 6) — Medium · CVSS 5.3",
-				"F-03 · Open redirect via ?next= — Medium · CVSS 5.4",
-			},
-			Note: "Fictional domain, real report structure.", Link: "Open the full sample report",
-		},
-		DefinitionH2: "What is Netsekurity?",
-		Definition:   "Netsekurity is an external web security assessment service operated by Dalang Pte. Ltd. A scanner runs more than 35 read-only checks against a website you have proved you own: DNS and subdomains, security headers, TLS certificates, exposed files and open redirects. An AI analysis agent then removes duplicates, ranks the findings by severity and business impact, and writes the report. It is an automated assessment, not a penetration test.",
+		Title:       "Netsekurity: Practical Website Security Checks You Can Repeat",
+		Description: "Check your website after updates and between scheduled pentests. Get findings, evidence and guidance for your developer. Repeat when needed. From {single}.",
+		Eyebrow:     "Website security checks, whenever you need them",
+		H1:          "Your website keeps changing. Keep checking its security.",
+		Lead:        "Find issues on your public website, understand their impact and give your developer clear next steps. Run another check after an update or a fix.",
+		SubLead:     "Start with one website from {single}. No security expertise is needed to request a check; your website manager can help with setup and repairs.",
+		CTAPrimary:  "Start a security check", CTASecondary: "See example results", CTATertiary: "Start with one website · {single}",
+		SignInNote:   "Sign in with Google, add your website and verify control before buying credits.",
+		Assurances:   []string{"Pay per check", "Evidence and repair guidance", "Repeat after updates"},
+		Card:         sampleCard{Label: "Example result", Domain: "shop.example.com", Summary: "A configuration file needs attention", Posture: "Priority: investigate promptly", Findings: []string{"What was seen: the configuration-file URL returned a successful response.", "Why it matters: a real exposed file could contain private settings or credentials.", "Next step: ask your developer to verify the response and restrict access if the file is exposed."}, Note: "Illustrative example. A successful response alone does not prove a secret was exposed.", Link: "View evidence and next steps"},
+		DefinitionH2: "What will we check?",
+		Definition:   "Netsekurity checks the public part of your website for exposed files, missing browser protections, certificate problems and unsafe redirects. An AI analysis agent organises findings and writes the report. The standard service is an automated external assessment; No human reads a standard report before delivery.",
 		ScopeLegend: []kv{
 			{"Scanned", "The public surface: the pages, files, headers, certificate and redirects that anyone on the internet can request."},
 			{"Not scanned: behind a login", "Signed-in areas are never exercised."},
 			{"Not scanned: data and logic", "Databases, payments and workflow logic are out of reach of an external, read-only check."},
 		},
-		TypicalH3: "Examples of what it looks for",
+		TypicalH3: "Examples of issues we look for",
 		Typical: []string{
 			"A .env or .git file that the web server hands to anyone who asks",
 			"Security headers missing from responses",
 			"A certificate that expires next month",
 			"A redirect that lets a phishing link carry your domain",
 		},
-		AudiencesH2: "Built for the three people who sign off on web risk",
-		Audiences: []audience{
-			{Role: "Board and executives", Tagline: "Evidence, not assurances.",
-				Bullets:   []string{"A dated, per-domain report you can file with your risk register.", "A published price per assessment: {single} for one, {volume} each in the {volumeCredits}-credit pack.", "A written boundary between what was checked and what was not."},
-				LinkLabel: "For boards and executives", Anchor: "board"},
-			{Role: "Engineering leads", Tagline: "Signal you can act on.",
-				Bullets:   []string{"Every finding carries a CVSS v3.1 score, CWE, OWASP category, evidence and a fix.", "Start assessments from CI/CD with an API token, on every deploy.", "Plain HTTP GET requests only: no injection payloads, nothing written to your systems."},
-				LinkLabel: "For engineering leads", Anchor: "engineering"},
-			{Role: "Procurement and risk", Tagline: "Clear scope, clear terms.",
-				Bullets:   []string{"A defined deliverable with published scope and exclusions.", "Prices in US dollars. Credits do not expire, and a failed scan is refunded.", "Ownership proven by a DNS record before any scan runs."},
-				LinkLabel: "Procurement fact sheet", Anchor: "procurement"},
-		},
-		ReportH2:   "What a report contains",
-		ReportLead: "Every report follows the same structure, in English, as a PDF for each domain.",
-		ReportLink: "Read the sample report",
-		Report: []kv{
-			{"Executive summary", "Counts by severity and a plain statement of overall posture."},
-			{"Risk register", "Every finding with severity, CVSS v3.1 score, CWE and OWASP category."},
-			{"Findings and evidence", "What was seen, the request that showed it as proof of concept, the CWE and CVE references, the impact and the fix."},
-			{"30/60/90-day plan", "What to do today, this month and next quarter."},
-			{"Scope statement", "What the report does not cover, stated in every report."},
-		},
-		PlainH3: "Terms in plain words", PlainLink: "Full glossary",
-		Plain: []kv{
-			{"CVSS", "A score from 0 to 10 for how severe a vulnerability is. The higher it is, the sooner it needs attention."},
-			{"CWE", "A public catalogue of types of software weakness. CWE-601, for example, is an open redirect."},
-			{"OWASP Top 10", "A widely used list of the most critical web application risk categories. We use it to label findings, not to claim that every category was tested."},
-			{"DNS TXT record", "A line of text in your domain's DNS settings. You add one so that we can confirm you control the domain."},
-		},
-		HowH2: "How it works",
-		Steps: []kv{
-			{"Prove ownership", "Add one DNS TXT record, _netsekurity.<your-domain>, containing a unique token. We check it before any scan can run."},
-			{"Start the assessment", "Press a button in the dashboard, or call the API from your pipeline. One assessment uses one credit."},
-			{"Scan and triage", "A scanner runs 35+ read-only checks. An AI analysis agent removes duplicates, ranks findings by severity and business impact, and writes the report. No human reads a standard report before delivery."},
-			{"Receive the report", "A scan takes 10 minutes to 24 hours, depending on what it finds. The report is a PDF in English, downloadable from your dashboard. Only the account that ordered it can open it."},
-		},
-		BandH2: "Ready to see what is exposed on your own domain?", BandBody: "Start with one domain, or read the structure of a real report first.",
-		CICDH2:   "Continuous, not annual",
-		CICDLead: "A yearly report describes a site that has since been released many times. Add one API call to your pipeline and each release is assessed the day it ships.",
-		CICD: []string{
-			"Create an API token in the dashboard. It is shown once and expires after 7 to 90 days, as you choose.",
-			"Call POST /api/v1/assessments with the X-API-Token header and the domain.",
-			"Read the status and the count of findings by severity with GET /api/v1/assessments/{id}. The PDF stays in the dashboard.",
-			"Works with any system that can send an HTTP request. Examples for GitHub Actions, GitLab CI, Jenkins and eight more are in the docs.",
-		},
-		CICDNote:    "Continuous means the public surface is re-checked on every release. It does not mean that logic behind a login is re-tested.",
-		CICDLink:    "Read the CI/CD docs",
-		PricingH2:   "Published pricing",
-		PricingLead: "1 credit = 1 external assessment of 1 domain. All prices are in US dollars.",
-		PricingNote: "Credits do not expire and a failed scan is refunded automatically.",
+		AudiencesH2: "When should you check again?",
+		Audiences:   []audience{{Role: "After an update", Tagline: "Your website has changed.", Bullets: []string{"New pages and configuration changes can change what is publicly accessible.", "Check the current website, even if an earlier version was tested."}, LinkLabel: "See how it works", Anchor: "how"}, {Role: "After a repair", Tagline: "Check the result of the fix.", Bullets: []string{"Run the same scoped assessment again after your developer makes changes.", "Review the new report; each repeat check uses 1 credit."}, LinkLabel: "See how it works", Anchor: "how"}, {Role: "Between pentests", Tagline: "Keep checking between appointments.", Bullets: []string{"Use external checks between your scheduled, comprehensive pentests.", "Tests behind a login and business logic need a deeper engagement."}, LinkLabel: "See how it works", Anchor: "how"}},
+		ReportH2:    "Know what needs attention and what to do next",
+		ReportLead:  "You receive a PDF report in English for each website checked. Start with the summary, then give the evidence and repair guidance to your developer.",
+		ReportLink:  "Explore example results",
+		Report:      []kv{{"Understand the issue", "See what was observed and why it deserves attention."}, {"Choose the next action", "Use the severity and impact to decide what your developer should investigate first."}, {"Give your developer the details", "The report includes evidence, reproduction steps and repair guidance."}, {"Check again after changes", "Run a new assessment and review the report against the repair. Each repeat uses 1 credit."}},
+		PlainH3:     "An example finding, in plain language", PlainLink: "See the evidence and technical details",
+		Plain:  []kv{{"What was seen", "A configuration-file address returned a successful response."}, {"Why it matters", "An exposed configuration file could contain sensitive settings. The response needs validation."}, {"What to ask your developer", "Confirm whether a file was exposed, restrict access and check whether any credentials need replacing."}},
+		HowH2:  "From your website address to your next step",
+		Steps:  []kv{{"Add your website", "Sign in with Google and enter the website address. Adding a website and verifying control are free."}, {"Confirm access", "Choose a DNS record, a verification file or a homepage tag. Copy the instructions for your website manager if you need help."}, {"Start your check", "Review the scope and confirm permission to test this hostname. Each check uses 1 credit and takes 10 minutes to 24 hours, depending on what it finds."}, {"Act on the result", "Download your English PDF, review priorities and give the details to your developer. Repeat the check after repairs."}},
+		BandH2: "Start with the website your customers use.", BandBody: "Check it today, then repeat after updates or repairs. Each check has the same clear scope and price per credit.",
+		PricingH2:   "Start with one check. Repeat when you need to.",
+		PricingLead: "1 credit = 1 check of 1 verified hostname. Repeat checks also use 1 credit. Prices are in US dollars; different subdomains are separate targets.",
+		PricingNote: "Credits do not expire. Failed checks are refunded automatically. A scan takes 10 minutes to 24 hours, depending on what it finds. Only one can run at a time per account.",
 		PricingCols: []string{"Pack", "Credits", "Price", "Per assessment", "Order"},
 		PricingBest: "Lowest price per assessment",
-		PricingTalk: "Need many domains, a purchase order or a vendor questionnaire answered?", PricingTalkBtn: "Talk to us",
-		TrustH2:   "Responsible by design",
-		TrustLead: "A security product has to be safe to point at your production site. These are the controls that make it so.",
-		TrustLink: "Read how we scan and what we keep",
-		Trust: []kv{
-			{"Ownership first", "No DNS record, no scan. Only domains you control can be assessed."},
-			{"Read-only", "Plain GET requests, a DNS lookup and a TLS handshake. Nothing is written to your systems."},
-			{"Data minimised", "Exposure probes record the status code and size, then discard the response body."},
-			{"Restricted reports", "Served only to the signed-in account that ordered them, never cached, kept out of search engines."},
-		},
-		FAQH2: "Frequently asked questions",
+		PricingTalk: "Need help choosing the right scope?", PricingTalkBtn: "Talk to us",
+		TrustH2:   "Your access and results stay under control",
+		TrustLead: "Before you start, see how we verify your website and handle the check.",
+		TrustLink: "Read about security and privacy",
+		Trust:     []kv{{"Control checked again", "DNS, file or meta tag proof is checked before each self-service scan. Leave it in place for repeat checks."}, {"External and read-only", "The standard check does not write to your website or test signed-in workflows."}, {"A clear scope", "One verified hostname per check. Other subdomains and deeper application testing are separate."}, {"Private reports", "Reports are available to the owning account and authorised operators, not on public links."}},
+		FAQH2:     "Before you start",
 		FAQ: []qa{
+			{"Do I need technical experience?", `You can order a check without security expertise. A website manager may need to help publish the verification token and make repairs. The dashboard provides instructions you can copy and send to them.`},
+			{"Will Netsekurity repair my website?", `The standard service provides findings and repair guidance. Your developer or website provider makes the changes. A repeat check uses 1 credit.`},
+			{"Does this check every new CVE?", `No. A CVE identifies a publicly known vulnerability in software. The standard service checks the published list of external exposures and configuration issues; it does not promise detection of every new CVE or continuous monitoring.`},
+			{"What if the report has no findings?", `It means no findings were reported within that check's scope. Areas outside the scope remain untested, and a failed or incomplete check must not be treated as a clean result.`},
 			{"What is Netsekurity?", `Netsekurity is an external web security assessment service operated by Dalang Pte. Ltd. It checks a website you own from the outside, read-only and without logging in, and delivers a prioritised PDF report with CVSS-scored findings, evidence and a 30/60/90-day fix plan.`},
 			{"Is it a penetration test?", `<strong>No.</strong> It is an automated, external, unauthenticated, read-only assessment. It does not test anything behind a login, authorisation (IDOR), business logic or injection flaws. For those risks use the <a href="/enterprise#escalation">expert review or whitebox tiers</a>, or a manual penetration test. The <a href="/external-assessment-vs-penetration-test">full comparison</a> explains the difference.`},
 			{"What does one assessment cover?", `More than 35 read-only checks on the domain you verified: DNS and passive subdomain listing, six security headers and clickjacking protection, server-version disclosure, WAF detection, TLS certificate validity and expiry, 13 exposed-file and admin-path probes, and nine open-redirect parameters. See the <a href="/product-scope">product scope</a> for the exact list.`},
 			{"What does it not cover?", `Anything behind a login, authorisation and IDOR, business logic, injection testing (SQLi, XSS, LFI/RFI), network port scanning, SSRF, GraphQL, WebSocket, request smuggling, cache poisoning, source-code analysis and multi-stage exploit chains. A finding that does not appear means “not scanned for”, not “verified safe”.`},
-			{"How is domain ownership verified?", `Each domain gets a unique token. You publish it as a DNS TXT record at <code>_netsekurity.&lt;your-domain&gt;</code>, and we check it against public resolvers and the domain's authoritative name servers. No record, no scan.`},
+			{"How is domain ownership verified?", `Choose DNS TXT, an HTTPS verification file or a meta tag on the public homepage. Each token is tied to your account and hostname. We check the proof before each self-service scan. Your website manager can follow the instructions without your Netsekurity password.`},
 			{"How much does it cost?", `1 credit = 1 assessment of 1 domain. A single credit costs {single}; in the {volumeCredits}-credit pack each assessment costs {volume}. Prices are in US dollars and credits do not expire. Expert review is priced on request, and the whitebox tier is {whitebox} per app or domain.`},
 			{"Is a human involved?", `Not in the standard assessment. An AI analysis agent removes duplicates, ranks the findings and writes the report, and no human reads it before delivery. If you want an engineer to re-test each finding, that is the expert review add-on.`},
 			{"Does Netsekurity use AI, and what does it see?", `An AI analysis agent operates the assessment and sees the scanner's output: findings, status codes, header values and short evidence strings. Exposure probes record the status code and size and discard the response body. The model provider and its region are not named on this site yet: ask <a href="mailto:security@dalang.io">security@dalang.io</a> before you buy. The <a href="/trust#third-parties">third-party list</a> says what else touches your data.`},
@@ -204,24 +154,19 @@ func homeEN() homeCopy {
 
 func enterpriseEN() enterpriseCopy {
 	return enterpriseCopy{
-		Title:       "Netsekurity for Enterprise: Board, Engineering, Procurement",
-		Description: "How boards, engineering leads and procurement teams use Netsekurity: scope, evidence, CI/CD, pricing, data handling and escalation to expert review.",
-		Eyebrow:     "Enterprise",
-		H1:          "External assurance for boards, engineering leaders and procurement.",
-		Lead:        "One assessment per domain, one report format, one published price. This page answers the questions each of the three audiences usually asks, and says plainly what Netsekurity does not do.",
-		HeroCTA:     "Talk to sales",
-		Jump:        []jump{{"Board", "board"}, {"Engineering", "engineering"}, {"Procurement", "procurement"}, {"Escalation", "escalation"}, {"Contact", "contact"}},
-		BoardH2:     "For boards and executives: what the internet can see, and how you know",
-		BoardIntro:  "A board does not need scanner output. It needs to know that the internet-facing estate is looked at regularly, by whom, with what result and at what cost. Netsekurity is built around those four answers.",
-		Board: []kv{
-			{"Is anyone checking?", "Every assessment is a dated report for one domain. Run on a schedule or on every release from CI/CD, the reports form a record of what was checked and when."},
-			{"What did it find?", "The executive summary gives counts by severity and a plain statement of overall posture. The risk register lists every finding with severity, CVSS v3.1 score, CWE and OWASP category."},
-			{"What does it cost?", "{single} for one assessment, and {volume} each in the {volumeCredits}-credit pack. Prices are published, in US dollars, and credits do not expire."},
-			{"What does it not tell us?", "It is external, unauthenticated and read-only. It does not test anything behind a login, authorisation, business logic or injection flaws, and a finding that does not appear means “not scanned for”. For those risks, use the whitebox tier or a manual penetration test."},
-		},
-		BoardCallout: "We do not claim that an assessment makes a company secure or compliant. It closes one specific blind spot: what is exposed on the public web, today.",
-		EngH2:        "For engineering leads: what runs, what comes back, how to wire it in",
-		EngIntro:     "The scanner is deterministic and its behaviour is documented. What follows is what your WAF and your on-call engineer will see.",
+		Title:        "Netsekurity: Comprehensive Pentesting for Your Application",
+		Description:  "Test signed-in areas, user permissions and business workflows with a security engineer. Agree the application scope and receive findings with repair guidance.",
+		Eyebrow:      "Comprehensive penetration testing",
+		H1:           "Look deeper into how your application can be misused.",
+		Lead:         "When you need to test signed-in features, access between user accounts or business workflows, work with a security engineer. Source review and agent-assisted analysis support an engagement scoped to your application.",
+		HeroCTA:      "Discuss my application",
+		Jump:         []jump{{"Process", "board"}, {"Services", "escalation"}, {"For developers", "engineering"}, {"Purchasing", "procurement"}, {"Contact", "contact"}},
+		BoardH2:      "What happens after you contact us?",
+		BoardIntro:   "Tell us what your application does and what you need to understand. You can involve your developer in the technical preparation.",
+		Board:        []kv{{"Discuss the application", "Describe the website, important workflows and what prompted the request."}, {"Agree scope and access", "Confirm which application, accounts and workflows are included, along with price, schedule and testing permission."}, {"Investigate with an engineer", "A dedicated security engineer carries out the agreed source review and authenticated testing with agent-assisted analysis."}, {"Plan the repairs", "Use the report to understand findings and discuss the next actions with your developer. Confirm any follow-up testing in the engagement scope."}},
+		BoardCallout: "The scope is agreed before work begins. Existing external-check reports can guide the discussion; you can also request comprehensive testing directly.",
+		EngH2:        "Technical details for your developer",
+		EngIntro:     "The details below describe the standard external check. Comprehensive testing has a separate agreed scope, including the access and test accounts it requires.",
 		Eng: []engBlock{
 			{Title: "What runs", Paragraphs: []string{"More than 35 read-only checks: the exact list is under “Exactly what is checked” further down this page, and on the product scope page. Subdomains are listed, not assessed: only the domain you verified is scanned, and each hostname you want assessed is its own domain and its own credit."}},
 			{Title: "How it touches your systems", Paragraphs: []string{"Plain HTTP GET requests, a DNS lookup and a TLS handshake. Every HTTP request carries the User-Agent “NetSekurity Scanner”, so it can be recognised in your logs, and the exposure and redirect probes are spaced 0.3 seconds apart. No credentials, no injection payloads, nothing written or uploaded. Exposure probes record the HTTP status code and response size and discard the body; the exception is robots.txt, whose disallowed paths are summarised as evidence."}},
@@ -230,7 +175,7 @@ func enterpriseEN() enterpriseCopy {
 				Code: apiExample},
 			{Title: "False positives", Paragraphs: []string{"A probe counts a path that answers 200, 301 or 302, so a single-page application or a login redirect can look like an exposure. The AI analysis agent de-duplicates and ranks findings, but it does not replace an engineer. Having an engineer re-test each finding is the expert review add-on."}},
 		},
-		ProcH2:    "For procurement and risk: scope, terms and vendor facts",
+		ProcH2:    "Company and purchasing information",
 		ProcIntro: "Everything below is true today. Where a vendor process needs something we have not listed, tell us what it requires.",
 		ProcFacts: []kv{
 			{"Supplier", "Dalang Pte. Ltd., Singapore. UEN 202622331M. 160 Robinson Road, #14-04, Singapore 068914."},
@@ -240,7 +185,7 @@ func enterpriseEN() enterpriseCopy {
 			{"Payment", "Online, in US dollars, through Xendit. Netsekurity never sees or stores card details. Tax treatment and invoice details: ask sales@dalang.io before you buy."},
 			{"Credits and refunds", "Credits do not expire. A scan that fails is refunded automatically."},
 			{"Deliverable", "A PDF report in English for each domain, downloadable by the account that ordered it."},
-			{"Ownership control", "Each domain is verified by a DNS TXT record before any scan. Domains you do not control cannot be assessed."},
+			{"Ownership control", "Confirm control of each hostname using DNS TXT, an HTTPS file or a homepage meta tag. Proof is checked again before each self-service scan; permission to test is confirmed separately."},
 			{"Accounts", "Sign-in is with Google. Accounts are individual today, and credits and reports belong to the account that bought them."},
 			{"Third parties", "Google (sign-in), Xendit (payments), Cloudflare (network), Umami (analytics), Meta (only after consent) and the AI model provider. The trust page lists what each receives."},
 			{"Policies", "Dalang publishes its privacy policy (dalang.io/privacy), terms of use (dalang.io/terms-of-use) and security and trust centre (dalang.io/security)."},
@@ -274,7 +219,7 @@ func trustEN() trustCopy {
 		RespH2:    "Responsible scanning",
 		RespIntro: "A security tool is dangerous if it can be pointed at anyone. These controls stop that.",
 		Resp: []kv{
-			{"Ownership first", "Before any scan, you publish a unique token as a DNS TXT record at _netsekurity.<your-domain>. We check it against public resolvers and the domain's authoritative name servers. No record, no scan."},
+			{"Ownership first", "Choose DNS TXT, an HTTPS verification file or a homepage meta tag. Proof is bound to your account and hostname and checked again before each self-service scan. HTTPS verification uses NetSekurity Verification as its User-Agent and refuses redirects. Confirm permission to test before starting."},
 			{"Read-only", "Requests are plain HTTP GETs, a DNS lookup and a TLS handshake. The standard assessment sends no injection payloads and writes nothing to your systems."},
 			{"A fixed list of checks", "The checks are the list on the product scope page, the same for every customer. One assessment runs at a time per account."},
 			{"Recognisable", "Every HTTP request carries the User-Agent “NetSekurity Scanner”, so it can be recognised in your logs."},
@@ -489,7 +434,7 @@ func docsEN() docsCopy {
 		Jump:        []jump{{"Quickstart", "quickstart"}, {"API reference", "api"}, {"Gate a release", "gate"}, {"CI examples", "ci"}, {"Security notes", "notes"}},
 		QuickH2:     "Quickstart",
 		Quick: []template.HTML{
-			`<strong>Add and verify your domain.</strong> Dashboard → My websites → add the domain → add the TXT record → check. The domain must show as <em>Verified</em>.`,
+			`<strong>Add and verify your domain.</strong> Dashboard → My websites → add the domain → choose DNS TXT, an HTTPS file or a homepage meta tag → check. The domain must show as <em>Verified</em>.`,
 			`<strong>Create an API token.</strong> Dashboard → Automation → choose how long it is valid (7, 14, 30, 60 or 90 days) → create. Copy it now: it is shown only once.`,
 			`<strong>Store it as a secret</strong> in your CI, for example <code>NETSEKURITY_API_TOKEN</code>.`,
 			`<strong>Call the endpoint</strong> on deploy. Netsekurity queues the assessment and runs it; the report appears in your dashboard, and the status is available from the API.`,
@@ -500,6 +445,7 @@ func docsEN() docsCopy {
 		StartLead: "Start an assessment. The original name, /api/v1/pentests, still works and behaves identically.",
 		ParamCols: []string{"Parameter", "Type", "Description"},
 		Params: []paramRow{
+			{"authorised", "JSON boolean / form true", "Required: true confirms permission to test this hostname within the published external, read-only scope. Sent on every start; verification proof is checked again before credits are used."},
 			{"X-API-Token", "header", "Required. Your API token."},
 			{"domain", "form or JSON", "Required. A verified domain owned by the token's account."},
 			{"mode", "form or JSON", `Optional. <code class="nsk-mono">standard</code> is the only value: 1 credit, read-only.`},
@@ -507,9 +453,9 @@ func docsEN() docsCopy {
 		StartResp: "# 200 OK\n" +
 			"{\"assessment_id\":\"pt_1f2e…\",\"pentest_id\":\"pt_1f2e…\",\"domain\":\"app.example.com\",\"mode\":\"standard\",\"status\":\"queued\"}\n" +
 			"# 401 missing, invalid or expired token\n" +
-			"# 400 domain not verified for this account\n" +
+			"# 400 missing domain, invalid mode or missing permission confirmation\n" +
 			"# 402 insufficient credits\n" +
-			"# 409 an assessment is already queued or running (one per account at a time)\n" +
+			"# 409 hostname proof could not be confirmed, or an assessment is already queued or running\n" +
 			"# 429 rate limited",
 		ResultH3:   "GET /api/v1/assessments/{assessment_id}",
 		ResultLead: "Read the status of an assessment you started, and the count of findings by severity once it is done.",
@@ -576,7 +522,7 @@ func gateScript(ok, cannotStart, failed, stillRunning, cannotRead string) string
 	return "set -eu\n" +
 		"API=https://netsekurity.com/api/v1/assessments\n" +
 		"AUTH=\"X-API-Token: $NETSEKURITY_API_TOKEN\"\n\n" +
-		"start=$(curl -fsS -X POST \"$API\" -H \"$AUTH\" -d \"domain=app.example.com\") \\\n" +
+		"start=$(curl -fsS -X POST \"$API\" -H \"$AUTH\" -d \"domain=app.example.com&authorised=true\") \\\n" +
 		"  || { echo \"" + cannotStart + "\"; exit 1; }\n" +
 		"id=$(echo \"$start\" | jq -r .assessment_id)\n\n" +
 		"for i in $(seq 1 30); do\n" +

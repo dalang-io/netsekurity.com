@@ -110,6 +110,7 @@ const siteLayoutHTML = `{{define "layout"}}<!DOCTYPE html>
           <li><a class="nsk-footlink" href="{{.HomeHref}}#how">{{.C.NavHow}}</a></li>
           <li><a class="nsk-footlink" href="{{.HomeHref}}#pricing">{{.C.NavPricing}}</a></li>
           <li><a class="nsk-footlink" href="{{.SampleHref}}">{{.C.NavSample}}</a></li>
+          <li><a class="nsk-footlink" href="{{.SetupHref}}">{{.C.LinkStartGuide}}</a></li>
           <li><a class="nsk-footlink" href="{{.ScopeHref}}">{{.C.LinkScope}}</a></li>
           <li><a class="nsk-footlink" href="{{.DocsHref}}">{{.C.NavDocs}}</a></li>
         </ul>
@@ -296,10 +297,9 @@ const siteHomeHTML = `{{define "body"}}{{with .Home}}
       <p class="mt-5 max-w-2xl text-lg text-gray-800">{{.Lead}}</p>
       <p class="mt-3 max-w-2xl text-gray-700">{{.SubLead}}</p>
       <div class="mt-7 flex flex-wrap gap-3">
-        <a href="{{$.SampleHref}}" data-umami-event="netsekurity_hero_sample" class="nsk-btn">{{.CTAPrimary}}</a>
-        <a href="{{$.ContactHref}}" data-umami-event="netsekurity_hero_enterprise" class="nsk-btn nsk-btn-ghost">{{.CTASecondary}}</a>
+        <a href="{{$.StartHref}}" data-umami-event="netsekurity_hero_cta" class="nsk-btn">{{.CTAPrimary}}</a>
+        <a href="{{$.SampleHref}}" data-umami-event="netsekurity_hero_sample" class="nsk-btn nsk-btn-ghost">{{.CTASecondary}}</a>
       </div>
-      <p class="mt-3"><a href="{{$.StartHref}}" data-umami-event="netsekurity_hero_cta" data-umami-event-tujuan="{{$.StartHref}}" class="nsk-textlink">{{.CTATertiary}}<span aria-hidden="true"> →</span></a></p>
       <p class="text-sm text-gray-700">{{.SignInNote}}</p>
       {{$.ScansProof}}
       <ul class="mt-8 grid gap-2 sm:grid-cols-3">
@@ -326,27 +326,6 @@ const siteHomeHTML = `{{define "body"}}{{with .Home}}
   </div>
 </section>
 
-<section id="what" class="nsk-section">
-  <div class="nsk-fit mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2">
-    <div>
-      <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">{{.DefinitionH2}}</h2>
-      <p class="mt-4 text-lg leading-relaxed text-gray-800">{{.Definition}}</p>
-      <h3 class="mt-8 text-lg font-extrabold">{{.TypicalH3}}</h3>
-      <ul class="mt-3 space-y-2 text-gray-800">
-        {{range .Typical}}<li class="flex gap-2"><span class="mt-1 text-green-800">{{icon "check" 16}}</span><span>{{.}}</span></li>
-        {{end}}
-      </ul>
-    </div>
-    <div class="nsk-card-flat-tint p-5 sm:p-6">
-      <div aria-hidden="true" class="mx-auto w-full max-w-sm">{{template "svg-scope"}}</div>
-      <ul class="mt-5 space-y-3 text-sm">
-        {{range $i, $l := .ScopeLegend}}<li class="flex gap-3"><span class="nsk-swatch {{if eq $i 0}}nsk-swatch-scanned{{else}}nsk-swatch-hatch{{end}}" aria-hidden="true"></span><span><strong class="font-extrabold">{{$l.Title}}.</strong> {{$l.Body}}</span></li>
-        {{end}}
-      </ul>
-    </div>
-  </div>
-</section>
-
 <section id="audiences" class="nsk-section nsk-section-tint">
   <div class="mx-auto max-w-7xl px-4 sm:px-6">
     <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">{{.AudiencesH2}}</h2>
@@ -359,7 +338,7 @@ const siteHomeHTML = `{{define "body"}}{{with .Home}}
           {{range $a.Bullets}}<li class="flex gap-2"><span class="mt-1 text-green-800">{{icon "check" 16}}</span><span>{{.}}</span></li>
           {{end}}
         </ul>
-        <a href="{{$.EntHref}}#{{$a.Anchor}}" class="nsk-textlink mt-3">{{$a.LinkLabel}}<span aria-hidden="true"> →</span></a>
+        <a href="{{$.HomeHref}}#{{$a.Anchor}}" class="nsk-textlink mt-3">{{$a.LinkLabel}}<span aria-hidden="true"> →</span></a>
       </article>
       {{end}}
     </div>
@@ -385,7 +364,7 @@ const siteHomeHTML = `{{define "body"}}{{with .Home}}
           {{range .Plain}}<div><dt class="font-extrabold">{{.Title}}</dt><dd class="text-gray-700">{{.Body}}</dd></div>
           {{end}}
         </dl>
-        <a href="{{$.GuideHref}}#glossary" class="nsk-textlink mt-2 text-sm">{{.PlainLink}}<span aria-hidden="true"> →</span></a>
+        <a href="{{$.SampleHref}}#s4" class="nsk-textlink mt-2 text-sm">{{.PlainLink}}<span aria-hidden="true"> →</span></a>
       </div>
     </div>
   </div>
@@ -405,51 +384,42 @@ const siteHomeHTML = `{{define "body"}}{{with .Home}}
       </li>
       {{end}}
     </ol>
+    <p class="mt-5"><a href="{{$.SetupHref}}" class="nsk-textlink">{{$.C.LinkStartGuide}}</a></p>
+    <p id="cicd" class="mt-5"><a href="{{$.DocsHref}}" data-umami-event="netsekurity_nav_docs" class="nsk-textlink">{{$.C.NavDocs}}</a></p>
   </div>
 </section>
 
-<section class="border-y-2 border-black bg-primary">
-  <div class="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-10 sm:px-6 md:flex-row md:items-center md:justify-between">
+<section id="what" class="nsk-section">
+  <div class="nsk-fit mx-auto grid max-w-7xl items-center gap-10 px-4 sm:px-6 lg:grid-cols-2">
     <div>
-      <h2 class="text-2xl font-extrabold tracking-tight">{{.BandH2}}</h2>
-      <p class="mt-1 text-gray-900">{{.BandBody}}</p>
-    </div>
-    <div class="flex flex-wrap gap-3">
-      <a href="{{$.StartHref}}" data-umami-event="netsekurity_band_start" data-umami-event-tujuan="{{$.StartHref}}" class="nsk-btn nsk-btn-dark">{{.CTATertiary}}</a>
-      <a href="{{$.SampleHref}}" data-umami-event="netsekurity_band_sample" class="nsk-btn nsk-btn-ghost">{{.CTAPrimary}}</a>
-    </div>
-  </div>
-</section>
-
-<section id="cicd" class="nsk-section">
-  <div class="nsk-fit mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-2">
-    <div>
-      <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">{{.CICDH2}}</h2>
-      <p class="mt-3 text-lg text-gray-700">{{.CICDLead}}</p>
-      <ul class="mt-5 space-y-3 text-gray-800">
-        {{range .CICD}}<li class="flex gap-2"><span class="mt-1 text-green-800">{{icon "check" 16}}</span><span>{{.}}</span></li>
+      <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">{{.DefinitionH2}}</h2>
+      <p class="mt-4 text-lg leading-relaxed text-gray-800">{{.Definition}}</p>
+      <p class="mt-4"><a href="{{$.ScopeHref}}" class="nsk-textlink">{{$.C.LinkScope}}</a></p>
+      <h3 class="mt-8 text-lg font-extrabold">{{.TypicalH3}}</h3>
+      <ul class="mt-3 space-y-2 text-gray-800">
+        {{range .Typical}}<li class="flex gap-2"><span class="mt-1 text-green-800">{{icon "check" 16}}</span><span>{{.}}</span></li>
         {{end}}
       </ul>
-      <p class="nsk-note mt-5 text-sm">{{.CICDNote}}</p>
-      <a href="{{$.DocsHref}}" class="nsk-textlink mt-2">{{.CICDLink}}<span aria-hidden="true"> →</span></a>
     </div>
-    <div class="self-start">
-      {{template "codebox" (codeArgs $.C $.APIExample)}}
+    <div class="nsk-card-flat-tint p-5 sm:p-6">
+      <div aria-hidden="true" class="mx-auto w-full max-w-sm">{{template "svg-scope"}}</div>
+      <ul class="mt-5 space-y-3 text-sm">
+        {{range $i, $l := .ScopeLegend}}<li class="flex gap-3"><span class="nsk-swatch {{if eq $i 0}}nsk-swatch-scanned{{else}}nsk-swatch-hatch{{end}}" aria-hidden="true"></span><span><strong class="font-extrabold">{{$l.Title}}.</strong> {{$l.Body}}</span></li>
+        {{end}}
+      </ul>
     </div>
   </div>
 </section>
 
-<section id="tiers" class="nsk-section nsk-section-tint">
+<section id="trust" class="nsk-section nsk-section-tint">
   <div class="mx-auto max-w-7xl px-4 sm:px-6">
-    <div class="nsk-fit grid items-center gap-8 lg:grid-cols-[1fr_20rem]">
-      <div>
-        <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">{{$.C.TiersH2}}</h2>
-        <p class="mt-3 max-w-3xl text-lg text-gray-700">{{$.C.TiersLead}}</p>
-      </div>
-      <div aria-hidden="true" class="mx-auto w-full max-w-[16rem]">{{template "svg-tiers"}}</div>
-    </div>
-    {{template "tiers" $}}
-    <p class="mt-4"><a href="{{$.GuideHref}}" class="nsk-textlink">{{$.C.LinkGuide}}<span aria-hidden="true"> →</span></a></p>
+    <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">{{.TrustH2}}</h2>
+    <p class="mt-3 max-w-3xl text-lg text-gray-700">{{.TrustLead}}</p>
+    <ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      {{range $i, $t := .Trust}}<li class="nsk-card-flat bg-white p-5"><span class="nsk-icon-tile">{{icon (pick "home-trust" $i) 20}}</span><p class="mt-3 font-extrabold">{{$t.Title}}</p><p class="mt-1 text-sm text-gray-700">{{$t.Body}}</p></li>
+      {{end}}
+    </ul>
+    <a href="{{$.TrustHref}}" class="nsk-textlink mt-4">{{.TrustLink}}<span aria-hidden="true"> →</span></a>
   </div>
 </section>
 
@@ -489,15 +459,14 @@ const siteHomeHTML = `{{define "body"}}{{with .Home}}
   </div>
 </section>
 
-<section id="trust" class="nsk-section nsk-section-tint">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6">
-    <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">{{.TrustH2}}</h2>
-    <p class="mt-3 max-w-3xl text-lg text-gray-700">{{.TrustLead}}</p>
-    <ul class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-      {{range $i, $t := .Trust}}<li class="nsk-card-flat bg-white p-5"><span class="nsk-icon-tile">{{icon (pick "home-trust" $i) 20}}</span><p class="mt-3 font-extrabold">{{$t.Title}}</p><p class="mt-1 text-sm text-gray-700">{{$t.Body}}</p></li>
-      {{end}}
-    </ul>
-    <a href="{{$.TrustHref}}" class="nsk-textlink mt-4">{{.TrustLink}}<span aria-hidden="true"> →</span></a>
+<section id="tiers" class="nsk-section nsk-section-tint">
+  <div class="nsk-fit mx-auto grid max-w-7xl items-center gap-8 px-4 sm:px-6 lg:grid-cols-[1fr_20rem]">
+    <div><h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">{{$.C.TiersH2}}</h2>
+      <p class="mt-3 max-w-3xl text-lg text-gray-700">{{$.C.TiersLead}}</p>
+      {{with index $.C.Tiers 2}}<p class="mt-4 font-bold">{{.Price}}</p>{{end}}
+      <a href="{{$.EntHref}}" class="nsk-btn nsk-btn-ghost mt-5">{{$.C.NavEnterprise}}</a>
+    </div>
+    <div aria-hidden="true" class="mx-auto w-full max-w-[16rem]">{{template "svg-tiers"}}</div>
   </div>
 </section>
 
@@ -505,6 +474,19 @@ const siteHomeHTML = `{{define "body"}}{{with .Home}}
   <div class="mx-auto max-w-4xl px-4 sm:px-6">
     <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">{{.FAQH2}}</h2>
     {{template "faq" .FAQ}}
+  </div>
+</section>
+
+<section class="border-y-2 border-black bg-primary">
+  <div class="mx-auto flex max-w-7xl flex-col gap-5 px-4 py-10 sm:px-6 md:flex-row md:items-center md:justify-between">
+    <div>
+      <h2 class="text-2xl font-extrabold tracking-tight">{{.BandH2}}</h2>
+      <p class="mt-1 text-gray-900">{{.BandBody}}</p>
+    </div>
+    <div class="flex flex-wrap gap-3">
+      <a href="{{$.StartHref}}" data-umami-event="netsekurity_band_start" data-umami-event-tujuan="{{$.StartHref}}" class="nsk-btn nsk-btn-dark">{{.CTATertiary}}</a>
+      <a href="{{$.SampleHref}}" data-umami-event="netsekurity_band_sample" class="nsk-btn nsk-btn-ghost">{{.CTASecondary}}</a>
+    </div>
   </div>
 </section>
 {{end}}
@@ -542,9 +524,31 @@ const siteEnterpriseHTML = `{{define "body"}}{{with .Ent}}
   </div>
 </section>
 
-<section id="engineering" class="nsk-section nsk-section-tint">
+{{end}}
+<section id="escalation" class="nsk-section nsk-section-tint">
   <div class="mx-auto max-w-7xl px-4 sm:px-6">
-    <h2 class="max-w-4xl text-2xl font-extrabold tracking-tight sm:text-3xl">{{.EngH2}}</h2>
+    <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">{{.C.TiersH2}}</h2>
+    <p class="mt-3 max-w-3xl text-lg text-gray-700">{{.C.TiersLead}}</p>
+    <div class="nsk-card-flat mt-8 divide-y-2 divide-gray-200 bg-white">
+      {{range .C.Tiers}}<div class="grid gap-3 p-5 md:grid-cols-[16rem_1fr] md:gap-8">
+        <div><p class="font-extrabold">{{.Name}}</p><p class="mt-1 text-lg font-extrabold">{{.Price}}</p></div>
+        <div>
+          <p class="text-gray-800">{{.Audience}}</p>
+          <ul class="mt-2 grid gap-1 text-sm text-gray-700 sm:grid-cols-2">
+            {{range .Points}}<li class="flex gap-2"><span class="mt-0.5 text-green-800">{{icon "check" 16}}</span><span>{{.}}</span></li>
+            {{end}}
+          </ul>
+        </div>
+      </div>
+      {{end}}
+    </div>
+    <a href="{{.GuideHref}}" class="nsk-textlink mt-4">{{.Ent.EscLink}}<span aria-hidden="true"> →</span></a>
+  </div>
+</section>
+{{with .Ent}}
+<section id="engineering" class="nsk-section nsk-section-tint">
+  <details class="mx-auto max-w-7xl px-4 sm:px-6">
+    <summary class="cursor-pointer text-xl font-extrabold">{{.EngH2}}</summary>
     <p class="mt-3 max-w-3xl text-lg text-gray-700">{{.EngIntro}}</p>
     <div class="nsk-fit mt-8 grid gap-6 lg:grid-cols-2">
       {{range .Eng}}<article class="nsk-card-flat bg-white p-5">
@@ -555,7 +559,7 @@ const siteEnterpriseHTML = `{{define "body"}}{{with .Ent}}
       </article>
       {{end}}
     </div>
-  </div>
+  </details>
 </section>
 {{end}}
 
@@ -578,26 +582,7 @@ const siteEnterpriseHTML = `{{define "body"}}{{with .Ent}}
 </section>
 {{end}}
 
-<section id="escalation" class="nsk-section nsk-section-tint">
-  <div class="mx-auto max-w-7xl px-4 sm:px-6">
-    <h2 class="text-2xl font-extrabold tracking-tight sm:text-3xl">{{.C.TiersH2}}</h2>
-    <p class="mt-3 max-w-3xl text-lg text-gray-700">{{.C.TiersLead}}</p>
-    <div class="nsk-card-flat mt-8 divide-y-2 divide-gray-200 bg-white">
-      {{range .C.Tiers}}<div class="grid gap-3 p-5 md:grid-cols-[16rem_1fr] md:gap-8">
-        <div><p class="font-extrabold">{{.Name}}</p><p class="mt-1 text-lg font-extrabold">{{.Price}}</p></div>
-        <div>
-          <p class="text-gray-800">{{.Audience}}</p>
-          <ul class="mt-2 grid gap-1 text-sm text-gray-700 sm:grid-cols-2">
-            {{range .Points}}<li class="flex gap-2"><span class="mt-0.5 text-green-800">{{icon "check" 16}}</span><span>{{.}}</span></li>
-            {{end}}
-          </ul>
-        </div>
-      </div>
-      {{end}}
-    </div>
-    <a href="{{.GuideHref}}" class="nsk-textlink mt-4">{{.Ent.EscLink}}<span aria-hidden="true"> →</span></a>
-  </div>
-</section>
+
 
 <section id="coverage" class="nsk-section">
   <div class="mx-auto max-w-7xl px-4 sm:px-6">

@@ -57,7 +57,14 @@ type pymt struct {
 }
 
 type dom struct {
-	Domain, Status, TXT string
+	Domain, Status, TXT, Method string
+}
+
+func (d dom) MetaTag() string {
+	return `<meta name="netsekurity-verification" content="` + d.TXT + `">`
+}
+func (d dom) VerificationInstructions() string {
+	return "Please help confirm control of " + d.Domain + " for my NetSekurity account. Choose ONE method:\n\nDNS: add TXT _netsekurity." + d.Domain + " with value " + d.TXT + ".\n\nFile: serve the exact text " + d.TXT + " at https://" + d.Domain + verificationPath + " (HTTPS, HTTP 200, no redirect).\n\nHTML: add " + d.MetaTag() + " to the <head> of https://" + d.Domain + "/ (no redirect).\n\nLeave the proof in place for repeat checks. This only verifies this hostname. Please tell me which method you used so I can confirm it in NetSekurity. Do not send me passwords."
 }
 
 // step is one line of the Home page's getting-started checklist.
@@ -91,7 +98,7 @@ func (d dashboardData) Steps() []step {
 			Body: "Type the address of the website you want to check, like www.mybusiness.com.",
 			CTA:  "Add a website", Href: "/dashboard/websites", Done: len(d.Domains) > 0},
 		{N: 2, Title: "Prove it's yours",
-			Body: "We only scan websites you own. You add one small record in your domain settings — we show you exactly how.",
+			Body: "Confirm control using a DNS record, a verification file or a website tag. You can copy the instructions for your website manager.",
 			CTA:  "Verify my website", Href: "/dashboard/websites", Done: d.VerifiedCount > 0},
 		{N: 3, Title: "Get a credit",
 			Body: "Each scan uses 1 credit. Credits never expire.",
@@ -123,7 +130,7 @@ func (d dashboardData) AllDone() bool { return d.StepsDone() == len(d.Steps()) }
 
 // loadDomains reads one customer's domains, newest first.
 func loadDomains(userID string) []dom {
-	rows, err := db.Query(`SELECT domain, status, txt_verification_token FROM domains WHERE user_id=? ORDER BY created_at DESC`, userID)
+	rows, err := db.Query(`SELECT domain, status, txt_verification_token, verified_by FROM domains WHERE user_id=? ORDER BY created_at DESC`, userID)
 	if err != nil {
 		return nil
 	}
@@ -131,7 +138,7 @@ func loadDomains(userID string) []dom {
 	var out []dom
 	for rows.Next() {
 		var d dom
-		rows.Scan(&d.Domain, &d.Status, &d.TXT)
+		rows.Scan(&d.Domain, &d.Status, &d.TXT, &d.Method)
 		out = append(out, d)
 	}
 	return out
