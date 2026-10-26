@@ -23,6 +23,11 @@ claims. A claim that fails a test costs more trust than the page ever earned. So
    `siteModified` in `site.go`, run `go test ./...`, and run `tools/og/render.sh`
    if the headline or sample card changed.
 
+Claims that need a fact from the owner before they can be made (or made better) are tracked in
+`TODO.md`: the AI model provider and region (T-03), data retention, DPA, SLA, tax treatment and scanner
+source IPs (T-12), and `report_auto.py`, which produces the CVE references, PoC text and OWASP mapping but
+is not in this repository (T-18).
+
 ## Claims the site makes
 
 | Claim | Source | Notes |

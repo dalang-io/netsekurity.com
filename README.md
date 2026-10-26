@@ -90,6 +90,10 @@ netsekurity.com/
 ├── pentests.go        # pentest start/list + worker claim/report (queue)
 ├── apitokens.go       # CI/CD API tokens (expiry 7/14/30/60/90d) and the /api/v1 endpoints
 ├── security.go        # security headers on every response; strict nonce CSP for public pages
+├── assets.go          # content-hash cache busting: /file?v=<sha256[:12]> (template func asset)
+├── HANDOVER.md        # state, map, release steps, traps, decisions (read first)
+├── TODO.md            # open work with owner, priority and how to verify
+├── CLAUDE.md          # rules for an agent working in this repo
 ├── site.go            # public site engine: page registry, view model, SEO head, JSON-LD, sitemap
 ├── site_copy.go       # copy types + helpers (token expansion, completeness checks)
 ├── site_copy_en.go    # English copy (all pages)         ┐ same structure, enforced
@@ -442,7 +446,8 @@ Manual steps the first time on the server (`root@163.128.54.5`):
 4. Pingora route in `/home/dalang/dev/proxy/config.yaml`:
    `- host: netsekurity.com / www.netsekurity.com → 127.0.0.1:8094` then `systemctl restart proxy.service`.
 
-**Cloudflare:** flexible SSL (public HTTPS, origin HTTP :80). DNS A record → `163.128.54.5`.
+**Cloudflare:** flexible SSL (public HTTPS, origin HTTP :80), as last recorded and **not re-verified**.
+DNS A record → `163.128.54.5`. Moving to Full (strict) needs TLS at the origin (TODO T-04).
 
 ---
 
@@ -460,9 +465,11 @@ systemctl status proxy.service              # Pingora
 - Deploy: `./deploy.sh`
 - Rollback: keep the previous binary (e.g. `cp netsekurity netsekurity.prev` before a swap) and
   restore it, then `systemctl restart netsekurity.service`; or redeploy the previous git commit.
-- **Purge Cloudflare cache** (after report/static changes): Cloudflare dashboard → netsekurity.com →
-  Caching → Purge Everything. (The API token in `api.dalang.io/.env` can read the zone but lacks
-  Cache Purge permission.)
+- **Cloudflare cache: nothing to purge on a normal release.** Pages are `no-store`; the stylesheet, favicons,
+  share cards, sample PDFs, font and htmx are addressed by content hash or versioned file name (see "Assets
+  never need purging" above). Only if you must evict something unversioned (`robots.txt`, `llms.txt`,
+  `sitemap.xml`, all `max-age` ≤ 1 h): Cloudflare dashboard → netsekurity.com → Caching → Purge. (The API
+  token in `api.dalang.io/.env` can read the zone but lacks Cache Purge permission.)
 - **Credits auto-add:** poller every 30s + dashboard load; if a payment isn't credited, check
   `journalctl -u netsekurity.service` for `sync payments` lines and confirm the invoice is
   `PAID` in Xendit.
@@ -489,8 +496,12 @@ systemctl status proxy.service              # Pingora
 
 ## Docs index (for handover reading order)
 
-1. `README.md` — this document.
-2. `AGENT_WORKER.md` — scanning agent behavior.
-3. `static/PRODUCT_SCOPE.md` (+ `.id.md`) — client-facing scope & methodology.
-4. `/docs` (`docsEN` / `docsID` in `site_copy_*.go`, examples in `docs.go`) — CI/CD integration + HTTP API reference.
-5. `env.example` — all environment variables.
+1. `CLAUDE.md` — rules for anyone (human or agent) changing this repo.
+2. `HANDOVER.md` — state per 2026-10-26, code map, release steps, traps, decisions.
+3. `TODO.md` — open work, with owner, priority and how to verify.
+4. `README.md` — this document.
+5. `CLAIMS.md` — every public claim and its source.
+6. `AGENT_WORKER.md` / `HERMES_UPDATE.md` — scanning agent behaviour and its update runbook.
+7. `static/PRODUCT_SCOPE.md` (+ `.id.md`) — client-facing scope & methodology.
+8. `/docs` (`docsEN` / `docsID` in `site_copy_*.go`, examples in `docs.go`) — CI/CD integration + HTTP API reference.
+9. `env.example` — all environment variables.

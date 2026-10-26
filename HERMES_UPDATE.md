@@ -1,5 +1,31 @@
 # Hermes agent — update runbook
 
+## OPEN as of 2026-10-26 — pull the release and make sure nothing is stranded on the agent
+
+Release `v2026.10.26.2` (`b6f31ab`) is live on the platform, but the agent's checkout has **not** been
+updated, and nobody has looked at whether it holds changes that were never committed. Do both, in this
+order, from the agent's checkout (the platform host's app directory `/home/dalang/netsekurity.com` on
+`163.128.54.5` is the likely place; confirm, the repo does not record it):
+
+```bash
+git status --short            # anything listed here exists only on this machine
+git log --oneline -3
+git remote -v | head -1
+```
+
+- **Clean?** `git pull --rebase origin main`, then the two `grep` checks in the next section.
+- **Not clean?** Read `git diff`; drop what was accidental; never commit `.env`, keys or tokens. Commit
+  only the intended files by name (`git add <file>`, not `-A`), `git pull --rebase origin main`,
+  `git push origin main`. If a platform file (`*.go`, templates) changed, deploy from the laptop with
+  `./deploy.sh`; `nsec_*` and documents need no deploy. Then tag the merged head with the next free
+  `vYYYY.MM.DD.N` and `git push origin <tag>`.
+
+**Rule from now on: no hot patches on a host.** Every change, the agent's included, goes through `main`
+(the `wip/netsekurity-live-state-20261016` branch exists only because an earlier patch was never committed).
+Tracked as `TODO.md` T-01 and T-02.
+
+---
+
 ## 2026-10-26 — the scanner now identifies itself
 
 `nsec_scan.py` sends **`User-Agent: NetSekurity Scanner`** (it used to send a Chrome
