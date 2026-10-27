@@ -34,6 +34,32 @@ func loadEnv(path string) {
 	}
 }
 
+// defaultSentryDSN points at the Dalang platform's internal Sentry (Mata). A DSN
+// is a public client key, not a secret, but every deployment may override it via
+// SENTRY_DSN; an empty SENTRY_DSN disables reporting entirely.
+const defaultSentryDSN = "https://bd3ff6f325012d29eacd074457aba1ea@mata.dalang.io/8"
+
+// sentryDSN returns the DSN to report to. An explicitly empty .env value or
+// environment variable disables reporting (getenv cannot express that: it treats
+// empty as unset); with neither set, the project default above is used.
+func sentryDSN() string {
+	if v, ok := env["SENTRY_DSN"]; ok {
+		return v
+	}
+	if v, ok := os.LookupEnv("SENTRY_DSN"); ok {
+		return v
+	}
+	return defaultSentryDSN
+}
+
+// sentryRelease is the release reported to Sentry (set it to the release tag,
+// e.g. v2026.10.27.1). Empty is fine: the SDK then omits the release.
+func sentryRelease() string { return getenv("SENTRY_RELEASE", "") }
+
+// sentryEnvironment mirrors the ENVIRONMENT setting already used by
+// checkSecrets, so events from production are not mixed with local ones.
+func sentryEnvironment() string { return getenv("ENVIRONMENT", "development") }
+
 // getenv returns the .env value, falling back to an actual environment variable,
 // then to a default.
 func getenv(key, def string) string {

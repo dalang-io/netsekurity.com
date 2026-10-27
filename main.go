@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
 	"embed"
+	"errors"
 	"io/fs"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -23,9 +27,20 @@ func init() { _ = cssHash }
 
 func main() {
 	loadEnv(".env")
+	// Sentry first, so anything that fails during startup is reported; the
+	// deferred flush also covers a panic on this goroutine.
+	initSentry()
+	defer flushSentry()
+	defer func() {
+		if rec := recover(); rec != nil {
+			captureMainPanic(rec)
+			log.Fatalf("fatal: panic in main: %v", rec)
+		}
+	}()
 	checkSecrets()
 
 	if err := initDB(); err != nil {
+		reportFatal(err)
 		log.Fatalf("db init: %v", err)
 	}
 	// Auto-credit poller: credits are added by checking Xendit periodically,
@@ -127,9 +142,26 @@ func main() {
 	registerAPIv1(mux, writeLimit, readLimit)
 
 	addr := ":" + port
+	// sentryhttp reports panics (and re-panics); recoverPanics turns that panic
+	// into a 500 so one bad request cannot take the process down.
+	srv := &http.Server{Addr: addr, Handler: withSentry(securityHeaders(mux))}
+
+	// systemd stops the unit with SIGTERM: drain in-flight requests, then let
+	// the deferred flush deliver whatever Sentry still has queued.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	go func() {
+		<-ctx.Done()
+		shutCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		_ = srv.Shutdown(shutCtx)
+	}()
+
 	log.Printf("netsekurity.com listening on %s", addr)
-	if err := http.ListenAndServe(addr, securityHeaders(mux)); err != nil {
-		log.Fatal(err)
+	if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Printf("server error: %v", err)
+		flushSentry()
+		os.Exit(1)
 	}
 }
 
@@ -149,6 +181,7 @@ func checkSecrets() {
 		return
 	}
 	if prod {
+		flushSentry()
 		log.Fatalf("refusing to start: ENVIRONMENT=production but %s not set", strings.Join(missing, ", "))
 	}
 	log.Printf("WARNING: %s not set — using insecure defaults (fine for development only)", strings.Join(missing, ", "))

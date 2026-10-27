@@ -307,6 +307,8 @@ Full template: [`env.example`](env.example). Key vars:
 | `PARTNER_ID` / `PARTNER_SECRET` | Dalang partner API; empty secret disables the endpoints (503) |
 | `BOT_AUTH_TOKEN` | agent↔platform secret (`openssl rand -hex 32`) |
 | `PLAUSIBLE_DOMAIN` / `GA_MEASUREMENT_ID` | optional analytics tag on public pages (set one) |
+| `SENTRY_DSN` | Sentry (Dalang "Mata") DSN; code default is this repo's project, empty disables reporting |
+| `SENTRY_RELEASE` | release tag reported to Sentry (optional) |
 
 ---
 
